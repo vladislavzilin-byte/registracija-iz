@@ -7,6 +7,7 @@ import {
 } from "../lib/storage";
 import ForgotPasswordModal from "./ForgotPasswordModal";
 import { useI18n } from "../lib/i18n";
+import { User, Lock, Unlock } from "lucide-react";
 
 // --- вспомогательные функции ---
 async function sha256(message) {
@@ -54,8 +55,12 @@ export default function Auth({ onAuth }) {
       if (!phone.trim()) errs.phone = t("required") || "Введите телефон";
       if (email && !validateEmail(email))
         errs.email = t("invalid_email") || "Неверный email";
-      if (password.length < 6)
-        errs.password = t("password_min") || "Минимум 6 символов";
+
+      const strongPass = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{7,}$/;
+      if (!strongPass.test(password))
+        errs.password =
+          "Пароль должен содержать минимум 7 символов, заглавную букву, цифру и спецсимвол (!@#$%^&*).";
+
       if (password !== passwordConfirm)
         errs.passwordConfirm =
           t("password_mismatch") || "Пароли не совпадают";
@@ -123,16 +128,16 @@ export default function Auth({ onAuth }) {
     const emailNorm = id.toLowerCase();
     const passwordHash = await sha256(password);
 
-   const found = users.find((u) => {
-  const phoneMatch =
-    normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
-  const emailMatch =
-    u.email && u.email.toLowerCase() === emailNorm;
-  const hashMatch =
-    (u.passwordHash && u.passwordHash === passwordHash) ||
-    (!u.passwordHash && u.password === password); // ✅ совместимость со старыми
-  return (phoneMatch || emailMatch) && hashMatch;
-});
+    const found = users.find((u) => {
+      const phoneMatch =
+        normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
+      const emailMatch =
+        u.email && u.email.toLowerCase() === emailNorm;
+      const hashMatch =
+        (u.passwordHash && u.passwordHash === passwordHash) ||
+        (!u.passwordHash && u.password === password); // ✅ совместимость
+      return (phoneMatch || emailMatch) && hashMatch;
+    });
 
     if (!found) {
       const newAttempts = loginAttempts + 1;
@@ -212,37 +217,75 @@ export default function Auth({ onAuth }) {
           {mode === "login" ? (
             <>
               <label>{t("phone_or_email")}</label>
-              <input
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="+3706... / email"
-              />
-              {fieldErrors.identifier && (
-                <div style={{ color: "#f77", fontSize: "0.9rem" }}>
-                  {fieldErrors.identifier}
-                </div>
-              )}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  borderRadius: "10px",
+                  background: "rgba(255,255,255,0.08)",
+                  padding: "4px 8px",
+                }}
+              >
+                <User size={18} strokeWidth={2} style={{ opacity: 0.8 }} />
+                <input
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="+3706... / email"
+                  style={{
+                    flex: 1,
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: "#fff",
+                  }}
+                />
+              </div>
 
               <label>{t("password")}</label>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  borderRadius: "10px",
+                  background: "rgba(255,255,255,0.08)",
+                  padding: "4px 8px",
+                }}
+              >
+                <Lock size={18} strokeWidth={2} style={{ opacity: 0.8 }} />
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••"
+                  style={{
+                    flex: 1,
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: "#fff",
+                  }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((s) => !s)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
                 >
-                  {showPassword ? "👁️" : "🙈"}
+                  {showPassword ? (
+                    <Unlock size={18} strokeWidth={2} style={{ opacity: 0.9 }} />
+                  ) : (
+                    <Lock size={18} strokeWidth={2} style={{ opacity: 0.9 }} />
+                  )}
                 </button>
               </div>
-              {fieldErrors.password && (
-                <div style={{ color: "#f77", fontSize: "0.9rem" }}>
-                  {fieldErrors.password}
-                </div>
-              )}
             </>
           ) : (
             <>
@@ -252,9 +295,6 @@ export default function Auth({ onAuth }) {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Inga"
               />
-              {fieldErrors.name && (
-                <div style={{ color: "#f77" }}>{fieldErrors.name}</div>
-              )}
 
               <label>{t("instagram")}</label>
               <input
@@ -269,9 +309,6 @@ export default function Auth({ onAuth }) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
               />
-              {fieldErrors.email && (
-                <div style={{ color: "#f77" }}>{fieldErrors.email}</div>
-              )}
 
               <label>{t("phone")}</label>
               <input
@@ -279,33 +316,108 @@ export default function Auth({ onAuth }) {
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+3706..."
               />
-              {fieldErrors.phone && (
-                <div style={{ color: "#f77" }}>{fieldErrors.phone}</div>
-              )}
 
+              {/* PASSWORD */}
               <label>{t("password")}</label>
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••"
-              />
-              {fieldErrors.password && (
-                <div style={{ color: "#f77" }}>{fieldErrors.password}</div>
-              )}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  borderRadius: "10px",
+                  background: "rgba(255,255,255,0.08)",
+                  padding: "4px 8px",
+                }}
+              >
+                <Lock size={18} strokeWidth={2} style={{ opacity: 0.8 }} />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••"
+                  style={{
+                    flex: 1,
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: "#fff",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {showPassword ? (
+                    <Unlock size={18} strokeWidth={2} style={{ opacity: 0.9 }} />
+                  ) : (
+                    <Lock size={18} strokeWidth={2} style={{ opacity: 0.9 }} />
+                  )}
+                </button>
+              </div>
+              <div
+                style={{
+                  fontSize: "0.85rem",
+                  opacity: 0.85,
+                  marginTop: "4px",
+                  marginBottom: "6px",
+                }}
+              >
+                Пароль должен содержать минимум <b>7 символов</b>, <b>одну заглавную букву</b>, <b>цифру</b> и <b>спецсимвол</b> (!@#$%).
+              </div>
 
+              {/* CONFIRM */}
               <label>{t("confirm_password")}</label>
-              <input
-                type={showPassword ? "text" : "password"}
-                value={passwordConfirm}
-                onChange={(e) => setPasswordConfirm(e.target.value)}
-                placeholder="••••••"
-              />
-              {fieldErrors.passwordConfirm && (
-                <div style={{ color: "#f77" }}>
-                  {fieldErrors.passwordConfirm}
-                </div>
-              )}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  borderRadius: "10px",
+                  background: "rgba(255,255,255,0.08)",
+                  padding: "4px 8px",
+                }}
+              >
+                <Lock size={18} strokeWidth={2} style={{ opacity: 0.8 }} />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={passwordConfirm}
+                  onChange={(e) => setPasswordConfirm(e.target.value)}
+                  placeholder="••••••"
+                  style={{
+                    flex: 1,
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: "#fff",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {showPassword ? (
+                    <Unlock size={18} strokeWidth={2} style={{ opacity: 0.9 }} />
+                  ) : (
+                    <Lock size={18} strokeWidth={2} style={{ opacity: 0.9 }} />
+                  )}
+                </button>
+              </div>
             </>
           )}
 
@@ -315,41 +427,3 @@ export default function Auth({ onAuth }) {
                 color: "rgb(255,150,150)",
                 fontSize: "0.9rem",
                 marginTop: 6,
-              }}
-            >
-              {error}
-            </div>
-          )}
-
-          <div style={{ marginTop: 12 }}>
-            <button type="submit" disabled={isSubmitting}>
-              {mode === "login" ? t("login") : t("register")}
-            </button>
-          </div>
-        </form>
-
-        <div
-          style={{
-            marginTop: 8,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div style={{ opacity: 0.9, fontSize: "0.9rem" }}>{t("or")}</div>
-          <button
-            onClick={() => setRecoverOpen(true)}
-            style={{ fontSize: "0.85rem" }}
-          >
-            {t("forgot_password")}
-          </button>
-        </div>
-      </div>
-
-      <ForgotPasswordModal
-        open={recoverOpen}
-        onClose={() => setRecoverOpen(false)}
-      />
-    </>
-  );
-}
