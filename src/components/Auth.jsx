@@ -15,6 +15,7 @@ async function sha256(message) {
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
+
 const normalizePhone = (p) => (p || "").replace(/\D/g, "");
 const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
@@ -36,7 +37,6 @@ export default function Auth({ onAuth }) {
   const [current, setCurrent] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Rate-limit
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [lockUntil, setLockUntil] = useState(null);
 
@@ -81,18 +81,17 @@ export default function Auth({ onAuth }) {
       return;
     }
 
-    const users = getUsers() || [];
+    let users = getUsers();
+    if (!Array.isArray(users)) users = [];
 
-    // Регистрация
     if (mode === "register") {
       const phoneNorm = normalizePhone(phone);
-      if (
-        users.find(
-          (u) =>
-            normalizePhone(u.phone) === phoneNorm ||
-            (u.email && u.email.toLowerCase() === email.toLowerCase())
-        )
-      ) {
+      const existingUser = users.find(
+        (u) =>
+          normalizePhone(u.phone) === phoneNorm ||
+          (u.email && u.email.toLowerCase() === email.toLowerCase())
+      );
+      if (existingUser) {
         setError("Пользователь с таким email или телефоном уже существует");
         return;
       }
@@ -114,7 +113,7 @@ export default function Auth({ onAuth }) {
       return;
     }
 
-    // Вход
+    // === Вход ===
     const id = identifier.trim();
     const phoneNorm = normalizePhone(id);
     const emailNorm = id.toLowerCase();
@@ -156,7 +155,7 @@ export default function Auth({ onAuth }) {
     onAuth?.(null);
   };
 
-  // === Авторизованный ===
+  // === Авторизован ===
   if (current) {
     const initials = current.name
       ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
@@ -166,6 +165,12 @@ export default function Auth({ onAuth }) {
       <div style={cardStyle}>
         <div style={auroraBg} />
         <div style={borderGlow} />
+        <style>{`
+          @keyframes avatarPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(168,85,247,0.4); }
+            50% { box-shadow: 0 0 15px 3px rgba(168,85,247,0.3); }
+          }
+        `}</style>
         <div
           style={{
             position: "relative",
@@ -176,7 +181,6 @@ export default function Auth({ onAuth }) {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            {/* Инициалы */}
             <div style={avatarStyle}>{initials}</div>
 
             <div>
@@ -307,7 +311,7 @@ export default function Auth({ onAuth }) {
   );
 }
 
-// === СТИЛИ ДЛЯ ЗАЛОГИНЕННОГО ===
+// === стили для авторизованного ===
 const cardStyle = {
   position: "relative",
   padding: "26px",
@@ -354,6 +358,7 @@ const avatarStyle = {
   color: "#fff",
   fontWeight: 700,
   fontSize: "1.1rem",
+  animation: "avatarPulse 3.6s ease-in-out infinite",
 };
 const nameStyle = {
   fontSize: "1.35rem",
