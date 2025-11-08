@@ -7,7 +7,7 @@ import {
 } from "../lib/storage";
 import { useI18n } from "../lib/i18n";
 
-// === вспомогательные ===
+// === Вспомогательные функции ===
 async function sha256(message) {
   const msgUint8 = new TextEncoder().encode(message);
   const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
@@ -76,7 +76,7 @@ function ForgotPasswordModal({ open, onClose }) {
   );
 }
 
-// === основной компонент Auth ===
+// === Основной компонент ===
 export default function Auth({ onAuth }) {
   const { t } = useI18n();
 
@@ -210,7 +210,7 @@ export default function Auth({ onAuth }) {
     onAuth?.(null);
   };
 
-  // === отображение ===
+  // === Отображение ===
   if (current) {
     const initials = current.name
       ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
@@ -287,7 +287,7 @@ export default function Auth({ onAuth }) {
   );
 }
 
-// === иконка глаза ===
+// === Иконка глаза ===
 const EyeIcon = ({ open }) => (
   <svg width="20" height="20" fill="none" stroke="#c7a3ff" strokeWidth="1.8" viewBox="0 0 24 24">
     {open ? (
@@ -307,7 +307,7 @@ const EyeIcon = ({ open }) => (
 
 const eyeIcon = { position: "absolute", right: 12, top: 10, cursor: "pointer", opacity: 0.8 };
 
-// === стили ===
+// === Стили ===
 const fadeAnim = `
 @keyframes fadeInOut {
   0% { opacity: 0; transform: translateY(-10px); }
@@ -322,7 +322,39 @@ const segmentStyles = `
   background: linear-gradient(145deg, rgba(66,0,145,0.28), rgba(20,0,40,0.35));
   border: 1px solid rgba(168,85,247,0.35);
   backdrop-filter: blur(8px);
-}`;
+}
+.segmented button {
+  height: 42px; border-radius: 12px;
+  border: 1px solid rgba(168,85,247,0.55);
+  color: #fff; background: linear-gradient(180deg, rgba(124,58,237,0.6), rgba(88,28,135,0.55));
+  transition: .2s;
+}
+.segmented button.active {
+  background: linear-gradient(180deg, rgba(160,75,255,0.8), rgba(90,40,180,0.7));
+  box-shadow: inset 0 0 0 1px rgba(168,85,247,0.45), 0 10px 28px rgba(120,0,255,0.18);
+}
+.glass-input {
+  width: 100%; height: 42px; border-radius: 12px;
+  padding: 10px 12px; color: #fff;
+  border: 1px solid rgba(168,85,247,0.35);
+  background: rgba(17,0,40,0.45);
+  outline: none; transition: border-color .3s, box-shadow .3s;
+}
+.glass-input:focus {
+  border-color: rgba(168,85,247,0.65);
+  box-shadow: 0 0 0 3px rgba(168,85,247,0.18);
+  background: rgba(24,0,60,0.55);
+}
+.cta {
+  height: 42px; border-radius: 12px;
+  border: 1px solid rgba(168,85,247,0.65);
+  color: #fff;
+  background: linear-gradient(180deg, rgba(150,75,255,0.9), rgba(110,35,190,0.8));
+  transition: all .25s;
+}
+.cta:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(140,0,255,0.25); }
+`;
+
 const cardStyle = {
   position: "relative",
   padding: "26px",
