@@ -423,7 +423,8 @@ const toastStyle = {
   position: "fixed",
   top: "25px",
   right: "25px",
-  background: "linear-gradient(135deg, rgba(124,58,237,0.8), rgba(168,85,247,0.6))",
+  background:
+    "linear-gradient(135deg, rgba(124,58,237,0.8), rgba(168,85,247,0.6))",
   border: "1px solid rgba(200,150,255,0.4)",
   color: "#fff",
   padding: "10px 18px",
@@ -433,4 +434,5 @@ const toastStyle = {
   fontWeight: 500,
   letterSpacing: "0.3px",
   zIndex: 1000,
-  animation: "fade
+  animation: "fadeInOut 2s ease-in-out forwards",
+};
