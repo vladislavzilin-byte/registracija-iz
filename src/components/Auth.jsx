@@ -18,7 +18,6 @@ async function sha256(message) {
 const normalizePhone = (p) => (p || "").replace(/\D/g, "");
 const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
-// --- основная компонента ---
 export default function Auth({ onAuth }) {
   const { t } = useI18n();
 
@@ -37,7 +36,6 @@ export default function Auth({ onAuth }) {
   const [current, setCurrent] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // rate limit
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [lockUntil, setLockUntil] = useState(null);
 
@@ -78,7 +76,6 @@ export default function Auth({ onAuth }) {
       return;
     }
 
-    // проверка rate limit
     if (lockUntil && Date.now() < lockUntil) {
       setError("Слишком много попыток, попробуйте позже");
       return;
@@ -100,7 +97,6 @@ export default function Auth({ onAuth }) {
       }
 
       const passwordHash = await sha256(password);
-
       const newUser = {
         name: name.trim(),
         instagram,
@@ -117,28 +113,27 @@ export default function Auth({ onAuth }) {
       return;
     }
 
-    // LOGIN
     const id = identifier.trim();
     const phoneNorm = normalizePhone(id);
     const emailNorm = id.toLowerCase();
     const passwordHash = await sha256(password);
 
-   const found = users.find((u) => {
-  const phoneMatch =
-    normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
-  const emailMatch =
-    u.email && u.email.toLowerCase() === emailNorm;
-  const hashMatch =
-    (u.passwordHash && u.passwordHash === passwordHash) ||
-    (!u.passwordHash && u.password === password); // ✅ совместимость со старыми
-  return (phoneMatch || emailMatch) && hashMatch;
-});
+    const found = users.find((u) => {
+      const phoneMatch =
+        normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
+      const emailMatch =
+        u.email && u.email.toLowerCase() === emailNorm;
+      const hashMatch =
+        (u.passwordHash && u.passwordHash === passwordHash) ||
+        (!u.passwordHash && u.password === password);
+      return (phoneMatch || emailMatch) && hashMatch;
+    });
 
     if (!found) {
       const newAttempts = loginAttempts + 1;
       setLoginAttempts(newAttempts);
       if (newAttempts >= 5) {
-        setLockUntil(Date.now() + 60_000); // блокировка на 1 мин
+        setLockUntil(Date.now() + 60_000);
         setLoginAttempts(0);
         setError("Превышено число попыток. Повторите через 1 минуту.");
       } else {
@@ -162,7 +157,16 @@ export default function Auth({ onAuth }) {
   // === UI ===
   if (current) {
     return (
-      <div className="card" style={{ color: "#fff" }}>
+      <div
+        style={{
+          background:
+            "linear-gradient(145deg, rgba(40,0,60,0.9), rgba(10,0,20,0.9))",
+          padding: "20px",
+          borderRadius: "18px",
+          boxShadow: "0 0 25px rgba(160,90,255,0.3)",
+          color: "#fff",
+        }}
+      >
         <div
           style={{
             display: "flex",
@@ -171,12 +175,29 @@ export default function Auth({ onAuth }) {
           }}
         >
           <div>
-            <b>{current.name}</b>
+            <div style={{ fontWeight: 600, fontSize: "1.2rem" }}>
+              {current.name}
+            </div>
             <div style={{ opacity: 0.8 }}>
               {current.email || current.phone || ""}
             </div>
           </div>
-          <button onClick={logout}>{t("logout")}</button>
+          <button
+            onClick={logout}
+            style={{
+              background:
+                "linear-gradient(90deg, #7a3cff, #a05bff, #c089ff)",
+              border: "none",
+              borderRadius: "12px",
+              padding: "8px 18px",
+              color: "#fff",
+              cursor: "pointer",
+              fontWeight: 500,
+              boxShadow: "0 0 12px rgba(160,90,255,0.6)",
+            }}
+          >
+            {t("logout") || "Выйти"}
+          </button>
         </div>
       </div>
     );
@@ -184,166 +205,168 @@ export default function Auth({ onAuth }) {
 
   return (
     <>
-      <div className="card">
-        <div className="segmented" style={{ marginBottom: 12 }}>
+      <div
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(25,0,45,0.95), rgba(10,0,25,0.95))",
+          borderRadius: "20px",
+          padding: "28px",
+          color: "#fff",
+          boxShadow: "0 0 30px rgba(150,60,255,0.25)",
+          width: "100%",
+          maxWidth: "550px",
+          margin: "auto",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: "18px",
+            background: "rgba(100,30,180,0.3)",
+            borderRadius: "14px",
+            overflow: "hidden",
+          }}
+        >
           <button
             type="button"
-            className={mode === "login" ? "active" : ""}
             onClick={() => {
               setMode("login");
               setError("");
             }}
+            style={{
+              flex: 1,
+              padding: "10px",
+              border: "none",
+              cursor: "pointer",
+              background:
+                mode === "login"
+                  ? "linear-gradient(90deg, #7a3cff, #a05bff)"
+                  : "transparent",
+              color: "#fff",
+              fontWeight: 600,
+              transition: "0.3s",
+            }}
           >
-            {t("login")}
+            {t("login") || "Вход"}
           </button>
           <button
             type="button"
-            className={mode === "register" ? "active" : ""}
             onClick={() => {
               setMode("register");
               setError("");
             }}
+            style={{
+              flex: 1,
+              padding: "10px",
+              border: "none",
+              cursor: "pointer",
+              background:
+                mode === "register"
+                  ? "linear-gradient(90deg, #7a3cff, #a05bff)"
+                  : "transparent",
+              color: "#fff",
+              fontWeight: 600,
+              transition: "0.3s",
+            }}
           >
-            {t("register")}
+            {t("register") || "Регистрация"}
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {mode === "login" ? (
             <>
-              <label>{t("phone_or_email")}</label>
               <input
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 placeholder="+3706... / email"
+                style={inputStyle}
               />
-              {fieldErrors.identifier && (
-                <div style={{ color: "#f77", fontSize: "0.9rem" }}>
-                  {fieldErrors.identifier}
-                </div>
-              )}
-
-              <label>{t("password")}</label>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((s) => !s)}
-                >
-                  {showPassword ? "👁️" : "🙈"}
-                </button>
-              </div>
-              {fieldErrors.password && (
-                <div style={{ color: "#f77", fontSize: "0.9rem" }}>
-                  {fieldErrors.password}
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <label>{t("name")}</label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Inga"
-              />
-              {fieldErrors.name && (
-                <div style={{ color: "#f77" }}>{fieldErrors.name}</div>
-              )}
-
-              <label>{t("instagram")}</label>
-              <input
-                value={instagram}
-                onChange={(e) => setInstagram(e.target.value)}
-                placeholder="@username"
-              />
-
-              <label>{t("email_opt")}</label>
-              <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-              />
-              {fieldErrors.email && (
-                <div style={{ color: "#f77" }}>{fieldErrors.email}</div>
-              )}
-
-              <label>{t("phone")}</label>
-              <input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+3706..."
-              />
-              {fieldErrors.phone && (
-                <div style={{ color: "#f77" }}>{fieldErrors.phone}</div>
-              )}
-
-              <label>{t("password")}</label>
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••"
+                style={inputStyle}
               />
-              {fieldErrors.password && (
-                <div style={{ color: "#f77" }}>{fieldErrors.password}</div>
-              )}
-
-              <label>{t("confirm_password")}</label>
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                style={toggleButton}
+              >
+                {showPassword ? "👁️" : "🙈"}
+              </button>
+            </>
+          ) : (
+            <>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Имя"
+                style={inputStyle}
+              />
+              <input
+                value={instagram}
+                onChange={(e) => setInstagram(e.target.value)}
+                placeholder="@instagram"
+                style={inputStyle}
+              />
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                style={inputStyle}
+              />
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+3706..."
+                style={inputStyle}
+              />
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Пароль"
+                style={inputStyle}
+              />
               <input
                 type={showPassword ? "text" : "password"}
                 value={passwordConfirm}
                 onChange={(e) => setPasswordConfirm(e.target.value)}
-                placeholder="••••••"
+                placeholder="Подтвердите пароль"
+                style={inputStyle}
               />
-              {fieldErrors.passwordConfirm && (
-                <div style={{ color: "#f77" }}>
-                  {fieldErrors.passwordConfirm}
-                </div>
-              )}
             </>
           )}
 
           {error && (
-            <div
-              style={{
-                color: "rgb(255,150,150)",
-                fontSize: "0.9rem",
-                marginTop: 6,
-              }}
-            >
+            <div style={{ color: "#ff88aa", textAlign: "center", fontSize: "0.9rem" }}>
               {error}
             </div>
           )}
 
-          <div style={{ marginTop: 12 }}>
-            <button type="submit" disabled={isSubmitting}>
-              {mode === "login" ? t("login") : t("register")}
-            </button>
-          </div>
-        </form>
-
-        <div
-          style={{
-            marginTop: 8,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div style={{ opacity: 0.9, fontSize: "0.9rem" }}>{t("or")}</div>
           <button
-            onClick={() => setRecoverOpen(true)}
-            style={{ fontSize: "0.85rem" }}
+            type="submit"
+            disabled={isSubmitting}
+            style={{
+              marginTop: "8px",
+              padding: "12px",
+              border: "none",
+              borderRadius: "14px",
+              background:
+                "linear-gradient(90deg, #7a3cff, #a05bff, #c089ff)",
+              boxShadow: "0 0 18px rgba(160,90,255,0.5)",
+              color: "#fff",
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "all 0.3s ease",
+            }}
           >
-            {t("forgot_password")}
+            {mode === "login" ? t("login") || "Войти" : t("register") || "Регистрация"}
           </button>
-        </div>
+        </form>
       </div>
 
       <ForgotPasswordModal
@@ -353,3 +376,24 @@ export default function Auth({ onAuth }) {
     </>
   );
 }
+
+const inputStyle = {
+  background: "rgba(255,255,255,0.05)",
+  border: "1px solid rgba(160,90,255,0.4)",
+  borderRadius: "12px",
+  padding: "10px 12px",
+  color: "#fff",
+  fontSize: "1rem",
+  outline: "none",
+  transition: "0.3s",
+  boxShadow: "0 0 10px rgba(160,90,255,0.15)",
+};
+
+const toggleButton = {
+  alignSelf: "flex-end",
+  background: "transparent",
+  color: "#a889ff",
+  border: "none",
+  cursor: "pointer",
+  marginTop: "-5px",
+};
