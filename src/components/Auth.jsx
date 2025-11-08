@@ -216,6 +216,7 @@ export default function Auth({ onAuth }) {
         <form onSubmit={handleSubmit}>
           {mode === "login" ? (
             <>
+              {/* --- LOGIN --- */}
               <label>{t("phone_or_email")}</label>
               <div
                 style={{
@@ -289,6 +290,7 @@ export default function Auth({ onAuth }) {
             </>
           ) : (
             <>
+              {/* --- REGISTER --- */}
               <label>{t("name")}</label>
               <input
                 value={name}
@@ -317,7 +319,7 @@ export default function Auth({ onAuth }) {
                 placeholder="+3706..."
               />
 
-              {/* PASSWORD */}
+              {/* --- PASSWORD --- */}
               <label>{t("password")}</label>
               <div
                 style={{
@@ -362,6 +364,7 @@ export default function Auth({ onAuth }) {
                   )}
                 </button>
               </div>
+
               <div
                 style={{
                   fontSize: "0.85rem",
@@ -373,7 +376,7 @@ export default function Auth({ onAuth }) {
                 Пароль должен содержать минимум <b>7 символов</b>, <b>одну заглавную букву</b>, <b>цифру</b> и <b>спецсимвол</b> (!@#$%).
               </div>
 
-              {/* CONFIRM */}
+              {/* --- CONFIRM --- */}
               <label>{t("confirm_password")}</label>
               <div
                 style={{
@@ -427,3 +430,41 @@ export default function Auth({ onAuth }) {
                 color: "rgb(255,150,150)",
                 fontSize: "0.9rem",
                 marginTop: 6,
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          <div style={{ marginTop: 12 }}>
+            <button type="submit" disabled={isSubmitting}>
+              {mode === "login" ? t("login") : t("register")}
+            </button>
+          </div>
+        </form>
+
+        <div
+          style={{
+            marginTop: 8,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div style={{ opacity: 0.9, fontSize: "0.9rem" }}>{t("or")}</div>
+          <button
+            onClick={() => setRecoverOpen(true)}
+            style={{ fontSize: "0.85rem" }}
+          >
+            {t("forgot_password")}
+          </button>
+        </div>
+      </div>
+
+      <ForgotPasswordModal
+        open={recoverOpen}
+        onClose={() => setRecoverOpen(false)}
+      />
+    </>
+  );
+}
