@@ -47,7 +47,7 @@ export default function Auth({ onAuth }) {
   // === Toast ===
   const showToast = (msg) => {
     setToast(msg);
-    setTimeout(() => setToast(""), 2000);
+    setTimeout(() => setToast(""), 2200);
   };
 
   // === Проверка формы ===
@@ -131,7 +131,7 @@ export default function Auth({ onAuth }) {
       const emailMatch = u.email && u.email.toLowerCase() === emailNorm;
       const hashMatch =
         (u.passwordHash && u.passwordHash === passwordHash) ||
-        (!u.passwordHash && u.password === password); // совместимость со старыми
+        (!u.passwordHash && u.password === password);
       return (phoneMatch || emailMatch) && hashMatch;
     });
 
@@ -160,7 +160,7 @@ export default function Auth({ onAuth }) {
     onAuth?.(null);
   };
 
-  // === UI ===
+  // === Авторизованный ===
   if (current) {
     const initials = current.name
       ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
@@ -169,6 +169,7 @@ export default function Auth({ onAuth }) {
     return (
       <>
         {toast && <div style={toastStyle}>{toast}</div>}
+        <style>{fadeAnim}</style>
         <div style={cardStyle}>
           <div style={auroraBg} />
           <div style={borderGlow} />
@@ -208,59 +209,12 @@ export default function Auth({ onAuth }) {
     );
   }
 
+  // === Не авторизован ===
   return (
     <>
       {toast && <div style={toastStyle}>{toast}</div>}
-      <style>{`
-        .segmented {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px;
-          padding: 6px;
-          border-radius: 16px;
-          background: linear-gradient(145deg, rgba(66,0,145,0.28), rgba(20,0,40,0.35));
-          border: 1px solid rgba(168,85,247,0.35);
-          backdrop-filter: blur(8px);
-        }
-        .segmented button {
-          height: 42px;
-          border-radius: 12px;
-          border: 1px solid rgba(168,85,247,0.35);
-          color: #fff;
-          background: rgba(31,0,63,0.45);
-          transition: .2s;
-        }
-        .segmented button.active {
-          background: linear-gradient(180deg, rgba(124,58,237,0.55), rgba(88,28,135,0.5));
-          box-shadow: inset 0 0 0 1px rgba(168,85,247,0.45), 0 10px 28px rgba(120,0,255,0.18);
-        }
-        .glass-input {
-          width: 100%;
-          height: 42px;
-          border-radius: 12px;
-          padding: 10px 12px;
-          color: #fff;
-          border: 1px solid rgba(168,85,247,0.35);
-          background: rgba(17,0,40,0.45);
-          outline: none;
-          transition: .2s;
-        }
-        .glass-input:focus {
-          border-color: rgba(168,85,247,0.65);
-          box-shadow: 0 0 0 3px rgba(168,85,247,0.18);
-          background: rgba(24,0,60,0.55);
-        }
-        .cta {
-          height: 42px;
-          border-radius: 12px;
-          border: 1px solid rgba(168,85,247,0.55);
-          color: #fff;
-          background: linear-gradient(180deg, rgba(124,58,237,0.6), rgba(88,28,135,0.55));
-          backdrop-filter: blur(6px);
-          transition: .2s;
-        }
-        .cta:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(120,0,255,0.22); }
-      `}</style>
+      <style>{fadeAnim}</style>
+      <style>{segmentStyles}</style>
 
       <div className="card" style={{ paddingTop: 18 }}>
         <div className="segmented" style={{ marginBottom: 14 }}>
@@ -305,17 +259,17 @@ export default function Auth({ onAuth }) {
                 right: 12,
                 top: 10,
                 cursor: "pointer",
-                opacity: 0.7,
+                opacity: 0.75,
               }}
             >
               {showPassword ? (
                 <svg width="20" height="20" fill="none" stroke="#c7a3ff" strokeWidth="1.8" viewBox="0 0 24 24">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
                 </svg>
               ) : (
                 <svg width="20" height="20" fill="none" stroke="#c7a3ff" strokeWidth="1.8" viewBox="0 0 24 24">
-                  <path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.36 21.36 0 015.1-6.36M9.88 9.88A3 3 0 0012 15a3 3 0 002.12-.88M1 1l22 22"/>
+                  <path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.36 21.36 0 015.1-6.36M9.88 9.88A3 3 0 0012 15a3 3 0 002.12-.88M1 1l22 22" />
                 </svg>
               )}
             </span>
@@ -344,7 +298,66 @@ export default function Auth({ onAuth }) {
   );
 }
 
-// === Стили ===
+// === стили ===
+const fadeAnim = `
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(-10px); }
+  15% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}`;
+
+const segmentStyles = `
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(66,0,145,0.28), rgba(20,0,40,0.35));
+  border: 1px solid rgba(168,85,247,0.35);
+  backdrop-filter: blur(8px);
+}
+.segmented button {
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(168,85,247,0.35);
+  color: #fff;
+  background: rgba(31,0,63,0.45);
+  transition: .2s;
+}
+.segmented button.active {
+  background: linear-gradient(180deg, rgba(124,58,237,0.55), rgba(88,28,135,0.5));
+  box-shadow: inset 0 0 0 1px rgba(168,85,247,0.45), 0 10px 28px rgba(120,0,255,0.18);
+}
+.glass-input {
+  width: 100%;
+  height: 42px;
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: #fff;
+  border: 1px solid rgba(168,85,247,0.35);
+  background: rgba(17,0,40,0.45);
+  outline: none;
+  transition: .2s;
+}
+.glass-input:focus {
+  border-color: rgba(168,85,247,0.65);
+  box-shadow: 0 0 0 3px rgba(168,85,247,0.18);
+  background: rgba(24,0,60,0.55);
+}
+.cta {
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(168,85,247,0.55);
+  color: #fff;
+  background: linear-gradient(180deg, rgba(124,58,237,0.6), rgba(88,28,135,0.55));
+  backdrop-filter: blur(6px);
+  transition: .2s;
+}
+.cta:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(120,0,255,0.22); }
+`;
+
 const cardStyle = {
   position: "relative",
   padding: "26px",
@@ -419,9 +432,4 @@ const toastStyle = {
   top: "25px",
   right: "25px",
   background: "linear-gradient(135deg, rgba(124,58,237,0.8), rgba(168,85,247,0.6))",
-  border: "1px solid rgba(200,150,255,0.4)",
-  color: "#fff",
-  padding: "10px 18px",
-  borderRadius: "12px",
-  backdropFilter: "blur(10px)",
-  boxShadow: "0 0 25px rgba(140,70
+  border: "1px solid rgba(200,150,
