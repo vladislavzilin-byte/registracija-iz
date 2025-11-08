@@ -5,10 +5,9 @@ import {
   setCurrentUser,
   getCurrentUser,
 } from "../lib/storage";
-import ForgotPasswordModal from "./ForgotPasswordModal";
 import { useI18n } from "../lib/i18n";
 
-// === Вспомогательные ===
+// === вспомогательные ===
 async function sha256(message) {
   const msgUint8 = new TextEncoder().encode(message);
   const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
@@ -20,6 +19,7 @@ const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
 export default function Auth({ onAuth }) {
   const { t } = useI18n();
+
   const [mode, setMode] = useState("login");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -29,7 +29,6 @@ export default function Auth({ onAuth }) {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
-  const [recoverOpen, setRecoverOpen] = useState(false);
   const [current, setCurrent] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [toast, setToast] = useState("");
@@ -80,6 +79,7 @@ export default function Auth({ onAuth }) {
     let users = getUsers();
     if (!Array.isArray(users)) users = [];
 
+    // === Регистрация ===
     if (mode === "register") {
       const phoneNorm = normalizePhone(phone);
       const existing = users.find(
@@ -110,6 +110,7 @@ export default function Auth({ onAuth }) {
       return;
     }
 
+    // === Вход ===
     const id = identifier.trim();
     const phoneNorm = normalizePhone(id);
     const emailNorm = id.toLowerCase();
@@ -151,12 +152,7 @@ export default function Auth({ onAuth }) {
 
   if (current) {
     const initials = current.name
-      ? current.name
-          .split(" ")
-          .map((p) => p[0])
-          .join("")
-          .slice(0, 2)
-          .toUpperCase()
+      ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
       : "U";
 
     return (
@@ -180,14 +176,13 @@ export default function Auth({ onAuth }) {
               <div>
                 <div style={nameStyle}>{current.name}</div>
                 <div style={contactStyle}>{current.phone}</div>
-                {current.email && (
-                  <div style={contactStyle}>{current.email}</div>
-                )}
+                {current.email && <div style={contactStyle}>{current.email}</div>}
                 {current.instagram && (
                   <div style={contactStyle}>{current.instagram}</div>
                 )}
               </div>
             </div>
+
             <button onClick={logout} style={logoutButton}>
               {t("logout") || "Выйти"}
             </button>
@@ -197,6 +192,7 @@ export default function Auth({ onAuth }) {
     );
   }
 
+  // === Не авторизован ===
   return (
     <>
       {toast && <div style={toastStyle}>{toast}</div>}
@@ -221,17 +217,14 @@ export default function Auth({ onAuth }) {
           </button>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: "flex", flexDirection: "column", gap: 12 }}
-        >
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {mode === "login" ? (
             <>
               <input
                 className="glass-input"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="Телефон или Email"
+                placeholder="+3706... / email"
               />
               <div style={{ position: "relative" }}>
                 <input
@@ -252,34 +245,19 @@ export default function Auth({ onAuth }) {
                   }}
                 >
                   {showPassword ? (
-                    <svg
-                      width="20"
-                      height="20"
-                      fill="none"
-                      stroke="#c7a3ff"
-                      strokeWidth="1.8"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg width="20" height="20" fill="none" stroke="#c7a3ff" strokeWidth="1.8" viewBox="0 0 24 24">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   ) : (
-                    <svg
-                      width="20"
-                      height="20"
-                      fill="none"
-                      stroke="#c7a3ff"
-                      strokeWidth="1.8"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg width="20" height="20" fill="none" stroke="#c7a3ff" strokeWidth="1.8" viewBox="0 0 24 24">
                       <path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.36 21.36 0 015.1-6.36M9.88 9.88A3 3 0 0012 15a3 3 0 002.12-.88M1 1l22 22" />
                     </svg>
                   )}
                 </span>
               </div>
-
               <div
-                onClick={() => setRecoverOpen(true)}
+                onClick={() => alert("Функция восстановления пароля скоро будет доступна")}
                 style={{
                   textAlign: "right",
                   color: "#b58fff",
@@ -293,61 +271,22 @@ export default function Auth({ onAuth }) {
             </>
           ) : (
             <>
-              <input
-                className="glass-input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Имя"
-              />
-              <input
-                className="glass-input"
-                value={instagram}
-                onChange={(e) => setInstagram(e.target.value)}
-                placeholder="@instagram"
-              />
-              <input
-                className="glass-input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-              />
-              <input
-                className="glass-input"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+3706..."
-              />
-              <input
-                className="glass-input"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Пароль"
-              />
-              <input
-                className="glass-input"
-                type={showPassword ? "text" : "password"}
-                value={passwordConfirm}
-                onChange={(e) => setPasswordConfirm(e.target.value)}
-                placeholder="Подтвердите пароль"
-              />
+              <input className="glass-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" />
+              <input className="glass-input" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@instagram" />
+              <input className="glass-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+              <input className="glass-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+3706..." />
+              <input className="glass-input" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Пароль" />
+              <input className="glass-input" type={showPassword ? "text" : "password"} value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} placeholder="Подтвердите пароль" />
             </>
           )}
 
-          {error && (
-            <div style={{ color: "#ff88aa", textAlign: "center" }}>{error}</div>
-          )}
+          {error && <div style={{ color: "#ff88aa", textAlign: "center" }}>{error}</div>}
 
           <button type="submit" className="cta">
             {mode === "login" ? "Войти" : "Регистрация"}
           </button>
         </form>
       </div>
-
-      <ForgotPasswordModal
-        open={recoverOpen}
-        onClose={() => setRecoverOpen(false)}
-      />
     </>
   );
 }
@@ -361,4 +300,147 @@ const fadeAnim = `
   100% { opacity: 0; transform: translateY(-10px); }
 }`;
 
-// --- дальше идут стили segmented, inputs и toast (продолжу, если хочешь увидеть всё полностью) ---
+const segmentStyles = `
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(66,0,145,0.28), rgba(20,0,40,0.35));
+  border: 1px solid rgba(168,85,247,0.35);
+  backdrop-filter: blur(8px);
+}
+.segmented button {
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(168,85,247,0.35);
+  color: #fff;
+  background: rgba(31,0,63,0.45);
+  transition: .2s;
+}
+.segmented button.active {
+  background: linear-gradient(180deg, rgba(124,58,237,0.55), rgba(88,28,135,0.5));
+  box-shadow: inset 0 0 0 1px rgba(168,85,247,0.45), 0 10px 28px rgba(120,0,255,0.18);
+}
+.glass-input {
+  width: 100%;
+  height: 42px;
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: #fff;
+  border: 1px solid rgba(168,85,247,0.35);
+  background: rgba(17,0,40,0.45);
+  outline: none;
+  transition: .2s;
+}
+.glass-input:focus {
+  border-color: rgba(168,85,247,0.65);
+  box-shadow: 0 0 0 3px rgba(168,85,247,0.18);
+  background: rgba(24,0,60,0.55);
+}
+.cta {
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(168,85,247,0.55);
+  color: #fff;
+  background: linear-gradient(180deg, rgba(124,58,237,0.6), rgba(88,28,135,0.55));
+  backdrop-filter: blur(6px);
+  transition: .2s;
+}
+.cta:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(120,0,255,0.22); }
+`;
+
+const cardStyle = {
+  position: "relative",
+  padding: "26px",
+  borderRadius: "22px",
+  background: "rgba(15, 6, 26, 0.55)",
+  border: "1px solid rgba(168,85,247,0.35)",
+  backdropFilter: "blur(22px)",
+  boxShadow: "0 12px 45px rgba(0,0,0,0.45)",
+  overflow: "hidden",
+  marginBottom: "30px",
+  fontFamily: "Poppins, Inter, sans-serif",
+  color: "#fff",
+};
+
+const auroraBg = {
+  position: "absolute",
+  inset: 0,
+  pointerEvents: "none",
+  zIndex: 0,
+  background:
+    "radial-gradient(900px 500px at -10% 120%, rgba(168,85,247,0.18), transparent 65%)," +
+    "radial-gradient(700px 400px at 110% -20%, rgba(139,92,246,0.16), transparent 60%)," +
+    "radial-gradient(800px 450px at 50% 120%, rgba(99,102,241,0.12), transparent 65%)",
+};
+
+const borderGlow = {
+  position: "absolute",
+  inset: 0,
+  borderRadius: "22px",
+  padding: "1.5px",
+  background:
+    "linear-gradient(120deg, rgba(168,85,247,0.55), rgba(139,92,246,0.35), rgba(99,102,241,0.45))",
+  WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+  WebkitMaskComposite: "xor",
+  opacity: 0.7,
+};
+
+const avatarStyle = {
+  minWidth: 44,
+  height: 44,
+  borderRadius: 12,
+  background: "rgba(168,85,247,0.18)",
+  border: "1px solid rgba(168,85,247,0.35)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#fff",
+  fontWeight: 700,
+  fontSize: "1.1rem",
+  animation: "avatarPulse 3.6s ease-in-out infinite",
+};
+
+const nameStyle = {
+  fontSize: "1.35rem",
+  fontWeight: 700,
+  marginBottom: 3,
+  background: "linear-gradient(90deg, rgba(236,223,255,1), rgba(198,173,255,0.85))",
+  WebkitBackgroundClip: "text",
+  color: "transparent",
+};
+
+const contactStyle = { opacity: 0.85 };
+
+const logoutButton = {
+  padding: "6px 14px",
+  fontSize: "0.85rem",
+  borderRadius: "10px",
+  border: "1px solid rgba(168,85,247,0.5)",
+  background: "rgba(168,85,247,0.12)",
+  color: "#fff",
+  cursor: "pointer",
+  transition: "0.25s",
+  whiteSpace: "nowrap",
+  backdropFilter: "blur(6px)",
+};
+
+const toastStyle = {
+  position: "fixed",
+  top: "25px",
+  right: "25px",
+  background:
+    "linear-gradient(135deg, rgba(124,58,237,0.8), rgba(168,85,247,0.6))",
+  border: "1px solid rgba(200,150,255,0.4)",
+  color: "#fff",
+  padding: "10px 18px",
+  borderRadius: "12px",
+  backdropFilter: "blur(10px)",
+  boxShadow: "0 0 25px rgba(140,70,255,0.35)",
+  fontWeight: 500,
+  letterSpacing: "0.3px",
+  zIndex: 1000,
+  animation: "fadeInOut 2s ease-in-out forwards",
+};
