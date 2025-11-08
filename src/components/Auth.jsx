@@ -8,7 +8,7 @@ import {
 import ForgotPasswordModal from "./ForgotPasswordModal";
 import { useI18n } from "../lib/i18n";
 
-// === вспомогательные ===
+// === Вспомогательные ===
 async function sha256(message) {
   const msgUint8 = new TextEncoder().encode(message);
   const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
@@ -20,7 +20,6 @@ const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
 export default function Auth({ onAuth }) {
   const { t } = useI18n();
-
   const [mode, setMode] = useState("login");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -43,13 +42,11 @@ export default function Auth({ onAuth }) {
     setCurrent(user);
   }, []);
 
-  // === Toast ===
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(""), 2200);
   };
 
-  // === Проверка формы ===
   const validateForm = () => {
     const errs = {};
     if (mode === "register") {
@@ -57,7 +54,8 @@ export default function Auth({ onAuth }) {
       if (!phone.trim()) errs.phone = "Введите телефон";
       if (email && !validateEmail(email)) errs.email = "Неверный email";
       if (password.length < 6) errs.password = "Минимум 6 символов";
-      if (password !== passwordConfirm) errs.passwordConfirm = "Пароли не совпадают";
+      if (password !== passwordConfirm)
+        errs.passwordConfirm = "Пароли не совпадают";
     } else {
       if (!identifier.trim()) errs.identifier = "Введите email или телефон";
       if (!password) errs.password = "Введите пароль";
@@ -65,7 +63,6 @@ export default function Auth({ onAuth }) {
     return errs;
   };
 
-  // === Сабмит ===
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -83,7 +80,6 @@ export default function Auth({ onAuth }) {
     let users = getUsers();
     if (!Array.isArray(users)) users = [];
 
-    // === Регистрация ===
     if (mode === "register") {
       const phoneNorm = normalizePhone(phone);
       const existing = users.find(
@@ -114,7 +110,6 @@ export default function Auth({ onAuth }) {
       return;
     }
 
-    // === Вход ===
     const id = identifier.trim();
     const phoneNorm = normalizePhone(id);
     const emailNorm = id.toLowerCase();
@@ -154,10 +149,14 @@ export default function Auth({ onAuth }) {
     onAuth?.(null);
   };
 
-  // === Авторизованный ===
   if (current) {
     const initials = current.name
-      ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
+      ? current.name
+          .split(" ")
+          .map((p) => p[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase()
       : "U";
 
     return (
@@ -181,11 +180,14 @@ export default function Auth({ onAuth }) {
               <div>
                 <div style={nameStyle}>{current.name}</div>
                 <div style={contactStyle}>{current.phone}</div>
-                {current.email && <div style={contactStyle}>{current.email}</div>}
-                {current.instagram && <div style={contactStyle}>{current.instagram}</div>}
+                {current.email && (
+                  <div style={contactStyle}>{current.email}</div>
+                )}
+                {current.instagram && (
+                  <div style={contactStyle}>{current.instagram}</div>
+                )}
               </div>
             </div>
-
             <button onClick={logout} style={logoutButton}>
               {t("logout") || "Выйти"}
             </button>
@@ -195,7 +197,6 @@ export default function Auth({ onAuth }) {
     );
   }
 
-  // === Не авторизован ===
   return (
     <>
       {toast && <div style={toastStyle}>{toast}</div>}
@@ -220,7 +221,10 @@ export default function Auth({ onAuth }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "flex", flexDirection: "column", gap: 12 }}
+        >
           {mode === "login" ? (
             <>
               <input
@@ -248,12 +252,26 @@ export default function Auth({ onAuth }) {
                   }}
                 >
                   {showPassword ? (
-                    <svg width="20" height="20" fill="none" stroke="#c7a3ff" strokeWidth="1.8" viewBox="0 0 24 24">
+                    <svg
+                      width="20"
+                      height="20"
+                      fill="none"
+                      stroke="#c7a3ff"
+                      strokeWidth="1.8"
+                      viewBox="0 0 24 24"
+                    >
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   ) : (
-                    <svg width="20" height="20" fill="none" stroke="#c7a3ff" strokeWidth="1.8" viewBox="0 0 24 24">
+                    <svg
+                      width="20"
+                      height="20"
+                      fill="none"
+                      stroke="#c7a3ff"
+                      strokeWidth="1.8"
+                      viewBox="0 0 24 24"
+                    >
                       <path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.36 21.36 0 015.1-6.36M9.88 9.88A3 3 0 0012 15a3 3 0 002.12-.88M1 1l22 22" />
                     </svg>
                   )}
@@ -275,10 +293,30 @@ export default function Auth({ onAuth }) {
             </>
           ) : (
             <>
-              <input className="glass-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" />
-              <input className="glass-input" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@instagram" />
-              <input className="glass-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-              <input className="glass-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+3706..." />
+              <input
+                className="glass-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Имя"
+              />
+              <input
+                className="glass-input"
+                value={instagram}
+                onChange={(e) => setInstagram(e.target.value)}
+                placeholder="@instagram"
+              />
+              <input
+                className="glass-input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+              />
+              <input
+                className="glass-input"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+3706..."
+              />
               <input
                 className="glass-input"
                 type={showPassword ? "text" : "password"}
@@ -296,7 +334,9 @@ export default function Auth({ onAuth }) {
             </>
           )}
 
-          {error && <div style={{ color: "#ff88aa", textAlign: "center" }}>{error}</div>}
+          {error && (
+            <div style={{ color: "#ff88aa", textAlign: "center" }}>{error}</div>
+          )}
 
           <button type="submit" className="cta">
             {mode === "login" ? "Войти" : "Регистрация"}
@@ -304,7 +344,10 @@ export default function Auth({ onAuth }) {
         </form>
       </div>
 
-      <ForgotPasswordModal open={recoverOpen} onClose={() => setRecoverOpen(false)} />
+      <ForgotPasswordModal
+        open={recoverOpen}
+        onClose={() => setRecoverOpen(false)}
+      />
     </>
   );
 }
@@ -317,3 +360,5 @@ const fadeAnim = `
   85% { opacity: 1; transform: translateY(0); }
   100% { opacity: 0; transform: translateY(-10px); }
 }`;
+
+// --- дальше идут стили segmented, inputs и toast (продолжу, если хочешь увидеть всё полностью) ---
