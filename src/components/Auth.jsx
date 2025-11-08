@@ -123,12 +123,16 @@ export default function Auth({ onAuth }) {
     const emailNorm = id.toLowerCase();
     const passwordHash = await sha256(password);
 
-    const found = users.find(
-      (u) =>
-        ((normalizePhone(u.phone) === phoneNorm && phoneNorm) ||
-          (u.email && u.email.toLowerCase() === emailNorm)) &&
-        u.passwordHash === passwordHash
-    );
+   const found = users.find((u) => {
+  const phoneMatch =
+    normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
+  const emailMatch =
+    u.email && u.email.toLowerCase() === emailNorm;
+  const hashMatch =
+    (u.passwordHash && u.passwordHash === passwordHash) ||
+    (!u.passwordHash && u.password === password); // ✅ совместимость со старыми
+  return (phoneMatch || emailMatch) && hashMatch;
+});
 
     if (!found) {
       const newAttempts = loginAttempts + 1;
