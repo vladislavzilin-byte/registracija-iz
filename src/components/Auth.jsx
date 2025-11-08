@@ -8,14 +8,13 @@ import {
 import ForgotPasswordModal from "./ForgotPasswordModal";
 import { useI18n } from "../lib/i18n";
 
-// === хэширование пароля ===
+// === вспомогательные ===
 async function sha256(message) {
   const msgUint8 = new TextEncoder().encode(message);
   const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
-
 const normalizePhone = (p) => (p || "").replace(/\D/g, "");
 const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
@@ -32,10 +31,10 @@ export default function Auth({ onAuth }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [recoverOpen, setRecoverOpen] = useState(false);
   const [current, setCurrent] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [toast, setToast] = useState("");
 
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [lockUntil, setLockUntil] = useState(null);
@@ -45,7 +44,13 @@ export default function Auth({ onAuth }) {
     setCurrent(user);
   }, []);
 
-  // === Валидация формы ===
+  // === Toast ===
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2000);
+  };
+
+  // === Проверка формы ===
   const validateForm = () => {
     const errs = {};
     if (mode === "register") {
@@ -84,14 +89,15 @@ export default function Auth({ onAuth }) {
     let users = getUsers();
     if (!Array.isArray(users)) users = [];
 
+    // === Регистрация ===
     if (mode === "register") {
       const phoneNorm = normalizePhone(phone);
-      const existingUser = users.find(
+      const existing = users.find(
         (u) =>
           normalizePhone(u.phone) === phoneNorm ||
           (u.email && u.email.toLowerCase() === email.toLowerCase())
       );
-      if (existingUser) {
+      if (existing) {
         setError("Пользователь с таким email или телефоном уже существует");
         return;
       }
@@ -109,6 +115,7 @@ export default function Auth({ onAuth }) {
       saveUsers(users);
       setCurrentUser(newUser);
       setCurrent(newUser);
+      showToast("Аккаунт успешно создан!");
       onAuth?.(newUser);
       return;
     }
@@ -120,13 +127,11 @@ export default function Auth({ onAuth }) {
     const passwordHash = await sha256(password);
 
     const found = users.find((u) => {
-      const phoneMatch =
-        normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
-      const emailMatch =
-        u.email && u.email.toLowerCase() === emailNorm;
+      const phoneMatch = normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
+      const emailMatch = u.email && u.email.toLowerCase() === emailNorm;
       const hashMatch =
         (u.passwordHash && u.passwordHash === passwordHash) ||
-        (!u.passwordHash && u.password === password);
+        (!u.passwordHash && u.password === password); // совместимость со старыми
       return (phoneMatch || emailMatch) && hashMatch;
     });
 
@@ -155,55 +160,57 @@ export default function Auth({ onAuth }) {
     onAuth?.(null);
   };
 
-  // === Авторизован ===
+  // === UI ===
   if (current) {
     const initials = current.name
       ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
       : "U";
 
     return (
-      <div style={cardStyle}>
-        <div style={auroraBg} />
-        <div style={borderGlow} />
-        <style>{`
-          @keyframes avatarPulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(168,85,247,0.4); }
-            50% { box-shadow: 0 0 15px 3px rgba(168,85,247,0.3); }
-          }
-        `}</style>
-        <div
-          style={{
-            position: "relative",
-            zIndex: 2,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={avatarStyle}>{initials}</div>
-
-            <div>
-              <div style={nameStyle}>{current.name}</div>
-              <div style={contactStyle}>📞 {current.phone}</div>
-              {current.email && <div style={contactStyle}>✉️ {current.email}</div>}
-              {current.instagram && (
-                <div style={contactStyle}>📸 {current.instagram}</div>
-              )}
+      <>
+        {toast && <div style={toastStyle}>{toast}</div>}
+        <div style={cardStyle}>
+          <div style={auroraBg} />
+          <div style={borderGlow} />
+          <style>{`
+            @keyframes avatarPulse {
+              0%, 100% { box-shadow: 0 0 0 0 rgba(168,85,247,0.4); }
+              50% { box-shadow: 0 0 15px 3px rgba(168,85,247,0.3); }
+            }
+          `}</style>
+          <div
+            style={{
+              position: "relative",
+              zIndex: 2,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={avatarStyle}>{initials}</div>
+              <div>
+                <div style={nameStyle}>{current.name}</div>
+                <div style={contactStyle}>{current.phone}</div>
+                {current.email && <div style={contactStyle}>{current.email}</div>}
+                {current.instagram && (
+                  <div style={contactStyle}>{current.instagram}</div>
+                )}
+              </div>
             </div>
-          </div>
 
-          <button onClick={logout} style={logoutButton}>
-            {t("logout") || "Выйти"}
-          </button>
+            <button onClick={logout} style={logoutButton}>
+              {t("logout") || "Выйти"}
+            </button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
-  // === Не авторизован ===
   return (
     <>
+      {toast && <div style={toastStyle}>{toast}</div>}
       <style>{`
         .segmented {
           display: grid;
@@ -227,7 +234,6 @@ export default function Auth({ onAuth }) {
           background: linear-gradient(180deg, rgba(124,58,237,0.55), rgba(88,28,135,0.5));
           box-shadow: inset 0 0 0 1px rgba(168,85,247,0.45), 0 10px 28px rgba(120,0,255,0.18);
         }
-
         .glass-input {
           width: 100%;
           height: 42px;
@@ -244,7 +250,6 @@ export default function Auth({ onAuth }) {
           box-shadow: 0 0 0 3px rgba(168,85,247,0.18);
           background: rgba(24,0,60,0.55);
         }
-
         .cta {
           height: 42px;
           border-radius: 12px;
@@ -282,25 +287,53 @@ export default function Auth({ onAuth }) {
               <input className="glass-input" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@instagram" />
               <input className="glass-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
               <input className="glass-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+3706..." />
-              <input className="glass-input" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Пароль" />
-              <input className="glass-input" type={showPassword ? "text" : "password"} value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} placeholder="Подтвердите пароль" />
             </>
           )}
 
-          {mode === "login" && (
-            <>
-              <input className="glass-input" value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="+3706... / email" />
-              <input className="glass-input" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Пароль" />
-            </>
+          <div style={{ position: "relative" }}>
+            <input
+              className="glass-input"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Пароль"
+            />
+            <span
+              onClick={() => setShowPassword((s) => !s)}
+              style={{
+                position: "absolute",
+                right: 12,
+                top: 10,
+                cursor: "pointer",
+                opacity: 0.7,
+              }}
+            >
+              {showPassword ? (
+                <svg width="20" height="20" fill="none" stroke="#c7a3ff" strokeWidth="1.8" viewBox="0 0 24 24">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              ) : (
+                <svg width="20" height="20" fill="none" stroke="#c7a3ff" strokeWidth="1.8" viewBox="0 0 24 24">
+                  <path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.36 21.36 0 015.1-6.36M9.88 9.88A3 3 0 0012 15a3 3 0 002.12-.88M1 1l22 22"/>
+                </svg>
+              )}
+            </span>
+          </div>
+
+          {mode === "register" && (
+            <input
+              className="glass-input"
+              type={showPassword ? "text" : "password"}
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+              placeholder="Подтвердите пароль"
+            />
           )}
 
-          {error && (
-            <div style={{ color: "#ff88aa", textAlign: "center", fontSize: "0.9rem" }}>
-              {error}
-            </div>
-          )}
+          {error && <div style={{ color: "#ff88aa", textAlign: "center" }}>{error}</div>}
 
-          <button type="submit" disabled={isSubmitting} className="cta">
+          <button type="submit" className="cta">
             {mode === "login" ? t("login") || "Войти" : t("register") || "Регистрация"}
           </button>
         </form>
@@ -311,7 +344,7 @@ export default function Auth({ onAuth }) {
   );
 }
 
-// === стили для авторизованного ===
+// === Стили ===
 const cardStyle = {
   position: "relative",
   padding: "26px",
@@ -368,7 +401,7 @@ const nameStyle = {
   WebkitBackgroundClip: "text",
   color: "transparent",
 };
-const contactStyle = { opacity: 0.85, display: "flex", alignItems: "center", gap: 6 };
+const contactStyle = { opacity: 0.85 };
 const logoutButton = {
   padding: "6px 14px",
   fontSize: "0.85rem",
@@ -380,6 +413,15 @@ const logoutButton = {
   transition: "0.25s",
   whiteSpace: "nowrap",
   backdropFilter: "blur(6px)",
-  width: "65%",
-  textAlign: "center",
 };
+const toastStyle = {
+  position: "fixed",
+  top: "25px",
+  right: "25px",
+  background: "linear-gradient(135deg, rgba(124,58,237,0.8), rgba(168,85,247,0.6))",
+  border: "1px solid rgba(200,150,255,0.4)",
+  color: "#fff",
+  padding: "10px 18px",
+  borderRadius: "12px",
+  backdropFilter: "blur(10px)",
+  boxShadow: "0 0 25px rgba(140,70
