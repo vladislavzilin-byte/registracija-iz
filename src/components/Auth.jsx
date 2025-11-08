@@ -29,6 +29,7 @@ export default function Auth({ onAuth }) {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [recoverOpen, setRecoverOpen] = useState(false);
   const [current, setCurrent] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [toast, setToast] = useState("");
@@ -41,11 +42,13 @@ export default function Auth({ onAuth }) {
     setCurrent(user);
   }, []);
 
+  // === Toast ===
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(""), 2200);
   };
 
+  // === Проверка формы ===
   const validateForm = () => {
     const errs = {};
     if (mode === "register") {
@@ -62,6 +65,7 @@ export default function Auth({ onAuth }) {
     return errs;
   };
 
+  // === Сабмит ===
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -150,6 +154,7 @@ export default function Auth({ onAuth }) {
     onAuth?.(null);
   };
 
+  // === Авторизованный ===
   if (current) {
     const initials = current.name
       ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
@@ -257,7 +262,7 @@ export default function Auth({ onAuth }) {
                 </span>
               </div>
               <div
-                onClick={() => alert("Функция восстановления пароля скоро будет доступна")}
+                onClick={() => setRecoverOpen(true)}
                 style={{
                   textAlign: "right",
                   color: "#b58fff",
@@ -287,160 +292,130 @@ export default function Auth({ onAuth }) {
           </button>
         </form>
       </div>
+
+      <ForgotPasswordModal open={recoverOpen} onClose={() => setRecoverOpen(false)} />
     </>
   );
 }
 
-// === стили ===
-const fadeAnim = `
-@keyframes fadeInOut {
-  0% { opacity: 0; transform: translateY(-10px); }
-  15% { opacity: 1; transform: translateY(0); }
-  85% { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(-10px); }
-}`;
+// === Forgot Password Modal ===
+function ForgotPasswordModal({ open, onClose }) {
+  const [phoneInput, setPhoneInput] = useState("");
+  const [foundPassword, setFoundPassword] = useState("");
+  const [message, setMessage] = useState("");
 
-const segmentStyles = `
-.segmented {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 6px;
-  border-radius: 16px;
-  background: linear-gradient(145deg, rgba(66,0,145,0.28), rgba(20,0,40,0.35));
-  border: 1px solid rgba(168,85,247,0.35);
-  backdrop-filter: blur(8px);
-}
-.segmented button {
-  height: 42px;
-  border-radius: 12px;
-  border: 1px solid rgba(168,85,247,0.35);
-  color: #fff;
-  background: rgba(31,0,63,0.45);
-  transition: .2s;
-}
-.segmented button.active {
-  background: linear-gradient(180deg, rgba(124,58,237,0.55), rgba(88,28,135,0.5));
-  box-shadow: inset 0 0 0 1px rgba(168,85,247,0.45), 0 10px 28px rgba(120,0,255,0.18);
-}
-.glass-input {
-  width: 100%;
-  height: 42px;
-  border-radius: 12px;
-  padding: 10px 12px;
-  color: #fff;
-  border: 1px solid rgba(168,85,247,0.35);
-  background: rgba(17,0,40,0.45);
-  outline: none;
-  transition: .2s;
-}
-.glass-input:focus {
-  border-color: rgba(168,85,247,0.65);
-  box-shadow: 0 0 0 3px rgba(168,85,247,0.18);
-  background: rgba(24,0,60,0.55);
-}
-.cta {
-  height: 42px;
-  border-radius: 12px;
-  border: 1px solid rgba(168,85,247,0.55);
-  color: #fff;
-  background: linear-gradient(180deg, rgba(124,58,237,0.6), rgba(88,28,135,0.55));
-  backdrop-filter: blur(6px);
-  transition: .2s;
-}
-.cta:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(120,0,255,0.22); }
-`;
+  if (!open) return null;
 
-const cardStyle = {
-  position: "relative",
-  padding: "26px",
-  borderRadius: "22px",
-  background: "rgba(15, 6, 26, 0.55)",
-  border: "1px solid rgba(168,85,247,0.35)",
-  backdropFilter: "blur(22px)",
-  boxShadow: "0 12px 45px rgba(0,0,0,0.45)",
-  overflow: "hidden",
-  marginBottom: "30px",
-  fontFamily: "Poppins, Inter, sans-serif",
-  color: "#fff",
-};
+  const handleRecover = () => {
+    const phoneNorm = phoneInput.replace(/\D/g, "");
+    const users = getUsers() || [];
+    const user = users.find((u) => u.phone && u.phone.replace(/\D/g, "") === phoneNorm);
 
-const auroraBg = {
-  position: "absolute",
-  inset: 0,
-  pointerEvents: "none",
-  zIndex: 0,
-  background:
-    "radial-gradient(900px 500px at -10% 120%, rgba(168,85,247,0.18), transparent 65%)," +
-    "radial-gradient(700px 400px at 110% -20%, rgba(139,92,246,0.16), transparent 60%)," +
-    "radial-gradient(800px 450px at 50% 120%, rgba(99,102,241,0.12), transparent 65%)",
-};
+    if (!user) {
+      setFoundPassword("");
+      setMessage("Пользователь не найден");
+      return;
+    }
 
-const borderGlow = {
-  position: "absolute",
-  inset: 0,
-  borderRadius: "22px",
-  padding: "1.5px",
-  background:
-    "linear-gradient(120deg, rgba(168,85,247,0.55), rgba(139,92,246,0.35), rgba(99,102,241,0.45))",
-  WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
-  WebkitMaskComposite: "xor",
-  opacity: 0.7,
-};
+    if (user.passwordHash) {
+      setMessage("Ваш пароль хранится в зашифрованном виде и не может быть показан.");
+      setFoundPassword("");
+    } else if (user.password) {
+      setFoundPassword(user.password);
+      setMessage("");
+    } else {
+      setFoundPassword("");
+      setMessage("Пароль не найден");
+    }
+  };
 
-const avatarStyle = {
-  minWidth: 44,
-  height: 44,
-  borderRadius: 12,
-  background: "rgba(168,85,247,0.18)",
-  border: "1px solid rgba(168,85,247,0.35)",
+  return (
+    <div style={overlayStyle}>
+      <div style={modalStyle}>
+        <h3 style={{ color: "#fff", marginBottom: 12 }}>Восстановление пароля</h3>
+        <input
+          type="text"
+          placeholder="Введите номер телефона"
+          value={phoneInput}
+          onChange={(e) => setPhoneInput(e.target.value)}
+          style={inputStyle}
+        />
+        <button onClick={handleRecover} style={buttonStyle}>
+          Показать пароль
+        </button>
+        {message && <div style={{ color: "#ff9bbb", marginTop: 10 }}>{message}</div>}
+        {foundPassword && (
+          <div style={{ color: "#b58fff", marginTop: 10 }}>
+            Ваш пароль: <strong>{foundPassword}</strong>
+          </div>
+        )}
+        <button onClick={onClose} style={closeBtnStyle}>
+          Закрыть
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// === стили модалки ===
+const overlayStyle = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100vw",
+  height: "100vh",
+  background: "rgba(0,0,0,0.6)",
+  backdropFilter: "blur(8px)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  zIndex: 2000,
+};
+
+const modalStyle = {
+  background: "rgba(25,0,50,0.65)",
+  border: "1px solid rgba(168,85,247,0.4)",
+  borderRadius: "18px",
+  padding: "24px 28px",
+  width: "90%",
+  maxWidth: "380px",
+  boxShadow: "0 0 40px rgba(140,70,255,0.35)",
+  backdropFilter: "blur(15px)",
+  textAlign: "center",
   color: "#fff",
-  fontWeight: 700,
-  fontSize: "1.1rem",
-  animation: "avatarPulse 3.6s ease-in-out infinite",
+  animation: "fadeIn 0.4s ease-out",
 };
 
-const nameStyle = {
-  fontSize: "1.35rem",
-  fontWeight: 700,
-  marginBottom: 3,
-  background: "linear-gradient(90deg, rgba(236,223,255,1), rgba(198,173,255,0.85))",
-  WebkitBackgroundClip: "text",
-  color: "transparent",
-};
-
-const contactStyle = { opacity: 0.85 };
-
-const logoutButton = {
-  padding: "6px 14px",
-  fontSize: "0.85rem",
+const inputStyle = {
+  width: "100%",
   borderRadius: "10px",
-  border: "1px solid rgba(168,85,247,0.5)",
-  background: "rgba(168,85,247,0.12)",
+  border: "1px solid rgba(168,85,247,0.45)",
+  background: "rgba(10,0,25,0.45)",
+  padding: "10px 12px",
   color: "#fff",
-  cursor: "pointer",
-  transition: "0.25s",
-  whiteSpace: "nowrap",
-  backdropFilter: "blur(6px)",
+  marginTop: "8px",
+  outline: "none",
+  transition: "0.2s",
 };
 
-const toastStyle = {
-  position: "fixed",
-  top: "25px",
-  right: "25px",
-  background:
-    "linear-gradient(135deg, rgba(124,58,237,0.8), rgba(168,85,247,0.6))",
-  border: "1px solid rgba(200,150,255,0.4)",
+const buttonStyle = {
+  width: "100%",
+  marginTop: "12px",
+  borderRadius: "10px",
+  background: "linear-gradient(135deg, rgba(124,58,237,0.75), rgba(168,85,247,0.65))",
+  border: "1px solid rgba(168,85,247,0.55)",
   color: "#fff",
-  padding: "10px 18px",
-  borderRadius: "12px",
-  backdropFilter: "blur(10px)",
-  boxShadow: "0 0 25px rgba(140,70,255,0.35)",
-  fontWeight: 500,
-  letterSpacing: "0.3px",
-  zIndex: 1000,
-  animation: "fadeInOut 2s ease-in-out forwards",
+  padding: "10px 0",
+  cursor: "pointer",
+  transition: "0.2s",
+};
+
+const closeBtnStyle = {
+  marginTop: "16px",
+  color: "#d0b3ff",
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  textDecoration: "underline",
+  fontSize: "0.9rem",
 };
