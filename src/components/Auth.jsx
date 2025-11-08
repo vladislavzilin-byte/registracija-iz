@@ -30,7 +30,6 @@ export default function Auth({ onAuth }) {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState({});
   const [recoverOpen, setRecoverOpen] = useState(false);
   const [current, setCurrent] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -74,10 +73,9 @@ export default function Auth({ onAuth }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setFieldErrors({});
     const errs = validateForm();
     if (Object.keys(errs).length) {
-      setFieldErrors(errs);
+      setError(Object.values(errs)[0]);
       return;
     }
 
@@ -173,12 +171,6 @@ export default function Auth({ onAuth }) {
         <div style={cardStyle}>
           <div style={auroraBg} />
           <div style={borderGlow} />
-          <style>{`
-            @keyframes avatarPulse {
-              0%, 100% { box-shadow: 0 0 0 0 rgba(168,85,247,0.4); }
-              50% { box-shadow: 0 0 15px 3px rgba(168,85,247,0.3); }
-            }
-          `}</style>
           <div
             style={{
               position: "relative",
@@ -432,4 +424,13 @@ const toastStyle = {
   top: "25px",
   right: "25px",
   background: "linear-gradient(135deg, rgba(124,58,237,0.8), rgba(168,85,247,0.6))",
-  border: "1px solid rgba(200,150,
+  border: "1px solid rgba(200,150,255,0.4)",
+  color: "#fff",
+  padding: "10px 18px",
+  borderRadius: "12px",
+  backdropFilter: "blur(10px)",
+  boxShadow: "0 0 25px rgba(140,70,255,0.35)",
+  fontWeight: 500,
+  letterSpacing: "0.3px",
+  zIndex: 1000,
+  animation: "fade
