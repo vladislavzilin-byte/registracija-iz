@@ -1,0 +1,4 @@
+IZ Booking v7.6
+- Client notifications (approved/canceled) with 'notified' flag
+- Admin triggers sendEmail() stub and resets notified:false
+- i18n keys for notifications
