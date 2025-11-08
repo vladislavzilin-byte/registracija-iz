@@ -7,7 +7,7 @@ import {
 } from "../lib/storage";
 import { useI18n } from "../lib/i18n";
 
-// === вспомогательные ===
+// === Вспомогательные ===
 async function sha256(message) {
   const msgUint8 = new TextEncoder().encode(message);
   const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
@@ -17,9 +17,71 @@ async function sha256(message) {
 const normalizePhone = (p) => (p || "").replace(/\D/g, "");
 const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
+// === Forgot Password Modal ===
+function ForgotPasswordModal({ open, onClose }) {
+  const [phoneInput, setPhoneInput] = useState("");
+  const [foundPassword, setFoundPassword] = useState("");
+  const [message, setMessage] = useState("");
+
+  if (!open) return null;
+
+  const handleRecover = () => {
+    const phoneNorm = phoneInput.replace(/\D/g, "");
+    const users = getUsers() || [];
+    const user = users.find(
+      (u) => u.phone && normalizePhone(u.phone) === phoneNorm
+    );
+
+    if (!user) {
+      setFoundPassword("");
+      setMessage("Пользователь не найден");
+      return;
+    }
+
+    if (user.passwordHash) {
+      setMessage("Пароль зашифрован и не может быть показан");
+      setFoundPassword("");
+    } else if (user.password) {
+      setFoundPassword(user.password);
+      setMessage("");
+    } else {
+      setMessage("Пароль не найден");
+      setFoundPassword("");
+    }
+  };
+
+  return (
+    <div style={overlayStyle}>
+      <div style={modalStyle}>
+        <h3 style={{ color: "#fff", marginBottom: 12 }}>Восстановление пароля</h3>
+        <input
+          type="text"
+          placeholder="Введите номер телефона"
+          value={phoneInput}
+          onChange={(e) => setPhoneInput(e.target.value)}
+          style={inputStyle}
+        />
+        <button onClick={handleRecover} style={buttonStyle}>
+          Показать пароль
+        </button>
+        {message && (
+          <div style={{ color: "#ff9bbb", marginTop: 10 }}>{message}</div>
+        )}
+        {foundPassword && (
+          <div style={{ color: "#b58fff", marginTop: 10 }}>
+            Ваш пароль: <strong>{foundPassword}</strong>
+          </div>
+        )}
+        <button onClick={onClose} style={closeBtnStyle}>
+          Закрыть
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Auth({ onAuth }) {
   const { t } = useI18n();
-
   const [mode, setMode] = useState("login");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -42,13 +104,11 @@ export default function Auth({ onAuth }) {
     setCurrent(user);
   }, []);
 
-  // === Toast ===
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(""), 2200);
   };
 
-  // === Проверка формы ===
   const validateForm = () => {
     const errs = {};
     if (mode === "register") {
@@ -65,7 +125,6 @@ export default function Auth({ onAuth }) {
     return errs;
   };
 
-  // === Сабмит ===
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -83,7 +142,6 @@ export default function Auth({ onAuth }) {
     let users = getUsers();
     if (!Array.isArray(users)) users = [];
 
-    // === Регистрация ===
     if (mode === "register") {
       const phoneNorm = normalizePhone(phone);
       const existing = users.find(
@@ -114,7 +172,6 @@ export default function Auth({ onAuth }) {
       return;
     }
 
-    // === Вход ===
     const id = identifier.trim();
     const phoneNorm = normalizePhone(id);
     const emailNorm = id.toLowerCase();
@@ -154,10 +211,14 @@ export default function Auth({ onAuth }) {
     onAuth?.(null);
   };
 
-  // === Авторизованный ===
   if (current) {
     const initials = current.name
-      ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
+      ? current.name
+          .split(" ")
+          .map((p) => p[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase()
       : "U";
 
     return (
@@ -181,13 +242,14 @@ export default function Auth({ onAuth }) {
               <div>
                 <div style={nameStyle}>{current.name}</div>
                 <div style={contactStyle}>{current.phone}</div>
-                {current.email && <div style={contactStyle}>{current.email}</div>}
+                {current.email && (
+                  <div style={contactStyle}>{current.email}</div>
+                )}
                 {current.instagram && (
                   <div style={contactStyle}>{current.instagram}</div>
                 )}
               </div>
             </div>
-
             <button onClick={logout} style={logoutButton}>
               {t("logout") || "Выйти"}
             </button>
@@ -197,7 +259,6 @@ export default function Auth({ onAuth }) {
     );
   }
 
-  // === Не авторизован ===
   return (
     <>
       {toast && <div style={toastStyle}>{toast}</div>}
@@ -222,14 +283,17 @@ export default function Auth({ onAuth }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "flex", flexDirection: "column", gap: 12 }}
+        >
           {mode === "login" ? (
             <>
               <input
                 className="glass-input"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="+3706... / email"
+                placeholder="Телефон или Email"
               />
               <div style={{ position: "relative" }}>
                 <input
@@ -249,16 +313,7 @@ export default function Auth({ onAuth }) {
                     opacity: 0.75,
                   }}
                 >
-                  {showPassword ? (
-                    <svg width="20" height="20" fill="none" stroke="#c7a3ff" strokeWidth="1.8" viewBox="0 0 24 24">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  ) : (
-                    <svg width="20" height="20" fill="none" stroke="#c7a3ff" strokeWidth="1.8" viewBox="0 0 24 24">
-                      <path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.36 21.36 0 015.1-6.36M9.88 9.88A3 3 0 0012 15a3 3 0 002.12-.88M1 1l22 22" />
-                    </svg>
-                  )}
+                  👁
                 </span>
               </div>
               <div
@@ -276,16 +331,50 @@ export default function Auth({ onAuth }) {
             </>
           ) : (
             <>
-              <input className="glass-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" />
-              <input className="glass-input" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@instagram" />
-              <input className="glass-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-              <input className="glass-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+3706..." />
-              <input className="glass-input" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Пароль" />
-              <input className="glass-input" type={showPassword ? "text" : "password"} value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} placeholder="Подтвердите пароль" />
+              <input
+                className="glass-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Имя"
+              />
+              <input
+                className="glass-input"
+                value={instagram}
+                onChange={(e) => setInstagram(e.target.value)}
+                placeholder="@instagram"
+              />
+              <input
+                className="glass-input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+              />
+              <input
+                className="glass-input"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+3706..."
+              />
+              <input
+                className="glass-input"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Пароль"
+              />
+              <input
+                className="glass-input"
+                type={showPassword ? "text" : "password"}
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
+                placeholder="Подтвердите пароль"
+              />
             </>
           )}
 
-          {error && <div style={{ color: "#ff88aa", textAlign: "center" }}>{error}</div>}
+          {error && (
+            <div style={{ color: "#ff88aa", textAlign: "center" }}>{error}</div>
+          )}
 
           <button type="submit" className="cta">
             {mode === "login" ? "Войти" : "Регистрация"}
@@ -293,129 +382,22 @@ export default function Auth({ onAuth }) {
         </form>
       </div>
 
-      <ForgotPasswordModal open={recoverOpen} onClose={() => setRecoverOpen(false)} />
+      <ForgotPasswordModal
+        open={recoverOpen}
+        onClose={() => setRecoverOpen(false)}
+      />
     </>
   );
 }
 
-// === Forgot Password Modal ===
-function ForgotPasswordModal({ open, onClose }) {
-  const [phoneInput, setPhoneInput] = useState("");
-  const [foundPassword, setFoundPassword] = useState("");
-  const [message, setMessage] = useState("");
-
-  if (!open) return null;
-
-  const handleRecover = () => {
-    const phoneNorm = phoneInput.replace(/\D/g, "");
-    const users = getUsers() || [];
-    const user = users.find((u) => u.phone && u.phone.replace(/\D/g, "") === phoneNorm);
-
-    if (!user) {
-      setFoundPassword("");
-      setMessage("Пользователь не найден");
-      return;
-    }
-
-    if (user.passwordHash) {
-      setMessage("Ваш пароль хранится в зашифрованном виде и не может быть показан.");
-      setFoundPassword("");
-    } else if (user.password) {
-      setFoundPassword(user.password);
-      setMessage("");
-    } else {
-      setFoundPassword("");
-      setMessage("Пароль не найден");
-    }
-  };
-
-  return (
-    <div style={overlayStyle}>
-      <div style={modalStyle}>
-        <h3 style={{ color: "#fff", marginBottom: 12 }}>Восстановление пароля</h3>
-        <input
-          type="text"
-          placeholder="Введите номер телефона"
-          value={phoneInput}
-          onChange={(e) => setPhoneInput(e.target.value)}
-          style={inputStyle}
-        />
-        <button onClick={handleRecover} style={buttonStyle}>
-          Показать пароль
-        </button>
-        {message && <div style={{ color: "#ff9bbb", marginTop: 10 }}>{message}</div>}
-        {foundPassword && (
-          <div style={{ color: "#b58fff", marginTop: 10 }}>
-            Ваш пароль: <strong>{foundPassword}</strong>
-          </div>
-        )}
-        <button onClick={onClose} style={closeBtnStyle}>
-          Закрыть
-        </button>
-      </div>
-    </div>
-  );
+// === Стили ===
+const fadeAnim = `
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(-10px); }
+  15% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-10px); }
 }
+`;
 
-// === стили модалки ===
-const overlayStyle = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100vw",
-  height: "100vh",
-  background: "rgba(0,0,0,0.6)",
-  backdropFilter: "blur(8px)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 2000,
-};
-
-const modalStyle = {
-  background: "rgba(25,0,50,0.65)",
-  border: "1px solid rgba(168,85,247,0.4)",
-  borderRadius: "18px",
-  padding: "24px 28px",
-  width: "90%",
-  maxWidth: "380px",
-  boxShadow: "0 0 40px rgba(140,70,255,0.35)",
-  backdropFilter: "blur(15px)",
-  textAlign: "center",
-  color: "#fff",
-  animation: "fadeIn 0.4s ease-out",
-};
-
-const inputStyle = {
-  width: "100%",
-  borderRadius: "10px",
-  border: "1px solid rgba(168,85,247,0.45)",
-  background: "rgba(10,0,25,0.45)",
-  padding: "10px 12px",
-  color: "#fff",
-  marginTop: "8px",
-  outline: "none",
-  transition: "0.2s",
-};
-
-const buttonStyle = {
-  width: "100%",
-  marginTop: "12px",
-  borderRadius: "10px",
-  background: "linear-gradient(135deg, rgba(124,58,237,0.75), rgba(168,85,247,0.65))",
-  border: "1px solid rgba(168,85,247,0.55)",
-  color: "#fff",
-  padding: "10px 0",
-  cursor: "pointer",
-  transition: "0.2s",
-};
-
-const closeBtnStyle = {
-  marginTop: "16px",
-  color: "#d0b3ff",
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  textDecoration: "underline",
-  fontSize: "0.9rem",
-};
+// --- (остальные стили cardStyle, glass-input, toastStyle и т.д. оставь без изменений из твоей версии) ---
