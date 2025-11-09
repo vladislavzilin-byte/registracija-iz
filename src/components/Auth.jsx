@@ -47,9 +47,7 @@ function ForgotPasswordModal({ open, onClose }) {
     }
 
     if (user.passwordHash) {
-      setMessage(
-        "Ваш пароль хранится в зашифрованном виде и не может быть показан."
-      );
+      setMessage("Ваш пароль зашифрован и не может быть показан.");
       setFoundPassword("");
     } else if (user.password) {
       setFoundPassword(user.password);
@@ -95,7 +93,6 @@ function ForgotPasswordModal({ open, onClose }) {
 // === основной компонент Auth ===
 export default function Auth({ onAuth }) {
   const { t } = useI18n();
-
   const [mode, setMode] = useState("login");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -131,7 +128,7 @@ export default function Auth({ onAuth }) {
       if (!phone.trim()) errs.phone = "Введите телефон";
       if (email && !validateEmail(email)) errs.email = "Неверный email";
       if (password.length < 6)
-        errs.password = "Пароль должен состоять минимум из 6 символов";
+        errs.password = "Пароль должен быть минимум 6 символов";
       if (password !== passwordConfirm)
         errs.passwordConfirm = "Пароли не совпадают";
     } else {
@@ -168,7 +165,7 @@ export default function Auth({ onAuth }) {
           (u.email && u.email.toLowerCase() === email.toLowerCase())
       );
       if (existing) {
-        setError("Пользователь с таким email или телефоном уже существует");
+        setError("Такой email или телефон уже зарегистрирован");
         return;
       }
 
@@ -279,10 +276,11 @@ export default function Auth({ onAuth }) {
             zIndex: 0,
             pointerEvents: "none",
             background:
-              "radial-gradient(800px 400px at -20% 120%, rgba(168,85,247,0.18), transparent 65%), " +
-              "radial-gradient(700px 400px at 110% -20%, rgba(139,92,246,0.16), transparent 60%), " +
-              "radial-gradient(800px 450px at 50% 120%, rgba(99,102,241,0.12), transparent 65%)",
-            animation: "auroraShift 12s ease-in-out infinite alternate",
+              "radial-gradient(900px 500px at -15% 120%, rgba(168,85,247,0.25), transparent 65%), " +
+              "radial-gradient(700px 500px at 120% -10%, rgba(139,92,246,0.25), transparent 60%), " +
+              "radial-gradient(900px 500px at 50% 120%, rgba(99,102,241,0.2), transparent 70%)",
+            animation: "auroraShift 10s ease-in-out infinite alternate",
+            filter: "blur(10px)",
           }}
         />
 
@@ -292,13 +290,12 @@ export default function Auth({ onAuth }) {
             position: "absolute",
             inset: 0,
             borderRadius: "22px",
-            padding: "1.5px",
             background:
-              "linear-gradient(120deg, rgba(168,85,247,0.55), rgba(139,92,246,0.35), rgba(99,102,241,0.45))",
-            WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
-            WebkitMaskComposite: "xor",
-            maskComposite: "exclude",
-            opacity: 0.75,
+              "linear-gradient(120deg, rgba(168,85,247,0.7), rgba(139,92,246,0.5), rgba(99,102,241,0.6))",
+            boxShadow:
+              "0 0 35px rgba(168,85,247,0.35), inset 0 0 25px rgba(168,85,247,0.25)",
+            opacity: 0.85,
+            animation: "glowPulse 5s ease-in-out infinite",
           }}
         />
 
@@ -365,7 +362,7 @@ export default function Auth({ onAuth }) {
     );
   }
 
-  // === форма ===
+  // === форма входа / регистрации ===
   return (
     <>
       {toast && <div style={toastStyle}>{toast}</div>}
@@ -514,6 +511,10 @@ const segmentStyles = `
   0% { background-position: 0 0, 100% 100%, 50% 50%; }
   100% { background-position: 100% 0, 0 100%, 50% 50%; }
 }
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.6; box-shadow: 0 0 25px rgba(168,85,247,0.35); }
+  50% { opacity: 1; box-shadow: 0 0 45px rgba(168,85,247,0.65); }
+}
 @keyframes avatarPulse {
   0%, 100% { box-shadow: 0 0 8px rgba(168,85,247,0.3); }
   50% { box-shadow: 0 0 16px rgba(168,85,247,0.6); }
@@ -558,10 +559,6 @@ const segmentStyles = `
   border: 1.5px solid rgba(184,118,255,0.95);
   box-shadow: 0 0 12px rgba(168,85,247,0.6);
   animation: glowPulse 1s ease-in-out;
-}
-@keyframes glowPulse {
-  0%,100% { box-shadow: 0 0 10px rgba(168,85,247,0.5); }
-  50% { box-shadow: 0 0 18px rgba(168,85,247,0.9); }
 }
 .cta {
   height: 42px;
