@@ -134,18 +134,17 @@ export default function App() {
 /* === Стили === */
 const navBar = {
   display: 'flex',
+  justifyContent: 'space-between',
   alignItems: 'center',
-  background: 'rgba(8,6,15,0.8)',
+  padding: '14px 28px',
+  background: 'rgba(10,10,15,0.75)',
   backdropFilter: 'blur(18px)',
-  boxShadow: `
-    0 3px 16px rgba(0,0,0,0.55),
-    0 0 40px rgba(110,50,200,0.18),
-    inset 0 -1px 0 rgba(150,85,247,0.12)
-  `,
-  zIndex: 100,
-  animation: 'fadeIn 0.6s ease-in-out',
+  boxShadow:
+    '0 4px 12px rgba(0,0,0,0.45), 0 0 25px rgba(150,85,247,0.12), inset 0 -1px 0 rgba(168,85,247,0.2)',
+  borderRadius: '0 0 16px 16px',
+  position: 'relative', // ✅ заменено: раньше было 'sticky'
+  zIndex: 10,            // ✅ уменьшен приоритет, чтобы не залипала панель
 }
-
 const navGroup = {
   display: 'flex',
   alignItems: 'center',
