@@ -490,15 +490,15 @@ const auroraBg = {
 };
 const borderGlow = {
   position: "absolute",
-  inset: "-1.5px", // чуть выведено наружу, чтобы рамка не "съедалась"
+  inset: 0,
   borderRadius: "20px",
-  padding: "2.5px", // ← добавлено, имитирует более толстую рамку
-  background:
-    "linear-gradient(120deg, rgba(168,85,247,0.55), rgba(139,92,246,0.45), rgba(99,102,241,0.5))",
-  WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
-  WebkitMaskComposite: "xor",
-  opacity: 0.7,
-  animation: "glowBreath 7s ease-in-out infinite alternate",
+  border: "2px solid rgba(175,95,255,1)", // плотный пурпурный обод
+  boxShadow: `
+    0 0 6px rgba(175,95,255,0.8),
+    0 0 12px rgba(175,95,255,0.6),
+    0 0 20px rgba(175,95,255,0.35)
+  `,
+  animation: "glowBreath 4s ease-in-out infinite alternate",
 };
 const avatarStyle = {
   width: 48,
