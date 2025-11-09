@@ -257,38 +257,115 @@ export default function Auth({ onAuth }) {
       : "U";
 
     return (
-      <>
-        {toast && <div style={toastStyle}>{toast}</div>}
-        <div style={cardStyle}>
-          <div style={auroraBg} />
-          <div style={borderGlow} />
-          <div
+      <div
+        style={{
+          position: "relative",
+          padding: "26px",
+          borderRadius: "22px",
+          background: "rgba(15, 6, 26, 0.55)",
+          border: "1px solid rgba(168,85,247,0.35)",
+          backdropFilter: "blur(22px)",
+          WebkitBackdropFilter: "blur(22px)",
+          boxShadow: "0 12px 45px rgba(0,0,0,0.45)",
+          overflow: "hidden",
+          color: "#fff",
+        }}
+      >
+        {/* Aurora background */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 0,
+            pointerEvents: "none",
+            background:
+              "radial-gradient(800px 400px at -20% 120%, rgba(168,85,247,0.18), transparent 65%), " +
+              "radial-gradient(700px 400px at 110% -20%, rgba(139,92,246,0.16), transparent 60%), " +
+              "radial-gradient(800px 450px at 50% 120%, rgba(99,102,241,0.12), transparent 65%)",
+            animation: "auroraShift 12s ease-in-out infinite alternate",
+          }}
+        />
+
+        {/* Border glow */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "22px",
+            padding: "1.5px",
+            background:
+              "linear-gradient(120deg, rgba(168,85,247,0.55), rgba(139,92,246,0.35), rgba(99,102,241,0.45))",
+            WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+            WebkitMaskComposite: "xor",
+            maskComposite: "exclude",
+            opacity: 0.75,
+          }}
+        />
+
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                background: "rgba(168,85,247,0.18)",
+                border: "1px solid rgba(168,85,247,0.35)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 600,
+                color: "#fff",
+                fontSize: "1rem",
+                animation: "avatarPulse 3.8s ease-in-out infinite",
+              }}
+            >
+              {initials}
+            </div>
+
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "1.15rem" }}>{current.name}</div>
+              <div style={{ opacity: 0.8 }}>{current.phone}</div>
+              {current.email && <div style={{ opacity: 0.8 }}>{current.email}</div>}
+              {current.instagram && <div style={{ opacity: 0.8 }}>{current.instagram}</div>}
+            </div>
+          </div>
+
+          <button
+            onClick={logout}
             style={{
-              position: "relative",
-              zIndex: 2,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+              borderRadius: "10px",
+              border: "1px solid rgba(168,85,247,0.45)",
+              background: "rgba(31,0,63,0.45)",
+              color: "#fff",
+              padding: "8px 22px",
+              fontWeight: 500,
+              cursor: "pointer",
+              transition: "0.25s",
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.boxShadow = "0 0 20px rgba(168,85,247,0.6)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.boxShadow = "none";
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={avatarStyle}>{initials}</div>
-              <div>
-                <div style={nameStyle}>{current.name}</div>
-                <div style={contactStyle}>{current.phone}</div>
-                {current.email && <div style={contactStyle}>{current.email}</div>}
-                {current.instagram && <div style={contactStyle}>{current.instagram}</div>}
-              </div>
-            </div>
-            <button onClick={logout} style={logoutButton}>
-              Выйти
-            </button>
-          </div>
+            Выйти
+          </button>
         </div>
-      </>
+      </div>
     );
   }
 
+  // === форма ===
   return (
     <>
       {toast && <div style={toastStyle}>{toast}</div>}
@@ -367,22 +444,22 @@ export default function Auth({ onAuth }) {
                 className={`glass-input ${errorFields.email ? "error" : ""}`}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
+                placeholder="Email example@email.com"
               />
-           <input
-  className={`glass-input ${errorFields.phone ? "error" : ""}`}
-  value={phone}
-  onChange={(e) => setPhone(formatLithuanianPhone(e.target.value))}
-  placeholder="Телефон +370 61234567"
-  style={{ color: phone ? "#fff" : "#aaa" }}
-/>
+              <input
+                className={`glass-input ${errorFields.phone ? "error" : ""}`}
+                value={phone}
+                onChange={(e) => setPhone(formatLithuanianPhone(e.target.value))}
+                placeholder="Телефон +370 61234567"
+                style={{ color: phone ? "#fff" : "#aaa" }}
+              />
               <div style={{ position: "relative" }}>
                 <input
                   className={`glass-input ${errorFields.password ? "error" : ""}`}
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Пароль"
+                  placeholder="Пароль (минимум 6 символов)"
                 />
                 <span onClick={() => setShowPassword(!showPassword)} style={eyeIcon}>
                   {showPassword ? eyeOpen : eyeClosed}
@@ -396,7 +473,10 @@ export default function Auth({ onAuth }) {
                   onChange={(e) => setPasswordConfirm(e.target.value)}
                   placeholder="Подтвердите пароль"
                 />
-                <span onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={eyeIcon}>
+                <span
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={eyeIcon}
+                >
                   {showConfirmPassword ? eyeOpen : eyeClosed}
                 </span>
               </div>
@@ -430,6 +510,15 @@ export default function Auth({ onAuth }) {
 
 // === стили ===
 const segmentStyles = `
+@keyframes auroraShift {
+  0% { background-position: 0 0, 100% 100%, 50% 50%; }
+  100% { background-position: 100% 0, 0 100%, 50% 50%; }
+}
+@keyframes avatarPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(168,85,247,0.3); }
+  50% { box-shadow: 0 0 16px rgba(168,85,247,0.6); }
+}
+
 .segmented {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -489,48 +578,6 @@ const segmentStyles = `
 }
 `;
 
-const cardStyle = {
-  position: "relative",
-  padding: "26px",
-  borderRadius: "22px",
-  background: "rgba(15, 6, 26, 0.55)",
-  border: "1px solid rgba(168,85,247,0.35)",
-  backdropFilter: "blur(22px)",
-  boxShadow: "0 12px 45px rgba(0,0,0,0.45)",
-  overflow: "hidden",
-  color: "#fff",
-};
-const auroraBg = { position: "absolute", inset: 0 };
-const borderGlow = { position: "absolute", inset: 0, borderRadius: "22px" };
-const avatarStyle = {
-  width: 44,
-  height: 44,
-  borderRadius: 12,
-  background: "rgba(168,85,247,0.18)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-const nameStyle = { fontSize: "1.35rem", fontWeight: 700 };
-const contactStyle = { opacity: 0.85 };
-const logoutButton = {
-  padding: "6px 14px",
-  borderRadius: 10,
-  background: "rgba(168,85,247,0.12)",
-  border: "1px solid rgba(168,85,247,0.5)",
-  color: "#fff",
-  cursor: "pointer",
-};
-const toastStyle = {
-  position: "fixed",
-  top: 25,
-  right: 25,
-  background:
-    "linear-gradient(135deg, rgba(124,58,237,0.8), rgba(168,85,247,0.6))",
-  padding: "10px 18px",
-  borderRadius: 12,
-  color: "#fff",
-};
 const overlayStyle = {
   position: "fixed",
   top: 0,
@@ -577,4 +624,14 @@ const closeBtnStyle = {
   border: "none",
   cursor: "pointer",
   textDecoration: "underline",
+};
+const toastStyle = {
+  position: "fixed",
+  top: 25,
+  right: 25,
+  background:
+    "linear-gradient(135deg, rgba(124,58,237,0.8), rgba(168,85,247,0.6))",
+  padding: "10px 18px",
+  borderRadius: 12,
+  color: "#fff",
 };
