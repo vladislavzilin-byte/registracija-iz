@@ -14,41 +14,45 @@ export default function App() {
   const [showLangBar, setShowLangBar] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
 
-  // Отслеживание ширины экрана
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Fade-in / fade-out языковой панели при прокрутке
+  // Плавное появление/исчезновение панели языков
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > lastScrollY && window.scrollY > 80) {
-        setShowLangBar(false) // скрыть при прокрутке вниз
-      } else {
-        setShowLangBar(true) // показать при прокрутке вверх
-      }
+      if (window.scrollY > lastScrollY && window.scrollY > 80) setShowLangBar(false)
+      else setShowLangBar(true)
       setLastScrollY(window.scrollY)
     }
-
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [lastScrollY])
 
   return (
     <div className="container" style={{ position: 'relative', minHeight: '100vh' }}>
-      {/* === Верхняя панель === */}
+      {/* === Верхняя панель (НЕ фиксированная) === */}
       <div
         style={{
           ...navBar,
+          flexWrap: isMobile ? 'wrap' : 'nowrap',
+          justifyContent: isMobile ? 'center' : 'space-between',
+          padding: isMobile ? '10px 12px' : '14px 28px',
+          borderRadius: isMobile ? '0 0 10px 10px' : '0 0 16px 16px',
           position: 'relative',
-          padding: isMobile ? '10px 16px' : '14px 28px',
-          borderRadius: isMobile ? '0 0 12px 12px' : '0 0 16px 16px',
         }}
       >
         {/* Навигация */}
-        <div style={navGroup}>
+        <div
+          style={{
+            ...navGroup,
+            flexWrap: isMobile ? 'wrap' : 'nowrap',
+            justifyContent: isMobile ? 'center' : 'flex-start',
+            gap: isMobile ? '8px' : '12px',
+          }}
+        >
           {[
             { key: 'calendar', label: t('nav_calendar') },
             { key: 'my', label: t('nav_my') },
@@ -60,6 +64,8 @@ export default function App() {
               style={{
                 ...navButton,
                 ...(tab === key ? activeButton : {}),
+                flex: isMobile ? '1 1 100px' : '0',
+                minWidth: isMobile ? '90px' : '130px',
               }}
             >
               {label}
@@ -67,7 +73,7 @@ export default function App() {
           ))}
         </div>
 
-        {/* Языки справа (для ПК) */}
+        {/* Языки справа (ПК) */}
         {!isMobile && (
           <div style={langGroup}>
             {['lt', 'ru', 'en'].map(code => (
@@ -98,7 +104,7 @@ export default function App() {
         © IZ HAIR TREND
       </footer>
 
-      {/* === Панель языков внизу (только для мобильной версии) === */}
+      {/* === Панель языков снизу (fade-in/out, только на мобильных) === */}
       {isMobile && (
         <div
           style={{
@@ -126,20 +132,17 @@ export default function App() {
 }
 
 /* === Стили === */
-
-// Верхняя панель
 const navBar = {
   display: 'flex',
-  justifyContent: 'space-between',
   alignItems: 'center',
-  background: 'rgba(8, 6, 15, 0.8)',
+  background: 'rgba(8,6,15,0.8)',
   backdropFilter: 'blur(18px)',
   boxShadow: `
     0 3px 16px rgba(0,0,0,0.55),
     0 0 40px rgba(110,50,200,0.18),
     inset 0 -1px 0 rgba(150,85,247,0.12)
   `,
-  zIndex: 1000,
+  zIndex: 100,
   animation: 'fadeIn 0.6s ease-in-out',
 }
 
@@ -154,11 +157,9 @@ const langGroup = {
   gap: '10px',
 }
 
-// Кнопки навигации
 const navButton = {
   borderRadius: '10px',
   padding: '9px 20px',
-  minWidth: '130px',
   textAlign: 'center',
   fontWeight: 500,
   fontSize: '0.95rem',
@@ -169,14 +170,12 @@ const navButton = {
   transition: 'all 0.3s ease',
   boxShadow: '0 0 10px rgba(150,90,255,0.15)',
 }
-
 const activeButton = {
   border: '1px solid rgba(180,95,255,0.8)',
   background: 'linear-gradient(180deg, rgba(80,30,130,0.9), rgba(40,15,70,0.9))',
   boxShadow: '0 0 25px rgba(180,95,255,0.6), 0 0 10px rgba(180,95,255,0.3) inset',
 }
 
-// Кнопки языков (ПК)
 const langButton = {
   borderRadius: '10px',
   padding: '7px 14px',
@@ -188,14 +187,12 @@ const langButton = {
   cursor: 'pointer',
   transition: '0.25s ease',
 }
-
 const activeLang = {
   background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
   border: '1px solid rgba(180,95,255,0.7)',
   boxShadow: '0 0 15px rgba(150,90,255,0.3)',
 }
 
-// === Языковая панель (мобильная) ===
 const mobileLangBar = {
   position: 'fixed',
   bottom: 10,
@@ -204,7 +201,7 @@ const mobileLangBar = {
   justifyContent: 'center',
   gap: '14px',
   padding: '10px 16px',
-  background: 'rgba(8, 6, 15, 0.8)',
+  background: 'rgba(8,6,15,0.8)',
   border: '1px solid rgba(168,85,247,0.25)',
   borderRadius: '16px',
   backdropFilter: 'blur(14px)',
@@ -212,7 +209,6 @@ const mobileLangBar = {
   zIndex: 2000,
   transition: 'all 0.4s ease-in-out',
 }
-
 const langButtonMobile = {
   borderRadius: '10px',
   padding: '7px 14px',
@@ -224,14 +220,12 @@ const langButtonMobile = {
   cursor: 'pointer',
   transition: '0.25s ease',
 }
-
 const activeLangMobile = {
   background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
   border: '1px solid rgba(180,95,255,0.7)',
   boxShadow: '0 0 18px rgba(150,90,255,0.4)',
 }
 
-// Футер
 const footerStyle = {
   marginTop: 40,
   textAlign: 'center',
