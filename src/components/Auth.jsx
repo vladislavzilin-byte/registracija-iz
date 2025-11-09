@@ -509,8 +509,16 @@ const avatarStyle = {
   fontWeight: 700,
   color: "#fff",
   fontSize: "1rem",
-  animation: "avatarPulse 5s ease-in-out infinite alternate",
-  transition: "0.3s ease-in-out",
+  position: "relative",
+  overflow: "hidden",
+};
+const avatarGlow = {
+  position: "absolute",
+  inset: 0,
+  borderRadius: 14,
+  boxShadow: "0 0 18px 6px rgba(168,85,247,0.0)",
+  animation: "avatarBorderPulse 3.5s ease-in-out infinite",
+  pointerEvents: "none",
 };
 const nameStyle = {
   fontWeight: 700,
