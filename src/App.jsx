@@ -2,7 +2,7 @@ import Auth from './components/Auth.jsx'
 import Calendar from './components/Calendar.jsx'
 import Admin from './components/Admin.jsx'
 import MyBookings from './components/MyBookings.jsx'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getCurrentUser } from './lib/storage'
 import { useI18n } from './lib/i18n'
 
@@ -10,13 +10,34 @@ export default function App() {
   const { lang, setLang, t } = useI18n()
   const [tab, setTab] = useState('calendar')
   const [user, setUser] = useState(getCurrentUser())
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+  // следим за шириной экрана
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   return (
     <div className="container">
-      {/* === Верхняя панель (Dark Aurora Glass) === */}
-      <div style={navBar}>
+      {/* === Верхняя панель (адаптивная) === */}
+      <div
+        style={{
+          ...navBar,
+          position: isMobile ? 'relative' : 'sticky',
+          padding: isMobile ? '10px 14px' : '14px 28px',
+          borderRadius: isMobile ? '0 0 12px 12px' : '0 0 16px 16px',
+        }}
+      >
         {/* LEFT — навигация */}
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: isMobile ? '8px' : '12px',
+            flexWrap: 'wrap',
+          }}
+        >
           <button
             onClick={() => setTab('calendar')}
             style={{
@@ -47,7 +68,14 @@ export default function App() {
         </div>
 
         {/* RIGHT — языки */}
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '10px',
+            flexWrap: 'wrap',
+            justifyContent: isMobile ? 'flex-start' : 'flex-end',
+          }}
+        >
           <button
             onClick={() => setLang('lt')}
             style={{
@@ -100,7 +128,8 @@ const navBar = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '14px 28px',
+  flexWrap: 'wrap',
+  gap: '8px',
   background: 'rgba(8, 6, 15, 0.8)',
   backdropFilter: 'blur(18px)',
   boxShadow: `
@@ -108,29 +137,11 @@ const navBar = {
     0 0 40px rgba(110,50,200,0.18),
     inset 0 -1px 0 rgba(150,85,247,0.12)
   `,
-  borderRadius: '0 0 16px 16px',
-  position: 'sticky',
+  position: 'relative',
   top: 0,
   zIndex: 1000,
   animation: 'fadeIn 0.6s ease-in-out',
-  position: 'relative',
 }
-
-// Добавляем мягкое затемнение под панелью
-const shadowAfter = document.createElement('style')
-shadowAfter.innerHTML = `
-.navbar-shadow::after {
-  content: '';
-  position: absolute;
-  bottom: -12px;
-  left: 0;
-  width: 100%;
-  height: 12px;
-  background: linear-gradient(180deg, rgba(0,0,0,0.25), transparent);
-  pointer-events: none;
-}
-`
-document.head.appendChild(shadowAfter)
 
 // Кнопки навигации
 const navButton = {
