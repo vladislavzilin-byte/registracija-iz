@@ -25,14 +25,13 @@ export default function App() {
         style={{
           ...navBar,
           position: isMobile ? 'relative' : 'sticky',
-          padding: isMobile ? '10px 14px' : '14px 28px',
+          padding: isMobile ? '10px 16px' : '14px 28px',
           borderRadius: isMobile ? '0 0 12px 12px' : '0 0 16px 16px',
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: isMobile ? '12px' : '0',
+          flexDirection: 'row',
         }}
       >
-        {/* Навигация */}
-        <div style={navBlock}>
+        {/* Навигация слева */}
+        <div style={navGroup}>
           <button
             onClick={() => setTab('calendar')}
             style={{
@@ -62,8 +61,8 @@ export default function App() {
           </button>
         </div>
 
-        {/* Языки */}
-        <div style={langBlock}>
+        {/* Языки справа */}
+        <div style={langGroup}>
           <button
             onClick={() => setLang('lt')}
             style={{
@@ -123,33 +122,20 @@ const navBar = {
     0 0 40px rgba(110,50,200,0.18),
     inset 0 -1px 0 rgba(150,85,247,0.12)
   `,
-  position: 'relative',
-  top: 0,
   zIndex: 1000,
   animation: 'fadeIn 0.6s ease-in-out',
-  flexWrap: 'wrap',
-  rowGap: '10px',
 }
 
-// Блок навигации
-const navBlock = {
+// Группы кнопок
+const navGroup = {
   display: 'flex',
-  flexWrap: 'nowrap',
-  gap: '10px',
-  justifyContent: 'flex-start',
-  flex: 1,
-  minWidth: 0,
-  overflowX: 'auto',
-  scrollbarWidth: 'none',
-  msOverflowStyle: 'none',
+  alignItems: 'center',
+  gap: '12px',
 }
-const langBlock = {
+const langGroup = {
   display: 'flex',
+  alignItems: 'center',
   gap: '10px',
-  justifyContent: 'flex-end',
-  flexShrink: 0,
-  flexWrap: 'nowrap',
-  overflowX: 'auto',
 }
 
 // Кнопки навигации
@@ -164,7 +150,6 @@ const navButton = {
   cursor: 'pointer',
   transition: 'all 0.3s ease',
   boxShadow: '0 0 10px rgba(150,90,255,0.15)',
-  flexShrink: 0,
 }
 
 const activeButton = {
@@ -184,7 +169,6 @@ const langButton = {
   background: 'rgba(25,10,45,0.6)',
   cursor: 'pointer',
   transition: '0.25s ease',
-  flexShrink: 0,
 }
 
 const activeLang = {
@@ -212,6 +196,5 @@ style.innerHTML = `
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
 }
-::-webkit-scrollbar { display: none; }
 `
 document.head.appendChild(style)
