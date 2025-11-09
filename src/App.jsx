@@ -13,27 +13,8 @@ export default function App() {
 
   return (
     <div className="container">
-{/* === Верхняя панель (Dark Aurora Glass без рамки) === */}
-<div
-  style={{
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '14px 28px',
-    background: 'rgba(10, 10, 15, 0.65)',
-    backdropFilter: 'blur(18px)',
-    boxShadow: `
-      0 2px 12px rgba(0,0,0,0.5),
-      0 0 35px rgba(110,50,200,0.18),
-      inset 0 -1px 0 rgba(150,85,247,0.15)
-    `,
-    borderRadius: '0 0 16px 16px',
-    position: 'sticky',
-    top: 0,
-    zIndex: 1000,
-    animation: 'fadeIn 0.6s ease-in-out',
-  }}
->
+      {/* === Верхняя панель (Dark Aurora Glass) === */}
+      <div style={navBar}>
         {/* LEFT — навигация */}
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
@@ -99,44 +80,83 @@ export default function App() {
 
       {/* === Контент === */}
       <Auth onAuth={setUser} />
-
       {tab === 'calendar' && <Calendar />}
       {tab === 'my' && <MyBookings />}
       {tab === 'admin' && <Admin />}
 
-      <footer>
-        <img src="/logo.svg" alt="logo" /> © IZ HAIR TREND
+      {/* === Футер === */}
+      <footer style={footerStyle}>
+        <img src="/logo.svg" alt="logo" style={{ height: 20, opacity: 0.7, marginRight: 6 }} />
+        © IZ HAIR TREND
       </footer>
     </div>
   )
 }
 
-// === Стили ===
+/* === Стили === */
+
+// Верхняя панель
+const navBar = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '14px 28px',
+  background: 'rgba(8, 6, 15, 0.8)',
+  backdropFilter: 'blur(18px)',
+  boxShadow: `
+    0 3px 16px rgba(0,0,0,0.55),
+    0 0 40px rgba(110,50,200,0.18),
+    inset 0 -1px 0 rgba(150,85,247,0.12)
+  `,
+  borderRadius: '0 0 16px 16px',
+  position: 'sticky',
+  top: 0,
+  zIndex: 1000,
+  animation: 'fadeIn 0.6s ease-in-out',
+  position: 'relative',
+}
+
+// Добавляем мягкое затемнение под панелью
+const shadowAfter = document.createElement('style')
+shadowAfter.innerHTML = `
+.navbar-shadow::after {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 0;
+  width: 100%;
+  height: 12px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.25), transparent);
+  pointer-events: none;
+}
+`
+document.head.appendChild(shadowAfter)
+
+// Кнопки навигации
 const navButton = {
   borderRadius: '10px',
-  padding: '8px 18px',
+  padding: '9px 20px',
   fontWeight: 500,
   fontSize: '0.95rem',
-  border: '1px solid rgba(168,85,247,0.45)',
-  background:
-    'linear-gradient(180deg, rgba(55,20,90,0.85), rgba(25,10,45,0.85))',
+  border: '1px solid rgba(168,85,247,0.4)',
+  background: 'linear-gradient(180deg, rgba(55,20,90,0.85), rgba(25,10,45,0.85))',
   color: '#fff',
   cursor: 'pointer',
-  transition: 'all 0.25s ease',
+  transition: 'all 0.3s ease',
   boxShadow: '0 0 10px rgba(150,90,255,0.15)',
 }
 
 const activeButton = {
   border: '1px solid rgba(180,95,255,0.8)',
-  boxShadow: '0 0 20px rgba(170,90,255,0.5)',
-  background:
-    'linear-gradient(180deg, rgba(80,30,130,0.9), rgba(40,15,70,0.9))',
+  background: 'linear-gradient(180deg, rgba(80,30,130,0.9), rgba(40,15,70,0.9))',
+  boxShadow: '0 0 25px rgba(180,95,255,0.6), 0 0 10px rgba(180,95,255,0.3) inset',
 }
 
+// Кнопки языков
 const langButton = {
   borderRadius: '10px',
   padding: '7px 14px',
-  border: '1px solid rgba(168,85,247,0.4)',
+  border: '1px solid rgba(168,85,247,0.35)',
   color: '#fff',
   fontWeight: 500,
   fontSize: '0.85rem',
@@ -146,8 +166,28 @@ const langButton = {
 }
 
 const activeLang = {
-  background:
-    'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
+  background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
   border: '1px solid rgba(180,95,255,0.7)',
   boxShadow: '0 0 15px rgba(150,90,255,0.3)',
 }
+
+// Футер
+const footerStyle = {
+  marginTop: 40,
+  textAlign: 'center',
+  opacity: 0.45,
+  fontSize: '0.9rem',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
+}
+
+/* Анимация появления */
+const style = document.createElement('style')
+style.innerHTML = `
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}`
+document.head.appendChild(style)
