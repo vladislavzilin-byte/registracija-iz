@@ -19,7 +19,7 @@ export default function App() {
   }, [])
 
   return (
-    <div className="container">
+    <div className="container" style={{ position: 'relative', minHeight: '100vh' }}>
       {/* === Верхняя панель === */}
       <div
         style={{
@@ -61,36 +61,23 @@ export default function App() {
           </button>
         </div>
 
-        {/* Языки справа */}
-        <div style={langGroup}>
-          <button
-            onClick={() => setLang('lt')}
-            style={{
-              ...langButton,
-              ...(lang === 'lt' ? activeLang : {}),
-            }}
-          >
-            🇱🇹
-          </button>
-          <button
-            onClick={() => setLang('ru')}
-            style={{
-              ...langButton,
-              ...(lang === 'ru' ? activeLang : {}),
-            }}
-          >
-            🇷🇺
-          </button>
-          <button
-            onClick={() => setLang('en')}
-            style={{
-              ...langButton,
-              ...(lang === 'en' ? activeLang : {}),
-            }}
-          >
-            🇬🇧
-          </button>
-        </div>
+        {/* Языки справа (только для десктопа) */}
+        {!isMobile && (
+          <div style={langGroup}>
+            {['lt', 'ru', 'en'].map(code => (
+              <button
+                key={code}
+                onClick={() => setLang(code)}
+                style={{
+                  ...langButton,
+                  ...(lang === code ? activeLang : {}),
+                }}
+              >
+                {code === 'lt' ? '🇱🇹' : code === 'ru' ? '🇷🇺' : '🇬🇧'}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* === Контент === */}
@@ -104,6 +91,24 @@ export default function App() {
         <img src="/logo.svg" alt="logo" style={{ height: 20, opacity: 0.7, marginRight: 6 }} />
         © IZ HAIR TREND
       </footer>
+
+      {/* === Панель языков внизу (только для мобильных) === */}
+      {isMobile && (
+        <div style={mobileLangBar}>
+          {['lt', 'ru', 'en'].map(code => (
+            <button
+              key={code}
+              onClick={() => setLang(code)}
+              style={{
+                ...langButtonMobile,
+                ...(lang === code ? activeLangMobile : {}),
+              }}
+            >
+              {code === 'lt' ? '🇱🇹' : code === 'ru' ? '🇷🇺' : '🇬🇧'}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -158,7 +163,7 @@ const activeButton = {
   boxShadow: '0 0 25px rgba(180,95,255,0.6), 0 0 10px rgba(180,95,255,0.3) inset',
 }
 
-// Кнопки языков
+// Кнопки языков (ПК)
 const langButton = {
   borderRadius: '10px',
   padding: '7px 14px',
@@ -175,6 +180,42 @@ const activeLang = {
   background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
   border: '1px solid rgba(180,95,255,0.7)',
   boxShadow: '0 0 15px rgba(150,90,255,0.3)',
+}
+
+// === Языковая панель (только для мобильных) ===
+const mobileLangBar = {
+  position: 'fixed',
+  bottom: 10,
+  left: '50%',
+  transform: 'translateX(-50%)',
+  display: 'flex',
+  justifyContent: 'center',
+  gap: '14px',
+  padding: '10px 16px',
+  background: 'rgba(8, 6, 15, 0.8)',
+  border: '1px solid rgba(168,85,247,0.25)',
+  borderRadius: '16px',
+  backdropFilter: 'blur(14px)',
+  boxShadow: '0 0 25px rgba(150,85,247,0.25)',
+  zIndex: 2000,
+}
+
+const langButtonMobile = {
+  borderRadius: '10px',
+  padding: '7px 14px',
+  border: '1px solid rgba(168,85,247,0.35)',
+  background: 'rgba(25,10,45,0.7)',
+  color: '#fff',
+  fontWeight: 500,
+  fontSize: '1rem',
+  cursor: 'pointer',
+  transition: '0.25s ease',
+}
+
+const activeLangMobile = {
+  background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
+  border: '1px solid rgba(180,95,255,0.7)',
+  boxShadow: '0 0 18px rgba(150,90,255,0.4)',
 }
 
 // Футер
