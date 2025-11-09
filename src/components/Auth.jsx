@@ -501,7 +501,8 @@ const avatarStyle = {
   width: 48,
   height: 48,
   borderRadius: 14,
-  background: "rgba(168,85,247,0.15)",
+  background:
+    "radial-gradient(circle at 30% 30%, rgba(168,85,247,0.25), rgba(60,0,90,0.35))",
   border: "1px solid rgba(168,85,247,0.35)",
   display: "flex",
   alignItems: "center",
@@ -509,7 +510,9 @@ const avatarStyle = {
   fontWeight: 600,
   color: "#fff",
   fontSize: "1rem",
-  boxShadow: "0 0 12px rgba(168,85,247,0.25)",
+  boxShadow:
+    "0 0 8px rgba(168,85,247,0.25), 0 0 14px rgba(139,92,246,0.25), inset 0 0 10px rgba(168,85,247,0.25)",
+  animation: "avatarGlow 6s ease-in-out infinite alternate",
 };
 const nameStyle = {
   fontWeight: 700,
@@ -601,6 +604,10 @@ style.innerHTML = `
 @keyframes glowBreath {
   0% { opacity: 0.45; }
   100% { opacity: 0.8; }
+}
+@keyframes avatarGlow {
+  0% { box-shadow: 0 0 6px rgba(168,85,247,0.25), inset 0 0 8px rgba(168,85,247,0.2); }
+  100% { box-shadow: 0 0 16px rgba(168,85,247,0.45), inset 0 0 14px rgba(168,85,247,0.35); }
 }
 `;
 document.head.appendChild(style);
