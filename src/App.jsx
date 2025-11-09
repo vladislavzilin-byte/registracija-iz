@@ -2,7 +2,7 @@ import Auth from './components/Auth.jsx'
 import Calendar from './components/Calendar.jsx'
 import Admin from './components/Admin.jsx'
 import MyBookings from './components/MyBookings.jsx'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getCurrentUser } from './lib/storage'
 import { useI18n } from './lib/i18n'
 
@@ -10,6 +10,27 @@ export default function App() {
   const { lang, setLang, t } = useI18n()
   const [tab, setTab] = useState('calendar')
   const [user, setUser] = useState(getCurrentUser())
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [showLangBar, setShowLangBar] = useState(true)
+  const [lastScrollY, setLastScrollY] = useState(0)
+
+  // ✅ Определяем мобильное устройство
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // ✅ Плавное появление/исчезновение панели языков при скролле (только моб.)
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > lastScrollY && window.scrollY > 80) setShowLangBar(false)
+      else setShowLangBar(true)
+      setLastScrollY(window.scrollY)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [lastScrollY])
 
   return (
     <div className="container" style={containerStyle}>
@@ -39,26 +60,20 @@ export default function App() {
           </button>
         </div>
 
-        <div style={langBlock}>
-          <button
-            onClick={() => setLang('lt')}
-            style={langButton(lang === 'lt')}
-          >
-            LT
-          </button>
-          <button
-            onClick={() => setLang('ru')}
-            style={langButton(lang === 'ru')}
-          >
-            RU
-          </button>
-          <button
-            onClick={() => setLang('en')}
-            style={langButton(lang === 'en')}
-          >
-            GB
-          </button>
-        </div>
+        {/* Языки справа (ПК) */}
+        {!isMobile && (
+          <div style={langBlock}>
+            <button onClick={() => setLang('lt')} style={langButton(lang === 'lt')}>
+              LT
+            </button>
+            <button onClick={() => setLang('ru')} style={langButton(lang === 'ru')}>
+              RU
+            </button>
+            <button onClick={() => setLang('en')} style={langButton(lang === 'en')}>
+              GB
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Контент */}
@@ -69,6 +84,30 @@ export default function App() {
 
       {/* Футер */}
       <footer style={footerStyle}>© IZ HAIR TREND</footer>
+
+      {/* === Панель языков снизу (fade-in/out, только на мобильных) === */}
+      {isMobile && (
+        <div
+          style={{
+            ...mobileLangBar,
+            opacity: showLangBar ? 1 : 0,
+            transform: `translate(-50%, ${showLangBar ? '0' : '20px'})`,
+          }}
+        >
+          {['lt', 'ru', 'en'].map(code => (
+            <button
+              key={code}
+              onClick={() => setLang(code)}
+              style={{
+                ...langButtonMobile,
+                ...(lang === code ? activeLangMobile : {}),
+              }}
+            >
+              {code === 'lt' ? '🇱🇹' : code === 'ru' ? '🇷🇺' : '🇬🇧'}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -96,68 +135,4 @@ const navBar = {
   boxShadow:
     '0 4px 12px rgba(0,0,0,0.45), 0 0 25px rgba(150,85,247,0.12), inset 0 -1px 0 rgba(168,85,247,0.2)',
   borderRadius: '0 0 16px 16px',
-  position: 'sticky',
-  top: 0,
-  zIndex: 1000,
-}
-
-const leftSide = {
-  display: 'flex',
-  gap: '12px',
-}
-
-const navButton = (active) => ({
-  borderRadius: '12px',
-  padding: '10px 22px',
-  fontWeight: 500,
-  cursor: 'pointer',
-  background: active
-    ? 'linear-gradient(180deg, rgba(130,60,255,0.9), rgba(70,0,120,0.85))'
-    : 'rgba(20,15,30,0.6)',
-  border: active
-    ? '1.5px solid rgba(168,85,247,0.8)'
-    : '1px solid rgba(120,80,180,0.3)',
-  boxShadow: active
-    ? '0 0 18px rgba(150,85,247,0.35)'
-    : '0 0 0 rgba(0,0,0,0)',
-  transition: 'all 0.3s ease',
-  color: '#fff',
-})
-
-const langBlock = {
-  display: 'flex',
-  gap: '8px',
-}
-
-const langButton = (active) => ({
-  borderRadius: '10px',
-  width: '44px',
-  height: '36px',
-  fontWeight: 600,
-  border: active
-    ? '1.5px solid rgba(168,85,247,0.9)'
-    : '1px solid rgba(120,80,180,0.25)',
-  background: active
-    ? 'linear-gradient(180deg, rgba(130,60,255,0.85), rgba(70,0,120,0.8))'
-    : 'rgba(20,15,30,0.5)',
-  color: '#fff',
-  cursor: 'pointer',
-  boxShadow: active ? '0 0 16px rgba(150,85,247,0.4)' : 'none',
-  transition: 'all 0.3s ease',
-})
-
-const footerStyle = {
-  marginTop: 40,
-  textAlign: 'center',
-  opacity: 0.4,
-  fontSize: '0.9rem',
-}
-
-/* === Анимация === */
-const style = document.createElement('style')
-style.innerHTML = `
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}`
-document.head.appendChild(style)
+  position: 'relative', //
