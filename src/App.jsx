@@ -157,18 +157,18 @@ const langGroup = {
   gap: '10px',
 }
 
-const navButton = {
-  borderRadius: '10px',
-  padding: '9px 20px',
-  textAlign: 'center',
-  fontWeight: 500,
-  fontSize: '0.95rem',
-  border: '1px solid rgba(168,85,247,0.4)',
-  background: 'linear-gradient(180deg, rgba(55,20,90,0.85), rgba(25,10,45,0.85))',
-  color: '#fff',
-  cursor: 'pointer',
-  transition: 'all 0.3s ease',
-  boxShadow: '0 0 10px rgba(150,90,255,0.15)',
+const navBar = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '14px 28px',
+  background: 'rgba(10,10,15,0.75)',
+  backdropFilter: 'blur(18px)',
+  boxShadow:
+    '0 4px 12px rgba(0,0,0,0.45), 0 0 25px rgba(150,85,247,0.12), inset 0 -1px 0 rgba(168,85,247,0.2)',
+  borderRadius: '0 0 16px 16px',
+  position: 'relative', // ✅ вместо sticky
+  zIndex: 10,           // ✅ чуть меньше, чтобы не перекрывала модальные окна
 }
 const activeButton = {
   border: '1px solid rgba(180,95,255,0.8)',
