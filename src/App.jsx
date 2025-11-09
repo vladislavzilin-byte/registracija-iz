@@ -134,12 +134,14 @@ const navBar = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
+  padding: '14px 28px',
   background: 'rgba(10,10,15,0.75)',
   backdropFilter: 'blur(18px)',
   boxShadow:
     '0 4px 12px rgba(0,0,0,0.45), 0 0 25px rgba(150,85,247,0.12), inset 0 -1px 0 rgba(168,85,247,0.2)',
   borderRadius: '0 0 16px 16px',
-  position: 'relative', // панель теперь не фиксированная
+  position: 'relative', // ✅ теперь панель будет скроллиться
+  top: 'auto',
   zIndex: 10,
 }
 
