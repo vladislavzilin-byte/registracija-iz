@@ -11,12 +11,30 @@ export default function App() {
   const [tab, setTab] = useState('calendar')
   const [user, setUser] = useState(getCurrentUser())
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [showLangBar, setShowLangBar] = useState(true)
+  const [lastScrollY, setLastScrollY] = useState(0)
 
+  // Отслеживание ширины экрана
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // Fade-in / fade-out языковой панели при прокрутке
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > lastScrollY && window.scrollY > 80) {
+        setShowLangBar(false) // скрыть при прокрутке вниз
+      } else {
+        setShowLangBar(true) // показать при прокрутке вверх
+      }
+      setLastScrollY(window.scrollY)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [lastScrollY])
 
   return (
     <div className="container" style={{ position: 'relative', minHeight: '100vh' }}>
@@ -27,38 +45,26 @@ export default function App() {
           position: 'relative',
           padding: isMobile ? '10px 16px' : '14px 28px',
           borderRadius: isMobile ? '0 0 12px 12px' : '0 0 16px 16px',
-          flexDirection: 'row',
         }}
       >
-        {/* Навигация слева */}
+        {/* Навигация */}
         <div style={navGroup}>
-          <button
-            onClick={() => setTab('calendar')}
-            style={{
-              ...navButton,
-              ...(tab === 'calendar' ? activeButton : {}),
-            }}
-          >
-            {t('nav_calendar')}
-          </button>
-          <button
-            onClick={() => setTab('my')}
-            style={{
-              ...navButton,
-              ...(tab === 'my' ? activeButton : {}),
-            }}
-          >
-            {t('nav_my')}
-          </button>
-          <button
-            onClick={() => setTab('admin')}
-            style={{
-              ...navButton,
-              ...(tab === 'admin' ? activeButton : {}),
-            }}
-          >
-            {t('nav_admin')}
-          </button>
+          {[
+            { key: 'calendar', label: t('nav_calendar') },
+            { key: 'my', label: t('nav_my') },
+            { key: 'admin', label: t('nav_admin') },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              style={{
+                ...navButton,
+                ...(tab === key ? activeButton : {}),
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* Языки справа (для ПК) */}
@@ -92,9 +98,15 @@ export default function App() {
         © IZ HAIR TREND
       </footer>
 
-      {/* === Панель языков внизу (только мобильная версия) === */}
+      {/* === Панель языков внизу (только для мобильной версии) === */}
       {isMobile && (
-        <div style={mobileLangBar}>
+        <div
+          style={{
+            ...mobileLangBar,
+            opacity: showLangBar ? 1 : 0,
+            transform: `translate(-50%, ${showLangBar ? '0' : '20px'})`,
+          }}
+        >
           {['lt', 'ru', 'en'].map(code => (
             <button
               key={code}
@@ -131,7 +143,6 @@ const navBar = {
   animation: 'fadeIn 0.6s ease-in-out',
 }
 
-// Группы кнопок
 const navGroup = {
   display: 'flex',
   alignItems: 'center',
@@ -147,7 +158,7 @@ const langGroup = {
 const navButton = {
   borderRadius: '10px',
   padding: '9px 20px',
-  minWidth: '130px', // 👈 одинаковая ширина
+  minWidth: '130px',
   textAlign: 'center',
   fontWeight: 500,
   fontSize: '0.95rem',
@@ -189,7 +200,6 @@ const mobileLangBar = {
   position: 'fixed',
   bottom: 10,
   left: '50%',
-  transform: 'translateX(-50%)',
   display: 'flex',
   justifyContent: 'center',
   gap: '14px',
@@ -200,6 +210,7 @@ const mobileLangBar = {
   backdropFilter: 'blur(14px)',
   boxShadow: '0 0 25px rgba(150,85,247,0.25)',
   zIndex: 2000,
+  transition: 'all 0.4s ease-in-out',
 }
 
 const langButtonMobile = {
