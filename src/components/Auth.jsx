@@ -515,7 +515,6 @@ const avatarStyle = {
     0 0 36px rgba(168,85,247,0.25)
   `,
   animation: "avatarPulse 4s ease-in-out infinite alternate",
-  transition: "0.3s ease-in-out",
 };
 const nameStyle = {
   fontWeight: 700,
@@ -611,29 +610,6 @@ style.innerHTML = `
 @keyframes avatarGlow {
   0% { box-shadow: 0 0 6px rgba(168,85,247,0.25), inset 0 0 8px rgba(168,85,247,0.2); }
   100% { box-shadow: 0 0 16px rgba(168,85,247,0.45), inset 0 0 14px rgba(168,85,247,0.35); }
-}
-@keyframes avatarPulse {
-  0% {
-    box-shadow:
-      0 0 6px rgba(168,85,247,0.25),
-      0 0 20px rgba(139,92,246,0.25),
-      0 0 35px rgba(168,85,247,0.2);
-    border-color: rgba(168,85,247,0.45);
-  }
-  50% {
-    box-shadow:
-      0 0 14px rgba(168,85,247,0.45),
-      0 0 32px rgba(139,92,246,0.4),
-      0 0 60px rgba(168,85,247,0.3);
-    border-color: rgba(168,85,247,0.75);
-  }
-  100% {
-    box-shadow:
-      0 0 6px rgba(168,85,247,0.25),
-      0 0 20px rgba(139,92,246,0.25),
-      0 0 35px rgba(168,85,247,0.2);
-    border-color: rgba(168,85,247,0.45);
-  }
 }
 `;
 document.head.appendChild(style);
