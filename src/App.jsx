@@ -13,61 +13,57 @@ export default function App() {
 
   return (
     <div className="container" style={containerStyle}>
-      {/* Верхняя панель */}
+      {/* === Верхняя панель === */}
       <div style={navBar}>
         <div style={leftSide}>
           <button
-            className={tab === 'calendar' ? 'active' : ''}
             onClick={() => setTab('calendar')}
             style={navButton(tab === 'calendar')}
           >
             {t('nav_calendar')}
           </button>
           <button
-            className={tab === 'my' ? 'active' : ''}
             onClick={() => setTab('my')}
             style={navButton(tab === 'my')}
           >
             {t('nav_my')}
           </button>
-          <button
-            className={tab === 'admin' ? 'active' : ''}
-            onClick={() => setTab('admin')}
-            style={navButton(tab === 'admin')}
-          >
-            {t('nav_admin')}
-          </button>
+
+          {/* Плавно появляющаяся кнопка Админ */}
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => setTab('admin')}
+              style={{
+                ...navButton(tab === 'admin'),
+                animation: 'fadeInUp 0.4s ease-out',
+              }}
+            >
+              {t('nav_admin')}
+            </button>
+          )}
         </div>
 
+        {/* Языки */}
         <div style={langBlock}>
-          <button
-            onClick={() => setLang('lt')}
-            style={langButton(lang === 'lt')}
-          >
+          <button onClick={() => setLang('lt')} style={langButton(lang === 'lt')}>
             LT
           </button>
-          <button
-            onClick={() => setLang('ru')}
-            style={langButton(lang === 'ru')}
-          >
+          <button onClick={() => setLang('ru')} style={langButton(lang === 'ru')}>
             RU
           </button>
-          <button
-            onClick={() => setLang('en')}
-            style={langButton(lang === 'en')}
-          >
+          <button onClick={() => setLang('en')} style={langButton(lang === 'en')}>
             GB
           </button>
         </div>
       </div>
 
-      {/* Контент */}
+      {/* === Контент === */}
       <Auth onAuth={setUser} />
       {tab === 'calendar' && <Calendar />}
       {tab === 'my' && <MyBookings />}
-      {tab === 'admin' && <Admin />}
+      {tab === 'admin' && user?.role === 'admin' && <Admin />}
 
-      {/* Футер */}
+      {/* === Футер === */}
       <footer style={footerStyle}>© IZ HAIR TREND</footer>
     </div>
   )
@@ -86,6 +82,7 @@ const containerStyle = {
   animation: 'fadeIn 0.8s ease-in-out',
 }
 
+/* === Верхняя панель === */
 const navBar = {
   display: 'flex',
   justifyContent: 'space-between',
@@ -101,6 +98,7 @@ const navBar = {
   zIndex: 1000,
 }
 
+/* === Кнопки навигации === */
 const leftSide = {
   display: 'flex',
   gap: '12px',
@@ -112,18 +110,22 @@ const navButton = (active) => ({
   fontWeight: 500,
   cursor: 'pointer',
   background: active
-    ? 'linear-gradient(180deg, rgba(130,60,255,0.9), rgba(70,0,120,0.85))'
-    : 'rgba(20,15,30,0.6)',
+    ? 'linear-gradient(180deg, rgba(150,80,255,0.4), rgba(80,0,140,0.3))'
+    : 'rgba(25,20,40,0.4)',
   border: active
-    ? '1.5px solid rgba(168,85,247,0.8)'
-    : '1px solid rgba(120,80,180,0.3)',
-  boxShadow: active
-    ? '0 0 18px rgba(150,85,247,0.35)'
-    : '0 0 0 rgba(0,0,0,0)',
-  transition: 'all 0.3s ease',
+    ? '1.5px solid rgba(168,85,247,0.85)'
+    : '1px solid rgba(140,90,200,0.25)',
   color: '#fff',
+  transition: 'all 0.25s ease',
+  boxShadow: active
+    ? '0 0 12px rgba(168,85,247,0.6), inset 0 0 8px rgba(168,85,247,0.25)'
+    : '0 0 6px rgba(0,0,0,0.2)',
+  textShadow: active ? '0 0 6px rgba(168,85,247,0.6)' : 'none',
+  backdropFilter: 'blur(8px)',
+  transform: active ? 'translateY(-1px)' : 'translateY(0)',
 })
 
+/* === Блок языков === */
 const langBlock = {
   display: 'flex',
   gap: '8px',
@@ -138,14 +140,15 @@ const langButton = (active) => ({
     ? '1.5px solid rgba(168,85,247,0.9)'
     : '1px solid rgba(120,80,180,0.25)',
   background: active
-    ? 'linear-gradient(180deg, rgba(130,60,255,0.85), rgba(70,0,120,0.8))'
-    : 'rgba(20,15,30,0.5)',
+    ? 'linear-gradient(180deg, rgba(130,60,255,0.9), rgba(70,0,120,0.85))'
+    : 'rgba(20,15,30,0.45)',
   color: '#fff',
   cursor: 'pointer',
-  boxShadow: active ? '0 0 16px rgba(150,85,247,0.4)' : 'none',
-  transition: 'all 0.3s ease',
+  boxShadow: active ? '0 0 12px rgba(150,85,247,0.4)' : 'none',
+  transition: 'all 0.25s ease',
 })
 
+/* === Футер === */
 const footerStyle = {
   marginTop: 40,
   textAlign: 'center',
@@ -153,11 +156,21 @@ const footerStyle = {
   fontSize: '0.9rem',
 }
 
-/* === Анимация === */
+/* === Анимации === */
 const style = document.createElement('style')
 style.innerHTML = `
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+button:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
 }`
 document.head.appendChild(style)
