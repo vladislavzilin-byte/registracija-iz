@@ -471,10 +471,10 @@ const profileCard = {
   position: "relative",
   padding: "24px",
   borderRadius: "20px",
-  background: "rgba(17, 0, 40, 0.65)",
-  border: "1px solid rgba(168,85,247,0.35)",
+  background: "rgba(12, 0, 25, 0.55)",
+  border: "1px solid rgba(168,85,247,0.25)",
   backdropFilter: "blur(22px)",
-  boxShadow: "0 0 40px rgba(168,85,247,0.12)",
+  boxShadow: "0 0 40px rgba(90,0,160,0.15)",
   overflow: "hidden",
   color: "#fff",
   animation: "fadeIn 0.6s ease-in-out",
@@ -483,19 +483,19 @@ const auroraBg = {
   position: "absolute",
   inset: 0,
   background:
-    "radial-gradient(900px 500px at -10% 120%, rgba(168,85,247,0.18), transparent 65%), " +
-    "radial-gradient(700px 400px at 110% -20%, rgba(139,92,246,0.16), transparent 60%), " +
-    "radial-gradient(800px 450px at 50% 120%, rgba(99,102,241,0.12), transparent 65%)",
+  "radial-gradient(800px 500px at -10% 120%, rgba(150,85,247,0.12), transparent 70%), " +
+  "radial-gradient(700px 400px at 110% -20%, rgba(110,80,246,0.1), transparent 65%), " +
+  "radial-gradient(800px 450px at 50% 120%, rgba(90,90,241,0.08), transparent 75%)",
   animation: "auroraPulse 8s ease-in-out infinite alternate",
 };
 const borderGlow = {
   position: "absolute",
   inset: 0,
   borderRadius: "20px",
-  background:
-    "linear-gradient(120deg, rgba(168,85,247,0.55), rgba(139,92,246,0.35), rgba(99,102,241,0.45))",
-  opacity: 0.6,
-  animation: "glowBreath 5s ease-in-out infinite alternate",
+background:
+  "linear-gradient(120deg, rgba(168,85,247,0.25), rgba(139,92,246,0.18), rgba(99,102,241,0.22))",
+opacity: 0.35,
+animation: "glowBreath 7s ease-in-out infinite alternate",
 };
 const avatarStyle = {
   width: 48,
