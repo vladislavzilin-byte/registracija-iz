@@ -13,22 +13,26 @@ export default function App() {
 
   return (
     <div className="container">
-      {/* === Верхняя панель (Aurora Purple Header) === */}
+      {/* === Верхняя панель (Aurora Glass Glow) === */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: '14px 28px',
-          background:
-            'linear-gradient(180deg, rgba(36,17,50,0.95) 0%, rgba(20,10,30,0.95) 100%)',
-          borderBottom: '1px solid rgba(168,85,247,0.3)',
-          boxShadow: '0 0 25px rgba(150,90,255,0.15)',
-          backdropFilter: 'blur(14px)',
-          borderRadius: '0 0 14px 14px',
+          background: 'rgba(20, 10, 35, 0.65)',
+          backdropFilter: 'blur(18px)',
+          borderBottom: '1px solid rgba(168,85,247,0.25)',
+          boxShadow: `
+            0 2px 18px rgba(150,90,255,0.25),
+            inset 0 -1px 0 rgba(168,85,247,0.3),
+            0 0 60px rgba(90,40,180,0.15)
+          `,
+          borderRadius: '0 0 16px 16px',
           position: 'sticky',
           top: 0,
           zIndex: 1000,
+          animation: 'fadeIn 0.6s ease-in-out',
         }}
       >
         {/* LEFT — навигация */}
@@ -116,7 +120,7 @@ const navButton = {
   fontSize: '0.95rem',
   border: '1px solid rgba(168,85,247,0.45)',
   background:
-    'linear-gradient(180deg, rgba(55,20,90,0.9), rgba(25,10,45,0.9))',
+    'linear-gradient(180deg, rgba(55,20,90,0.85), rgba(25,10,45,0.85))',
   color: '#fff',
   cursor: 'pointer',
   transition: 'all 0.25s ease',
@@ -125,7 +129,7 @@ const navButton = {
 
 const activeButton = {
   border: '1px solid rgba(180,95,255,0.8)',
-  boxShadow: '0 0 18px rgba(170,90,255,0.4)',
+  boxShadow: '0 0 20px rgba(170,90,255,0.5)',
   background:
     'linear-gradient(180deg, rgba(80,30,130,0.9), rgba(40,15,70,0.9))',
 }
