@@ -498,21 +498,18 @@ opacity: 0.35,
 animation: "glowBreath 7s ease-in-out infinite alternate",
 };
 const avatarStyle = {
-  width: 48,
-  height: 48,
-  borderRadius: 14,
-  background:
-    "radial-gradient(circle at 30% 30%, rgba(168,85,247,0.25), rgba(60,0,90,0.35))",
-  border: "1px solid rgba(168,85,247,0.35)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontWeight: 600,
-  color: "#fff",
-  fontSize: "1rem",
-  boxShadow:
-    "0 0 8px rgba(168,85,247,0.25), 0 0 14px rgba(139,92,246,0.25), inset 0 0 10px rgba(168,85,247,0.25)",
-  animation: "avatarGlow 6s ease-in-out infinite alternate",
+    minWidth: 44,
+    height: 44,
+    borderRadius: 12,
+    background: 'rgba(168,85,247,0.18)',
+    border: '1px solid rgba(168,85,247,0.35)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#fff',
+    fontWeight: 700,
+    fontSize: '1.1rem',
+    animation: 'avatarPulse 3.6s ease-in-out infinite'
 };
 const nameStyle = {
   fontWeight: 700,
