@@ -491,7 +491,7 @@ const auroraBg = {
 const borderGlow = {
   position: "absolute",
   inset: 0,
-  borderRadius: "20px",
+  borderRadius: "40px",
   border: "2px solid rgba(175,95,255,1)", // плотный пурпурный обод
   boxShadow: `
     0 0 6px rgba(175,95,255,0.8),
