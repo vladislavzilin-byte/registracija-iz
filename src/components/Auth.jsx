@@ -470,18 +470,14 @@ const profileCard = {
   position: "relative",
   padding: "24px",
   borderRadius: "20px",
-  background: `
-    linear-gradient(180deg, rgba(62,31,90,1) 0%, rgba(46,27,61,1) 100%),
-    radial-gradient(600px 400px at 20% 0%, rgba(130,80,255,0.12), transparent 80%),
-    radial-gradient(700px 500px at 80% 100%, rgba(100,60,200,0.10), transparent 75%)
-  `,
-  border: "1px solid rgba(168,85,247,0.25)",
-  backdropFilter: "blur(20px)",
+  background: "linear-gradient(180deg, rgba(46,27,61,1) 0%, rgba(36,17,50,1) 100%)",
+  border: "1px solid rgba(150,90,255,0.35)",
   boxShadow: `
-    inset 0 0 20px rgba(120,50,200,0.10),
-    0 0 30px rgba(110,50,200,0.12),
-    0 0 60px rgba(90,40,180,0.10)
+    inset 0 0 12px rgba(100,50,180,0.08),
+    0 0 18px rgba(120,60,210,0.08),
+    0 0 26px rgba(140,70,230,0.06)
   `,
+  backdropFilter: "blur(18px)",
   overflow: "hidden",
   color: "#fff",
   animation: "fadeIn 0.6s ease-in-out",
