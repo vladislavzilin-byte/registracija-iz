@@ -491,12 +491,12 @@ const auroraBg = {
 const borderGlow = {
   position: "absolute",
   inset: 0,
-  borderRadius: "40px",
-  border: "2px solid rgba(175,95,255,1)", // плотный пурпурный обод
+  borderRadius: "20px",
+  border: "4px solid rgba(175,95,255,1)", // ← было 2px, теперь в 2 раза шире
   boxShadow: `
-    0 0 6px rgba(175,95,255,0.8),
-    0 0 12px rgba(175,95,255,0.6),
-    0 0 20px rgba(175,95,255,0.35)
+    0 0 8px rgba(175,95,255,0.9),
+    0 0 18px rgba(175,95,255,0.7),
+    0 0 28px rgba(175,95,255,0.45)
   `,
   animation: "glowBreath 4s ease-in-out infinite alternate",
 };
