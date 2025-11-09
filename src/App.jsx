@@ -24,7 +24,7 @@ export default function App() {
       <div
         style={{
           ...navBar,
-          position: 'relative',
+          position: isMobile ? 'relative' : 'sticky',
           padding: isMobile ? '10px 16px' : '14px 28px',
           borderRadius: isMobile ? '0 0 12px 12px' : '0 0 16px 16px',
           flexDirection: 'row',
@@ -61,7 +61,7 @@ export default function App() {
           </button>
         </div>
 
-        {/* Языки справа (для ПК) */}
+        {/* Языки справа (только для десктопа) */}
         {!isMobile && (
           <div style={langGroup}>
             {['lt', 'ru', 'en'].map(code => (
@@ -92,7 +92,7 @@ export default function App() {
         © IZ HAIR TREND
       </footer>
 
-      {/* === Панель языков внизу (только мобильная версия) === */}
+      {/* === Панель языков внизу (только для мобильных) === */}
       {isMobile && (
         <div style={mobileLangBar}>
           {['lt', 'ru', 'en'].map(code => (
@@ -147,8 +147,6 @@ const langGroup = {
 const navButton = {
   borderRadius: '10px',
   padding: '9px 20px',
-  minWidth: '130px', // 👈 одинаковая ширина
-  textAlign: 'center',
   fontWeight: 500,
   fontSize: '0.95rem',
   border: '1px solid rgba(168,85,247,0.4)',
@@ -184,7 +182,7 @@ const activeLang = {
   boxShadow: '0 0 15px rgba(150,90,255,0.3)',
 }
 
-// === Языковая панель (мобильная) ===
+// === Языковая панель (только для мобильных) ===
 const mobileLangBar = {
   position: 'fixed',
   bottom: 10,
@@ -232,7 +230,7 @@ const footerStyle = {
   gap: 6,
 }
 
-/* Анимация */
+/* Анимация появления */
 const style = document.createElement('style')
 style.innerHTML = `
 @keyframes fadeIn {
