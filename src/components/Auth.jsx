@@ -466,22 +466,7 @@ const segmentStyles = `
   transform: translateY(-1px);
 }
 `;
-const profileCard = {
-  position: "relative",
-  padding: "24px",
-  borderRadius: "20px",
-  background: "linear-gradient(180deg, rgba(46,27,61,1) 0%, rgba(36,17,50,1) 100%)",
-  border: "1px solid rgba(150,90,255,0.35)",
-  boxShadow: `
-    inset 0 0 12px rgba(100,50,180,0.08),
-    0 0 18px rgba(120,60,210,0.08),
-    0 0 26px rgba(140,70,230,0.06)
-  `,
-  backdropFilter: "blur(18px)",
-  overflow: "hidden",
-  color: "#fff",
-  animation: "fadeIn 0.6s ease-in-out",
-};
+
 const auroraBg = {
   position: "absolute",
   inset: 0,
