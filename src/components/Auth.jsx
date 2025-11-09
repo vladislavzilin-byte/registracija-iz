@@ -501,8 +501,8 @@ const avatarStyle = {
   width: 48,
   height: 48,
   borderRadius: 14,
-  background: "rgba(25,0,45,0.85)",
-  border: "1px solid rgba(168,85,247,0.35)",
+  background: "rgba(25,0,45,0.9)",
+  border: "1px solid rgba(168,85,247,0.4)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -510,15 +510,7 @@ const avatarStyle = {
   color: "#fff",
   fontSize: "1rem",
   position: "relative",
-  overflow: "hidden",
-};
-const avatarGlow = {
-  position: "absolute",
-  inset: 0,
-  borderRadius: 14,
-  boxShadow: "0 0 18px 6px rgba(168,85,247,0.0)",
-  animation: "avatarBorderPulse 3.5s ease-in-out infinite",
-  pointerEvents: "none",
+  animation: "borderPulse 4.5s ease-in-out infinite",
 };
 const nameStyle = {
   fontWeight: 700,
@@ -611,27 +603,17 @@ style.innerHTML = `
   0% { opacity: 0.45; }
   100% { opacity: 0.8; }
 }
-@keyframes avatarGlow {
-  0% { box-shadow: 0 0 6px rgba(168,85,247,0.25), inset 0 0 8px rgba(168,85,247,0.2); }
-  100% { box-shadow: 0 0 16px rgba(168,85,247,0.45), inset 0 0 14px rgba(168,85,247,0.35); }
-}
-@keyframes avatarPulse {
+@keyframes borderPulse {
   0% {
-    box-shadow:
-      0 0 3px rgba(168,85,247,0.08),
-      0 0 6px rgba(139,92,246,0.08);
+    box-shadow: 0 0 0px 0 rgba(168,85,247,0.0);
     border-color: rgba(168,85,247,0.35);
   }
   50% {
-    box-shadow:
-      0 0 8px rgba(168,85,247,0.18),
-      0 0 14px rgba(139,92,246,0.15);
-    border-color: rgba(168,85,247,0.55);
+    box-shadow: 0 0 16px 4px rgba(168,85,247,0.25);
+    border-color: rgba(168,85,247,0.6);
   }
   100% {
-    box-shadow:
-      0 0 3px rgba(168,85,247,0.08),
-      0 0 6px rgba(139,92,246,0.08);
+    box-shadow: 0 0 0px 0 rgba(168,85,247,0.0);
     border-color: rgba(168,85,247,0.35);
   }
 }
