@@ -36,7 +36,9 @@ function ForgotPasswordModal({ open, onClose }) {
   const handleRecover = () => {
     const phoneNorm = phoneInput.replace(/\D/g, "");
     const users = getUsers() || [];
-    const user = users.find((u) => u.phone && normalizePhone(u.phone) === phoneNorm);
+    const user = users.find(
+      (u) => u.phone && normalizePhone(u.phone) === phoneNorm
+    );
 
     if (!user) {
       setFoundPassword("");
@@ -45,7 +47,9 @@ function ForgotPasswordModal({ open, onClose }) {
     }
 
     if (user.passwordHash) {
-      setMessage("Ваш пароль хранится в зашифрованном виде и не может быть показан.");
+      setMessage(
+        "Ваш пароль хранится в зашифрованном виде и не может быть показан."
+      );
       setFoundPassword("");
     } else if (user.password) {
       setFoundPassword(user.password);
@@ -59,7 +63,9 @@ function ForgotPasswordModal({ open, onClose }) {
   return (
     <div style={overlayStyle}>
       <div style={modalStyle}>
-        <h3 style={{ color: "#fff", marginBottom: 12 }}>Восстановление пароля</h3>
+        <h3 style={{ color: "#fff", marginBottom: 12 }}>
+          Восстановление пароля
+        </h3>
         <input
           type="text"
           placeholder="Введите номер телефона"
@@ -70,7 +76,9 @@ function ForgotPasswordModal({ open, onClose }) {
         <button onClick={handleRecover} style={buttonStyle}>
           Показать пароль
         </button>
-        {message && <div style={{ color: "#ff9bbb", marginTop: 10 }}>{message}</div>}
+        {message && (
+          <div style={{ color: "#ff9bbb", marginTop: 10 }}>{message}</div>
+        )}
         {foundPassword && (
           <div style={{ color: "#b58fff", marginTop: 10 }}>
             Ваш пароль: <strong>{foundPassword}</strong>
@@ -101,6 +109,7 @@ export default function Auth({ onAuth }) {
   const [recoverOpen, setRecoverOpen] = useState(false);
   const [current, setCurrent] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [toast, setToast] = useState("");
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [lockUntil, setLockUntil] = useState(null);
@@ -122,7 +131,7 @@ export default function Auth({ onAuth }) {
       if (!phone.trim()) errs.phone = "Введите телефон";
       if (email && !validateEmail(email)) errs.email = "Неверный email";
       if (password.length < 6)
-        errs.password = "Пароль должен состоять минимум из 6 букв";
+        errs.password = "Пароль должен состоять минимум из 6 символов";
       if (password !== passwordConfirm)
         errs.passwordConfirm = "Пароли не совпадают";
     } else {
@@ -221,6 +230,26 @@ export default function Auth({ onAuth }) {
     onAuth?.(null);
   };
 
+  // === SVG-глаз ===
+  const eyeIcon = {
+    position: "absolute",
+    right: 12,
+    top: 10,
+    cursor: "pointer",
+    opacity: 0.85,
+  };
+  const eyeOpen = (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b58fff" strokeWidth="1.8">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+  );
+  const eyeClosed = (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b58fff" strokeWidth="1.8">
+      <path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.36 21.36 0 015.1-6.36M1 1l22 22"></path>
+    </svg>
+  );
+
   // === отображение ===
   if (current) {
     const initials = current.name
@@ -303,17 +332,8 @@ export default function Auth({ onAuth }) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Пароль"
                 />
-                <span
-                  onClick={() => setShowPassword((s) => !s)}
-                  style={{
-                    position: "absolute",
-                    right: 12,
-                    top: 10,
-                    cursor: "pointer",
-                    opacity: 0.75,
-                  }}
-                >
-                  {showPassword ? "🙉" : "👁"}
+                <span onClick={() => setShowPassword(!showPassword)} style={eyeIcon}>
+                  {showPassword ? eyeOpen : eyeClosed}
                 </span>
               </div>
               <div
@@ -355,20 +375,30 @@ export default function Auth({ onAuth }) {
                 onChange={(e) => setPhone(formatLithuanianPhone(e.target.value))}
                 placeholder="+37060000000"
               />
-              <input
-                className={`glass-input ${errorFields.password ? "error" : ""}`}
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Пароль"
-              />
-              <input
-                className={`glass-input ${errorFields.passwordConfirm ? "error" : ""}`}
-                type={showPassword ? "text" : "password"}
-                value={passwordConfirm}
-                onChange={(e) => setPasswordConfirm(e.target.value)}
-                placeholder="Подтвердите пароль"
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  className={`glass-input ${errorFields.password ? "error" : ""}`}
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Пароль"
+                />
+                <span onClick={() => setShowPassword(!showPassword)} style={eyeIcon}>
+                  {showPassword ? eyeOpen : eyeClosed}
+                </span>
+              </div>
+              <div style={{ position: "relative" }}>
+                <input
+                  className={`glass-input ${errorFields.passwordConfirm ? "error" : ""}`}
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={passwordConfirm}
+                  onChange={(e) => setPasswordConfirm(e.target.value)}
+                  placeholder="Подтвердите пароль"
+                />
+                <span onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={eyeIcon}>
+                  {showConfirmPassword ? eyeOpen : eyeClosed}
+                </span>
+              </div>
             </>
           )}
 
@@ -405,21 +435,21 @@ const segmentStyles = `
   gap: 8px;
   padding: 6px;
   border-radius: 16px;
-  background: linear-gradient(145deg, rgba(66,0,145,0.28), rgba(20,0,40,0.35));
+  background: rgba(17, 0, 40, 0.45);
   border: 1px solid rgba(168,85,247,0.35);
   backdrop-filter: blur(8px);
 }
 .segmented button {
   height: 42px;
   border-radius: 12px;
-  border: 1px solid rgba(168,85,247,0.35);
+  border: 1px solid rgba(168,85,247,0.3);
   color: #fff;
-  background: rgba(31,0,63,0.45);
-  transition: .2s;
+  background: rgba(31,0,63,0.3);
+  transition: .25s;
 }
 .segmented button.active {
-  background: linear-gradient(180deg, rgba(124,58,237,0.55), rgba(88,28,135,0.5));
-  box-shadow: inset 0 0 0 1px rgba(168,85,247,0.45), 0 10px 28px rgba(120,0,255,0.18);
+  border: 2px solid rgba(168,85,247,0.8);
+  background: rgba(31,0,63,0.45);
 }
 .glass-input {
   width: 100%;
