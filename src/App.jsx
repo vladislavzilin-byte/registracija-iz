@@ -11,6 +11,8 @@ export default function App() {
   const [tab, setTab] = useState('calendar')
   const [user, setUser] = useState(getCurrentUser())
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [showLangBar, setShowLangBar] = useState(true)
+  const [lastScrollY, setLastScrollY] = useState(0)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -18,50 +20,49 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  // fade-in/fade-out панели языков на мобилке
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > lastScrollY && window.scrollY > 60) setShowLangBar(false)
+      else setShowLangBar(true)
+      setLastScrollY(window.scrollY)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [lastScrollY])
+
   return (
-    <div className="container" style={{ position: 'relative', minHeight: '100vh' }}>
+    <div style={appWrapper}>
       {/* === Верхняя панель === */}
       <div
         style={{
           ...navBar,
-          position: isMobile ? 'relative' : 'sticky',
           padding: isMobile ? '10px 16px' : '14px 28px',
           borderRadius: isMobile ? '0 0 12px 12px' : '0 0 16px 16px',
           flexDirection: 'row',
         }}
       >
-        {/* Навигация слева */}
+        {/* Кнопки навигации */}
         <div style={navGroup}>
-          <button
-            onClick={() => setTab('calendar')}
-            style={{
-              ...navButton,
-              ...(tab === 'calendar' ? activeButton : {}),
-            }}
-          >
-            {t('nav_calendar')}
-          </button>
-          <button
-            onClick={() => setTab('my')}
-            style={{
-              ...navButton,
-              ...(tab === 'my' ? activeButton : {}),
-            }}
-          >
-            {t('nav_my')}
-          </button>
-          <button
-            onClick={() => setTab('admin')}
-            style={{
-              ...navButton,
-              ...(tab === 'admin' ? activeButton : {}),
-            }}
-          >
-            {t('nav_admin')}
-          </button>
+          {[
+            { key: 'calendar', label: t('nav_calendar') },
+            { key: 'my', label: t('nav_my') },
+            { key: 'admin', label: t('nav_admin') },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              style={{
+                ...navButton,
+                ...(tab === key ? activeButton : {}),
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
-        {/* Языки справа (только для десктопа) */}
+        {/* Языки справа (ПК) */}
         {!isMobile && (
           <div style={langGroup}>
             {['lt', 'ru', 'en'].map(code => (
@@ -92,9 +93,15 @@ export default function App() {
         © IZ HAIR TREND
       </footer>
 
-      {/* === Панель языков внизу (только для мобильных) === */}
+      {/* === Панель языков снизу (fade-in/out, только на мобильных) === */}
       {isMobile && (
-        <div style={mobileLangBar}>
+        <div
+          style={{
+            ...mobileLangBar,
+            opacity: showLangBar ? 1 : 0,
+            transform: `translate(-50%, ${showLangBar ? '0' : '20px'})`,
+          }}
+        >
           {['lt', 'ru', 'en'].map(code => (
             <button
               key={code}
@@ -113,21 +120,36 @@ export default function App() {
   )
 }
 
-/* === Стили === */
+/* === СТИЛИ === */
+
+// Основной контейнер с фоном
+const appWrapper = {
+  minHeight: '100vh',
+  background:
+    'radial-gradient(800px at 50% 120%, rgba(80,40,180,0.12), transparent 80%),' +
+    'radial-gradient(600px at 0% 0%, rgba(140,70,255,0.05), transparent 80%),' +
+    '#0b0a0f',
+  color: '#fff',
+  fontFamily: 'Inter, sans-serif',
+  animation: 'fadeIn 0.8s ease-in-out',
+  padding: 0,
+  margin: 0,
+}
 
 // Верхняя панель
 const navBar = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  background: 'rgba(8, 6, 15, 0.8)',
+  background: 'rgba(8,6,15,0.85)',
   backdropFilter: 'blur(18px)',
   boxShadow: `
     0 3px 16px rgba(0,0,0,0.55),
     0 0 40px rgba(110,50,200,0.18),
     inset 0 -1px 0 rgba(150,85,247,0.12)
   `,
-  zIndex: 1000,
+  zIndex: 100,
+  position: 'relative', // 🔥 теперь панель двигается
   animation: 'fadeIn 0.6s ease-in-out',
 }
 
@@ -146,7 +168,7 @@ const langGroup = {
 // Кнопки навигации
 const navButton = {
   borderRadius: '10px',
-  padding: '9px 20px',
+  padding: '10px 20px',
   fontWeight: 500,
   fontSize: '0.95rem',
   border: '1px solid rgba(168,85,247,0.4)',
@@ -182,22 +204,22 @@ const activeLang = {
   boxShadow: '0 0 15px rgba(150,90,255,0.3)',
 }
 
-// === Языковая панель (только для мобильных) ===
+// === Языковая панель (мобильная) ===
 const mobileLangBar = {
   position: 'fixed',
   bottom: 10,
   left: '50%',
-  transform: 'translateX(-50%)',
   display: 'flex',
   justifyContent: 'center',
   gap: '14px',
   padding: '10px 16px',
-  background: 'rgba(8, 6, 15, 0.8)',
+  background: 'rgba(8,6,15,0.8)',
   border: '1px solid rgba(168,85,247,0.25)',
   borderRadius: '16px',
   backdropFilter: 'blur(14px)',
   boxShadow: '0 0 25px rgba(150,85,247,0.25)',
   zIndex: 2000,
+  transition: 'all 0.4s ease-in-out',
 }
 
 const langButtonMobile = {
@@ -211,7 +233,6 @@ const langButtonMobile = {
   cursor: 'pointer',
   transition: '0.25s ease',
 }
-
 const activeLangMobile = {
   background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
   border: '1px solid rgba(180,95,255,0.7)',
@@ -230,12 +251,11 @@ const footerStyle = {
   gap: 6,
 }
 
-/* Анимация появления */
+/* Анимация */
 const style = document.createElement('style')
 style.innerHTML = `
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
-}
-`
+}`
 document.head.appendChild(style)
