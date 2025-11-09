@@ -20,7 +20,7 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Плавное появление/исчезновение панели языков
+  // Fade-in/out языковой панели при скролле
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > lastScrollY && window.scrollY > 80) setShowLangBar(false)
@@ -33,7 +33,7 @@ export default function App() {
 
   return (
     <div className="container" style={{ position: 'relative', minHeight: '100vh' }}>
-      {/* === Верхняя панель (НЕ фиксированная) === */}
+      {/* === Верхняя панель === */}
       <div
         style={{
           ...navBar,
@@ -41,7 +41,6 @@ export default function App() {
           justifyContent: isMobile ? 'center' : 'space-between',
           padding: isMobile ? '10px 12px' : '14px 28px',
           borderRadius: isMobile ? '0 0 10px 10px' : '0 0 16px 16px',
-          position: 'relative',
         }}
       >
         {/* Навигация */}
@@ -64,8 +63,6 @@ export default function App() {
               style={{
                 ...navButton,
                 ...(tab === key ? activeButton : {}),
-                flex: isMobile ? '1 1 100px' : '0',
-                minWidth: isMobile ? '90px' : '130px',
               }}
             >
               {label}
@@ -104,7 +101,7 @@ export default function App() {
         © IZ HAIR TREND
       </footer>
 
-      {/* === Панель языков снизу (fade-in/out, только на мобильных) === */}
+      {/* === Панель языков снизу (только мобильная, fade-in/out) === */}
       {isMobile && (
         <div
           style={{
@@ -131,29 +128,48 @@ export default function App() {
   )
 }
 
+/* === Стили === */
+
+const navBar = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  background: 'rgba(10,10,15,0.75)',
+  backdropFilter: 'blur(18px)',
+  boxShadow:
+    '0 4px 12px rgba(0,0,0,0.45), 0 0 25px rgba(150,85,247,0.12), inset 0 -1px 0 rgba(168,85,247,0.2)',
+  borderRadius: '0 0 16px 16px',
+  position: 'relative', // панель теперь не фиксированная
+  zIndex: 10,
+}
+
 const navGroup = {
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
 }
+
 const langGroup = {
   display: 'flex',
   alignItems: 'center',
   gap: '10px',
 }
-/* === Стили === */
-const navBar = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '14px 28px',
-  background: 'rgba(10,10,15,0.75)',
-  backdropFilter: 'blur(18px)',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.45), 0 0 25px rgba(150,85,247,0.12), inset 0 -1px 0 rgba(168,85,247,0.2)',
-  borderRadius: '0 0 16px 16px',
-  position: 'relative', // ✅ вместо sticky
-  zIndex: 10,           // ✅ чуть меньше, чтобы не перекрывала модальные окна
+
+const navButton = {
+  borderRadius: '10px',
+  padding: '9px 22px',
+  minWidth: '130px',
+  fontWeight: 500,
+  fontSize: '0.95rem',
+  border: '1px solid rgba(168,85,247,0.4)',
+  background: 'linear-gradient(180deg, rgba(55,20,90,0.85), rgba(25,10,45,0.85))',
+  color: '#fff',
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
+  boxShadow: '0 0 10px rgba(150,90,255,0.15)',
+  textAlign: 'center',
 }
+
 const activeButton = {
   border: '1px solid rgba(180,95,255,0.8)',
   background: 'linear-gradient(180deg, rgba(80,30,130,0.9), rgba(40,15,70,0.9))',
@@ -171,6 +187,7 @@ const langButton = {
   cursor: 'pointer',
   transition: '0.25s ease',
 }
+
 const activeLang = {
   background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
   border: '1px solid rgba(180,95,255,0.7)',
@@ -193,6 +210,7 @@ const mobileLangBar = {
   zIndex: 2000,
   transition: 'all 0.4s ease-in-out',
 }
+
 const langButtonMobile = {
   borderRadius: '10px',
   padding: '7px 14px',
@@ -204,6 +222,7 @@ const langButtonMobile = {
   cursor: 'pointer',
   transition: '0.25s ease',
 }
+
 const activeLangMobile = {
   background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
   border: '1px solid rgba(180,95,255,0.7)',
@@ -227,6 +246,5 @@ style.innerHTML = `
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
-}
-`
+}`
 document.head.appendChild(style)
