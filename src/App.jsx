@@ -14,12 +14,14 @@ export default function App() {
   const [showLangBar, setShowLangBar] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
 
+  // Определяем мобильное устройство
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  // Плавное появление/исчезновение нижней панели языков
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > lastScrollY && window.scrollY > 80) setShowLangBar(false)
@@ -32,25 +34,22 @@ export default function App() {
 
   return (
     <div className="container" style={containerStyle}>
-      {/* Верхняя панель */}
+      {/* Верхняя панель (НЕ фиксирована) */}
       <div style={navBar}>
         <div style={leftSide}>
           <button
-            className={tab === 'calendar' ? 'active' : ''}
             onClick={() => setTab('calendar')}
             style={navButton(tab === 'calendar')}
           >
             {t('nav_calendar')}
           </button>
           <button
-            className={tab === 'my' ? 'active' : ''}
             onClick={() => setTab('my')}
             style={navButton(tab === 'my')}
           >
             {t('nav_my')}
           </button>
           <button
-            className={tab === 'admin' ? 'active' : ''}
             onClick={() => setTab('admin')}
             style={navButton(tab === 'admin')}
           >
@@ -58,28 +57,26 @@ export default function App() {
           </button>
         </div>
 
+        {/* Языки справа (только для ПК) */}
         {!isMobile && (
           <div style={langBlock}>
-            <button onClick={() => setLang('lt')} style={langButton(lang === 'lt')}>
-              LT
-            </button>
-            <button onClick={() => setLang('ru')} style={langButton(lang === 'ru')}>
-              RU
-            </button>
-            <button onClick={() => setLang('en')} style={langButton(lang === 'en')}>
-              GB
-            </button>
+            <button onClick={() => setLang('lt')} style={langButton(lang === 'lt')}>LT</button>
+            <button onClick={() => setLang('ru')} style={langButton(lang === 'ru')}>RU</button>
+            <button onClick={() => setLang('en')} style={langButton(lang === 'en')}>GB</button>
           </div>
         )}
       </div>
 
+      {/* Контент */}
       <Auth onAuth={setUser} />
       {tab === 'calendar' && <Calendar />}
       {tab === 'my' && <MyBookings />}
       {tab === 'admin' && <Admin />}
 
+      {/* Футер */}
       <footer style={footerStyle}>© IZ HAIR TREND</footer>
 
+      {/* Нижняя панель языков (только на мобильных) */}
       {isMobile && (
         <div
           style={{
@@ -129,7 +126,7 @@ const navBar = {
   boxShadow:
     '0 4px 12px rgba(0,0,0,0.45), 0 0 25px rgba(150,85,247,0.12), inset 0 -1px 0 rgba(168,85,247,0.2)',
   borderRadius: '0 0 16px 16px',
-  position: 'relative',
+  position: 'static', // ✅ теперь она ДВИЖЕТСЯ при скролле
   zIndex: 10,
 }
 
@@ -178,6 +175,7 @@ const langButton = (active) => ({
   transition: 'all 0.3s ease',
 })
 
+/* === Мобильная панель языков === */
 const mobileLangBar = {
   position: 'fixed',
   bottom: 10,
