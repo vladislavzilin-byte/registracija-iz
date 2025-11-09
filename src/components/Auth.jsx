@@ -20,7 +20,7 @@ const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 // автоформат телефона под +370
 const formatLithuanianPhone = (value) => {
   let digits = value.replace(/\D/g, "");
-  if (!digits.startsWith("")) digits = "" + digits.replace(/^0+/, "");
+  if (!digits.startsWith("370")) digits = "370" + digits.replace(/^0+/, "");
   if (digits.length > 11) digits = digits.slice(0, 11);
   return "+" + digits;
 };
@@ -47,7 +47,9 @@ function ForgotPasswordModal({ open, onClose }) {
     }
 
     if (user.passwordHash) {
-      setMessage("Ваш пароль зашифрован и не может быть показан.");
+      setMessage(
+        "Ваш пароль хранится в зашифрованном виде и не может быть показан."
+      );
       setFoundPassword("");
     } else if (user.password) {
       setFoundPassword(user.password);
@@ -93,6 +95,7 @@ function ForgotPasswordModal({ open, onClose }) {
 // === основной компонент Auth ===
 export default function Auth({ onAuth }) {
   const { t } = useI18n();
+
   const [mode, setMode] = useState("login");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -104,17 +107,22 @@ export default function Auth({ onAuth }) {
   const [error, setError] = useState("");
   const [errorFields, setErrorFields] = useState({});
   const [recoverOpen, setRecoverOpen] = useState(false);
-  const [current, setCurrent] = useState(null);
+  const [current, setCurrent] = useState(getCurrentUser());
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [toast, setToast] = useState("");
-  const [loginAttempts, setLoginAttempts] = useState(0);
-  const [lockUntil, setLockUntil] = useState(null);
 
+  // === автообновление данных профиля ===
   useEffect(() => {
-    const user = getCurrentUser();
-    setCurrent(user);
-  }, []);
+    const interval = setInterval(() => {
+      const updated = getCurrentUser();
+      if (updated && JSON.stringify(updated) !== JSON.stringify(current)) {
+        setCurrent(updated);
+        onAuth?.(updated);
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [current]);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -149,11 +157,6 @@ export default function Auth({ onAuth }) {
       return;
     }
 
-    if (lockUntil && Date.now() < lockUntil) {
-      setError("Слишком много попыток, попробуйте позже");
-      return;
-    }
-
     let users = getUsers();
     if (!Array.isArray(users)) users = [];
 
@@ -165,7 +168,7 @@ export default function Auth({ onAuth }) {
           (u.email && u.email.toLowerCase() === email.toLowerCase())
       );
       if (existing) {
-        setError("Такой email или телефон уже зарегистрирован");
+        setError("Пользователь с таким email или телефоном уже существует");
         return;
       }
 
@@ -187,7 +190,6 @@ export default function Auth({ onAuth }) {
       return;
     }
 
-    // === Вход ===
     const id = identifier.trim();
     const phoneNorm = normalizePhone(id);
     const emailNorm = id.toLowerCase();
@@ -203,19 +205,10 @@ export default function Auth({ onAuth }) {
     });
 
     if (!found) {
-      const newAttempts = loginAttempts + 1;
-      setLoginAttempts(newAttempts);
-      if (newAttempts >= 5) {
-        setLockUntil(Date.now() + 60_000);
-        setLoginAttempts(0);
-        setError("Превышено число попыток. Повторите через 1 минуту.");
-      } else {
-        setError("Неверный логин или пароль");
-      }
+      setError("Неверный логин или пароль");
       return;
     }
 
-    setLoginAttempts(0);
     setCurrentUser(found);
     setCurrent(found);
     onAuth?.(found);
@@ -247,118 +240,42 @@ export default function Auth({ onAuth }) {
     </svg>
   );
 
-  // === отображение ===
+  // === отображение профиля ===
   if (current) {
     const initials = current.name
       ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
       : "U";
 
     return (
-      <div
-        style={{
-          position: "relative",
-          padding: "26px",
-          borderRadius: "22px",
-          background: "rgba(15, 6, 26, 0.55)",
-          border: "1px solid rgba(168,85,247,0.35)",
-          backdropFilter: "blur(22px)",
-          WebkitBackdropFilter: "blur(22px)",
-          boxShadow: "0 12px 45px rgba(0,0,0,0.45)",
-          overflow: "hidden",
-          color: "#fff",
-        }}
-      >
-        {/* Aurora background */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 0,
-            pointerEvents: "none",
-            background:
-              "radial-gradient(900px 500px at -15% 120%, rgba(168,85,247,0.25), transparent 65%), " +
-              "radial-gradient(700px 500px at 120% -10%, rgba(139,92,246,0.25), transparent 60%), " +
-              "radial-gradient(900px 500px at 50% 120%, rgba(99,102,241,0.2), transparent 70%)",
-            animation: "auroraShift 10s ease-in-out infinite alternate",
-            filter: "blur(10px)",
-          }}
-        />
-
-        {/* Border glow */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            borderRadius: "22px",
-            background:
-              "linear-gradient(120deg, rgba(168,85,247,0.7), rgba(139,92,246,0.5), rgba(99,102,241,0.6))",
-            boxShadow:
-              "0 0 35px rgba(168,85,247,0.35), inset 0 0 25px rgba(168,85,247,0.25)",
-            opacity: 0.85,
-            animation: "glowPulse 5s ease-in-out infinite",
-          }}
-        />
-
-        <div
-          style={{
-            position: "relative",
-            zIndex: 2,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                background: "rgba(168,85,247,0.18)",
-                border: "1px solid rgba(168,85,247,0.35)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: 600,
-                color: "#fff",
-                fontSize: "1rem",
-                animation: "avatarPulse 3.8s ease-in-out infinite",
-              }}
-            >
-              {initials}
-            </div>
-
-            <div>
-              <div style={{ fontWeight: 700, fontSize: "1.15rem" }}>{current.name}</div>
-              <div style={{ opacity: 0.8 }}>{current.phone}</div>
-              {current.email && <div style={{ opacity: 0.8 }}>{current.email}</div>}
-              {current.instagram && <div style={{ opacity: 0.8 }}>{current.instagram}</div>}
-            </div>
-          </div>
-
-          <button
-            onClick={logout}
+      <>
+        {toast && <div style={toastStyle}>{toast}</div>}
+        <div style={cardStyle}>
+          <div style={auroraBg} />
+          <div style={borderGlow} />
+          <div
             style={{
-              borderRadius: "10px",
-              border: "1px solid rgba(168,85,247,0.45)",
-              background: "rgba(31,0,63,0.45)",
-              color: "#fff",
-              padding: "8px 22px",
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "0.25s",
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.boxShadow = "0 0 20px rgba(168,85,247,0.6)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.boxShadow = "none";
+              position: "relative",
+              zIndex: 2,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            Выйти
-          </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={avatarStyle}>{initials}</div>
+              <div>
+                <div style={nameStyle}>{current.name}</div>
+                <div style={contactStyle}>{current.phone}</div>
+                {current.email && <div style={contactStyle}>{current.email}</div>}
+                {current.instagram && <div style={contactStyle}>{current.instagram}</div>}
+              </div>
+            </div>
+            <button onClick={logout} style={logoutButton}>
+              Выйти
+            </button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -441,7 +358,7 @@ export default function Auth({ onAuth }) {
                 className={`glass-input ${errorFields.email ? "error" : ""}`}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email example@email.com"
+                placeholder="Email"
               />
               <input
                 className={`glass-input ${errorFields.phone ? "error" : ""}`}
@@ -456,7 +373,7 @@ export default function Auth({ onAuth }) {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Пароль (минимум 6 символов)"
+                  placeholder="Пароль"
                 />
                 <span onClick={() => setShowPassword(!showPassword)} style={eyeIcon}>
                   {showPassword ? eyeOpen : eyeClosed}
@@ -507,19 +424,6 @@ export default function Auth({ onAuth }) {
 
 // === стили ===
 const segmentStyles = `
-@keyframes auroraShift {
-  0% { background-position: 0 0, 100% 100%, 50% 50%; }
-  100% { background-position: 100% 0, 0 100%, 50% 50%; }
-}
-@keyframes glowPulse {
-  0%, 100% { opacity: 0.6; box-shadow: 0 0 25px rgba(168,85,247,0.35); }
-  50% { opacity: 1; box-shadow: 0 0 45px rgba(168,85,247,0.65); }
-}
-@keyframes avatarPulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(168,85,247,0.3); }
-  50% { box-shadow: 0 0 16px rgba(168,85,247,0.6); }
-}
-
 .segmented {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -542,7 +446,6 @@ const segmentStyles = `
   border: 1.5px solid rgba(168,85,247,0.9);
   background: rgba(31,0,63,0.45);
   box-shadow: 0 0 12px rgba(168,85,247,0.55), 0 0 22px rgba(168,85,247,0.35);
-  transition: box-shadow 0.3s ease;
 }
 .glass-input {
   width: 100%;
@@ -554,11 +457,6 @@ const segmentStyles = `
   background: rgba(17,0,40,0.45);
   outline: none;
   transition: .25s;
-}
-.glass-input.error {
-  border: 1.5px solid rgba(184,118,255,0.95);
-  box-shadow: 0 0 12px rgba(168,85,247,0.6);
-  animation: glowPulse 1s ease-in-out;
 }
 .cta {
   height: 42px;
@@ -575,6 +473,64 @@ const segmentStyles = `
 }
 `;
 
+const cardStyle = {
+  position: "relative",
+  padding: "26px",
+  borderRadius: "22px",
+  background: "rgba(15, 6, 26, 0.55)",
+  border: "1px solid rgba(168,85,247,0.35)",
+  backdropFilter: "blur(22px)",
+  boxShadow: "0 12px 45px rgba(0,0,0,0.45)",
+  overflow: "hidden",
+  color: "#fff",
+};
+const auroraBg = {
+  position: "absolute",
+  inset: 0,
+  background:
+    "radial-gradient(900px 500px at -10% 120%, rgba(168,85,247,0.18), transparent 65%), " +
+    "radial-gradient(700px 400px at 110% -20%, rgba(139,92,246,0.16), transparent 60%), " +
+    "radial-gradient(800px 450px at 50% 120%, rgba(99,102,241,0.12), transparent 65%)",
+  animation: "auroraShift 12s ease-in-out infinite alternate",
+};
+const borderGlow = {
+  position: "absolute",
+  inset: 0,
+  borderRadius: "22px",
+  background:
+    "linear-gradient(120deg, rgba(168,85,247,0.55), rgba(139,92,246,0.35), rgba(99,102,241,0.45))",
+  opacity: 0.7,
+};
+const avatarStyle = {
+  width: 44,
+  height: 44,
+  borderRadius: 12,
+  background: "rgba(168,85,247,0.18)",
+  border: "1px solid rgba(168,85,247,0.35)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontWeight: 600,
+  color: "#fff",
+  fontSize: "1rem",
+};
+const nameStyle = {
+  fontWeight: 700,
+  fontSize: "1.15rem",
+};
+const contactStyle = {
+  opacity: 0.8,
+};
+const logoutButton = {
+  borderRadius: "10px",
+  border: "1px solid rgba(168,85,247,0.45)",
+  background: "rgba(31,0,63,0.45)",
+  color: "#fff",
+  padding: "8px 22px",
+  fontWeight: 500,
+  cursor: "pointer",
+  transition: "0.25s",
+};
 const overlayStyle = {
   position: "fixed",
   top: 0,
