@@ -13,28 +13,28 @@ export default function App() {
 
   return (
     <div className="container">
-      {/* === Верхняя панель (Aurora Glass Glow) === */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '14px 28px',
-          background: 'rgba(20, 10, 35, 0.65)',
-          backdropFilter: 'blur(18px)',
-          borderBottom: '1px solid rgba(168,85,247,0.25)',
-          boxShadow: `
-            0 2px 18px rgba(150,90,255,0.25),
-            inset 0 -1px 0 rgba(168,85,247,0.3),
-            0 0 60px rgba(90,40,180,0.15)
-          `,
-          borderRadius: '0 0 16px 16px',
-          position: 'sticky',
-          top: 0,
-          zIndex: 1000,
-          animation: 'fadeIn 0.6s ease-in-out',
-        }}
-      >
+{/* === Верхняя панель (Dark Aurora Glass) === */}
+<div
+  style={{
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '14px 28px',
+    background: 'rgba(10, 10, 15, 0.65)', // более тёмный фон
+    backdropFilter: 'blur(18px)',
+    borderBottom: '1px solid rgba(168,85,247,0.15)',
+    boxShadow: `
+      0 2px 12px rgba(0,0,0,0.4),
+      0 0 25px rgba(110,50,200,0.15),
+      inset 0 -1px 0 rgba(168,85,247,0.25)
+    `,
+    borderRadius: '0 0 16px 16px',
+    position: 'sticky',
+    top: 0,
+    zIndex: 1000,
+    animation: 'fadeIn 0.6s ease-in-out',
+  }}
+>
         {/* LEFT — навигация */}
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
