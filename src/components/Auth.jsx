@@ -448,8 +448,10 @@ const segmentStyles = `
   transition: .25s;
 }
 .segmented button.active {
-  border: 2px solid rgba(168,85,247,0.8);
+  border: 1.5px solid rgba(168,85,247,0.9);
   background: rgba(31,0,63,0.45);
+  box-shadow: 0 0 12px rgba(168,85,247,0.55), 0 0 22px rgba(168,85,247,0.35);
+  transition: box-shadow 0.3s ease;
 }
 .glass-input {
   width: 100%;
