@@ -471,7 +471,7 @@ const profileCard = {
   position: "relative",
   padding: "24px",
   borderRadius: "20px",
-  background: 'rgba(168,85,247,0.18)',
+  background: 'rgba(46, 27, 61, 0.8)',
   border: '1px solid rgba(168,85,247,0.35)',
   backdropFilter: "blur(2px)",
   boxShadow: "0 0 40px rgba(90,0,160,0.15)",
