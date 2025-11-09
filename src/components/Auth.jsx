@@ -504,8 +504,8 @@ const avatarStyle = {
   width: 48,
   height: 48,
   borderRadius: 14,
-  background: "rgba(25,0,45,0.9)",
-  border: "1px solid rgba(168,85,247,0.35)",
+  background: "linear-gradient(180deg, rgba(46,27,61,1) 0%, rgba(36,17,50,1) 100%)",
+  border: "1px solid rgba(150,90,255,0.35)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -513,6 +513,10 @@ const avatarStyle = {
   color: "#fff",
   fontSize: "1rem",
   position: "relative",
+  boxShadow: `
+    0 0 12px rgba(120,60,210,0.08),
+    0 0 22px rgba(140,70,230,0.06)
+  `,
   animation: "auroraBorderPulse 6s ease-in-out infinite",
 };
 const nameStyle = {
