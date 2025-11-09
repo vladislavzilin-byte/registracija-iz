@@ -20,50 +20,50 @@ export default function App() {
 
   return (
     <div className="container">
-      {/* === Верхняя панель (адаптивная, но горизонтальная) === */}
+      {/* === Верхняя панель === */}
       <div
         style={{
           ...navBar,
           position: isMobile ? 'relative' : 'sticky',
           padding: isMobile ? '10px 14px' : '14px 28px',
           borderRadius: isMobile ? '0 0 12px 12px' : '0 0 16px 16px',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? '12px' : '0',
         }}
       >
-        {/* LEFT — навигация */}
-        <div style={navWrapper}>
-          <div style={scrollArea}>
-            <button
-              onClick={() => setTab('calendar')}
-              style={{
-                ...navButton,
-                ...(tab === 'calendar' ? activeButton : {}),
-              }}
-            >
-              {t('nav_calendar')}
-            </button>
-            <button
-              onClick={() => setTab('my')}
-              style={{
-                ...navButton,
-                ...(tab === 'my' ? activeButton : {}),
-              }}
-            >
-              {t('nav_my')}
-            </button>
-            <button
-              onClick={() => setTab('admin')}
-              style={{
-                ...navButton,
-                ...(tab === 'admin' ? activeButton : {}),
-              }}
-            >
-              {t('nav_admin')}
-            </button>
-          </div>
+        {/* Навигация */}
+        <div style={navBlock}>
+          <button
+            onClick={() => setTab('calendar')}
+            style={{
+              ...navButton,
+              ...(tab === 'calendar' ? activeButton : {}),
+            }}
+          >
+            {t('nav_calendar')}
+          </button>
+          <button
+            onClick={() => setTab('my')}
+            style={{
+              ...navButton,
+              ...(tab === 'my' ? activeButton : {}),
+            }}
+          >
+            {t('nav_my')}
+          </button>
+          <button
+            onClick={() => setTab('admin')}
+            style={{
+              ...navButton,
+              ...(tab === 'admin' ? activeButton : {}),
+            }}
+          >
+            {t('nav_admin')}
+          </button>
         </div>
 
-        {/* RIGHT — языки */}
-        <div style={langWrapper}>
+        {/* Языки */}
+        <div style={langBlock}>
           <button
             onClick={() => setLang('lt')}
             style={{
@@ -116,7 +116,6 @@ const navBar = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '14px 28px',
   background: 'rgba(8, 6, 15, 0.8)',
   backdropFilter: 'blur(18px)',
   boxShadow: `
@@ -128,29 +127,29 @@ const navBar = {
   top: 0,
   zIndex: 1000,
   animation: 'fadeIn 0.6s ease-in-out',
+  flexWrap: 'wrap',
+  rowGap: '10px',
 }
 
-// Контейнер с горизонтальной прокруткой навигации
-const navWrapper = {
-  overflowX: 'auto',
-  flex: 1,
+// Блок навигации
+const navBlock = {
   display: 'flex',
-  alignItems: 'center',
+  flexWrap: 'nowrap',
+  gap: '10px',
+  justifyContent: 'flex-start',
+  flex: 1,
+  minWidth: 0,
+  overflowX: 'auto',
   scrollbarWidth: 'none',
   msOverflowStyle: 'none',
 }
-const scrollArea = {
+const langBlock = {
   display: 'flex',
   gap: '10px',
-  flexShrink: 0,
-  whiteSpace: 'nowrap',
-}
-const langWrapper = {
-  display: 'flex',
-  gap: '10px',
-  flexShrink: 0,
   justifyContent: 'flex-end',
-  alignItems: 'center',
+  flexShrink: 0,
+  flexWrap: 'nowrap',
+  overflowX: 'auto',
 }
 
 // Кнопки навигации
