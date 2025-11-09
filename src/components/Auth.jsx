@@ -502,14 +502,14 @@ const avatarStyle = {
   height: 48,
   borderRadius: 14,
   background: "rgba(25,0,45,0.85)",
-  border: "1.3px solid rgba(168,85,247,0.45)",
+  border: "1px solid rgba(168,85,247,0.35)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   fontWeight: 700,
   color: "#fff",
   fontSize: "1rem",
-  animation: "avatarPulse 4s ease-in-out infinite alternate",
+  animation: "avatarPulse 5s ease-in-out infinite alternate",
   transition: "0.3s ease-in-out",
 };
 const nameStyle = {
@@ -609,18 +609,21 @@ style.innerHTML = `
 }
 @keyframes avatarPulse {
   0% {
-    box-shadow: none;
+    box-shadow:
+      0 0 3px rgba(168,85,247,0.08),
+      0 0 6px rgba(139,92,246,0.08);
     border-color: rgba(168,85,247,0.35);
   }
   50% {
     box-shadow:
-      0 0 14px rgba(168,85,247,0.45),
-      0 0 32px rgba(139,92,246,0.4),
-      0 0 60px rgba(168,85,247,0.3);
-    border-color: rgba(168,85,247,0.75);
+      0 0 8px rgba(168,85,247,0.18),
+      0 0 14px rgba(139,92,246,0.15);
+    border-color: rgba(168,85,247,0.55);
   }
   100% {
-    box-shadow: none;
+    box-shadow:
+      0 0 3px rgba(168,85,247,0.08),
+      0 0 6px rgba(139,92,246,0.08);
     border-color: rgba(168,85,247,0.35);
   }
 }
