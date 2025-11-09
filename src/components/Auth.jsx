@@ -466,23 +466,21 @@ const segmentStyles = `
   transform: translateY(-1px);
 }
 `;
-
 const profileCard = {
   position: "relative",
   padding: "24px",
   borderRadius: "20px",
   background: `
-    radial-gradient(800px 600px at -10% 120%, rgba(120,70,255,0.10), transparent 70%),
-    radial-gradient(700px 400px at 110% -20%, rgba(100,60,240,0.08), transparent 70%),
-    radial-gradient(900px 500px at 50% 100%, rgba(80,50,200,0.10), transparent 75%),
-    linear-gradient(180deg, rgba(46,27,61,1) 0%, rgba(40,20,55,1) 100%)
+    linear-gradient(180deg, rgba(62,31,90,1) 0%, rgba(46,27,61,1) 100%),
+    radial-gradient(600px 400px at 20% 0%, rgba(130,80,255,0.12), transparent 80%),
+    radial-gradient(700px 500px at 80% 100%, rgba(100,60,200,0.10), transparent 75%)
   `,
-  border: "1px solid rgba(168,85,247,0.3)",
-  backdropFilter: "blur(22px)",
+  border: "1px solid rgba(168,85,247,0.25)",
+  backdropFilter: "blur(20px)",
   boxShadow: `
-    inset 0 0 22px rgba(120,50,200,0.08),
-    0 0 40px rgba(100,50,220,0.12),
-    0 0 70px rgba(80,40,180,0.08)
+    inset 0 0 20px rgba(120,50,200,0.10),
+    0 0 30px rgba(110,50,200,0.12),
+    0 0 60px rgba(90,40,180,0.10)
   `,
   overflow: "hidden",
   color: "#fff",
