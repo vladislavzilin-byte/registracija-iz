@@ -11,8 +11,6 @@ export default function App() {
   const [tab, setTab] = useState('calendar')
   const [user, setUser] = useState(getCurrentUser())
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  const [showLangBar, setShowLangBar] = useState(true)
-  const [lastScrollY, setLastScrollY] = useState(0)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -20,51 +18,50 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Плавное появление/исчезновение панели языков
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > lastScrollY && window.scrollY > 80) setShowLangBar(false)
-      else setShowLangBar(true)
-      setLastScrollY(window.scrollY)
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [lastScrollY])
-
   return (
-    <div className="container" style={containerStyle}>
+    <div className="container" style={{ position: 'relative', minHeight: '100vh' }}>
       {/* === Верхняя панель === */}
       <div
         style={{
           ...navBar,
-          flexWrap: isMobile ? 'wrap' : 'nowrap',
-          justifyContent: isMobile ? 'center' : 'space-between',
-          padding: isMobile ? '10px 12px' : '14px 28px',
-          borderRadius: isMobile ? '0 0 10px 10px' : '0 0 16px 16px',
+          position: 'relative',
+          padding: isMobile ? '10px 16px' : '14px 28px',
+          borderRadius: isMobile ? '0 0 12px 12px' : '0 0 16px 16px',
+          flexDirection: 'row',
         }}
       >
-        {/* Кнопки навигации */}
-        <div style={{ display: 'flex', gap: isMobile ? '8px' : '12px', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
-          {[
-            { key: 'calendar', label: t('nav_calendar') },
-            { key: 'my', label: t('nav_my') },
-            { key: 'admin', label: t('nav_admin') },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              style={{
-                ...navButton,
-                ...(tab === key ? activeButton : {}),
-                minWidth: isMobile ? '90px' : '130px',
-              }}
-            >
-              {label}
-            </button>
-          ))}
+        {/* Навигация слева */}
+        <div style={navGroup}>
+          <button
+            onClick={() => setTab('calendar')}
+            style={{
+              ...navButton,
+              ...(tab === 'calendar' ? activeButton : {}),
+            }}
+          >
+            {t('nav_calendar')}
+          </button>
+          <button
+            onClick={() => setTab('my')}
+            style={{
+              ...navButton,
+              ...(tab === 'my' ? activeButton : {}),
+            }}
+          >
+            {t('nav_my')}
+          </button>
+          <button
+            onClick={() => setTab('admin')}
+            style={{
+              ...navButton,
+              ...(tab === 'admin' ? activeButton : {}),
+            }}
+          >
+            {t('nav_admin')}
+          </button>
         </div>
 
-        {/* Языки (справа на ПК) */}
+        {/* Языки справа (для ПК) */}
         {!isMobile && (
           <div style={langGroup}>
             {['lt', 'ru', 'en'].map(code => (
@@ -90,17 +87,14 @@ export default function App() {
       {tab === 'admin' && <Admin />}
 
       {/* === Футер === */}
-      <footer style={footerStyle}>© IZ HAIR TREND</footer>
+      <footer style={footerStyle}>
+        <img src="/logo.svg" alt="logo" style={{ height: 20, opacity: 0.7, marginRight: 6 }} />
+        © IZ HAIR TREND
+      </footer>
 
-      {/* === Панель языков снизу (fade-in/out, только на мобильных) === */}
+      {/* === Панель языков внизу (только мобильная версия) === */}
       {isMobile && (
-        <div
-          style={{
-            ...mobileLangBar,
-            opacity: showLangBar ? 1 : 0,
-            transform: `translate(-50%, ${showLangBar ? '0' : '20px'})`,
-          }}
-        >
+        <div style={mobileLangBar}>
           {['lt', 'ru', 'en'].map(code => (
             <button
               key={code}
@@ -119,88 +113,93 @@ export default function App() {
   )
 }
 
-/* === СТИЛИ === */
-const containerStyle = {
-  minHeight: '100vh',
-  background:
-    'radial-gradient(800px at 50% 120%, rgba(80,40,180,0.12), transparent 80%),' +
-    'radial-gradient(600px at 0% 0%, rgba(140,70,255,0.05), transparent 80%),' +
-    '#0b0a0f',
-  color: '#fff',
-  fontFamily: 'Inter, sans-serif',
-  animation: 'fadeIn 0.8s ease-in-out',
-}
+/* === Стили === */
 
+// Верхняя панель
 const navBar = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  background: 'rgba(10,10,15,0.75)',
+  background: 'rgba(8, 6, 15, 0.8)',
   backdropFilter: 'blur(18px)',
-  boxShadow:
-    '0 4px 12px rgba(0,0,0,0.45), 0 0 25px rgba(150,85,247,0.12), inset 0 -1px 0 rgba(168,85,247,0.2)',
-  borderRadius: '0 0 16px 16px',
-  position: 'relative', // ✅ теперь панель двигается
-  top: 'auto',
-  zIndex: 10,
+  boxShadow: `
+    0 3px 16px rgba(0,0,0,0.55),
+    0 0 40px rgba(110,50,200,0.18),
+    inset 0 -1px 0 rgba(150,85,247,0.12)
+  `,
+  zIndex: 1000,
+  animation: 'fadeIn 0.6s ease-in-out',
 }
 
-const navButton = {
-  borderRadius: '12px',
-  padding: '10px 22px',
-  fontWeight: 500,
-  cursor: 'pointer',
-  background: 'rgba(20,15,30,0.6)',
-  border: '1px solid rgba(120,80,180,0.3)',
-  color: '#fff',
-  transition: 'all 0.3s ease',
-  boxShadow: '0 0 0 rgba(0,0,0,0)',
+// Группы кнопок
+const navGroup = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
 }
-const activeButton = {
-  background: 'linear-gradient(180deg, rgba(130,60,255,0.9), rgba(70,0,120,0.85))',
-  border: '1.5px solid rgba(168,85,247,0.8)',
-  boxShadow: '0 0 18px rgba(150,85,247,0.35)',
-}
-
 const langGroup = {
   display: 'flex',
   alignItems: 'center',
   gap: '10px',
 }
 
-const langButton = {
+// Кнопки навигации
+const navButton = {
   borderRadius: '10px',
-  width: '44px',
-  height: '36px',
-  fontWeight: 600,
-  border: '1px solid rgba(120,80,180,0.25)',
-  background: 'rgba(20,15,30,0.5)',
+  padding: '9px 20px',
+  minWidth: '130px', // 👈 одинаковая ширина
+  textAlign: 'center',
+  fontWeight: 500,
+  fontSize: '0.95rem',
+  border: '1px solid rgba(168,85,247,0.4)',
+  background: 'linear-gradient(180deg, rgba(55,20,90,0.85), rgba(25,10,45,0.85))',
   color: '#fff',
   cursor: 'pointer',
   transition: 'all 0.3s ease',
-}
-const activeLang = {
-  background: 'linear-gradient(180deg, rgba(130,60,255,0.85), rgba(70,0,120,0.8))',
-  border: '1.5px solid rgba(168,85,247,0.9)',
-  boxShadow: '0 0 16px rgba(150,85,247,0.4)',
+  boxShadow: '0 0 10px rgba(150,90,255,0.15)',
 }
 
-/* === Мобильная панель языков === */
+const activeButton = {
+  border: '1px solid rgba(180,95,255,0.8)',
+  background: 'linear-gradient(180deg, rgba(80,30,130,0.9), rgba(40,15,70,0.9))',
+  boxShadow: '0 0 25px rgba(180,95,255,0.6), 0 0 10px rgba(180,95,255,0.3) inset',
+}
+
+// Кнопки языков (ПК)
+const langButton = {
+  borderRadius: '10px',
+  padding: '7px 14px',
+  border: '1px solid rgba(168,85,247,0.35)',
+  color: '#fff',
+  fontWeight: 500,
+  fontSize: '0.85rem',
+  background: 'rgba(25,10,45,0.6)',
+  cursor: 'pointer',
+  transition: '0.25s ease',
+}
+
+const activeLang = {
+  background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
+  border: '1px solid rgba(180,95,255,0.7)',
+  boxShadow: '0 0 15px rgba(150,90,255,0.3)',
+}
+
+// === Языковая панель (мобильная) ===
 const mobileLangBar = {
   position: 'fixed',
   bottom: 10,
   left: '50%',
+  transform: 'translateX(-50%)',
   display: 'flex',
   justifyContent: 'center',
   gap: '14px',
   padding: '10px 16px',
-  background: 'rgba(8,6,15,0.8)',
+  background: 'rgba(8, 6, 15, 0.8)',
   border: '1px solid rgba(168,85,247,0.25)',
   borderRadius: '16px',
   backdropFilter: 'blur(14px)',
   boxShadow: '0 0 25px rgba(150,85,247,0.25)',
   zIndex: 2000,
-  transition: 'all 0.4s ease-in-out',
 }
 
 const langButtonMobile = {
@@ -214,24 +213,31 @@ const langButtonMobile = {
   cursor: 'pointer',
   transition: '0.25s ease',
 }
+
 const activeLangMobile = {
   background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
   border: '1px solid rgba(180,95,255,0.7)',
   boxShadow: '0 0 18px rgba(150,90,255,0.4)',
 }
 
+// Футер
 const footerStyle = {
   marginTop: 40,
   textAlign: 'center',
-  opacity: 0.4,
+  opacity: 0.45,
   fontSize: '0.9rem',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
 }
 
-/* === Анимация === */
+/* Анимация */
 const style = document.createElement('style')
 style.innerHTML = `
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
-}`
+}
+`
 document.head.appendChild(style)
