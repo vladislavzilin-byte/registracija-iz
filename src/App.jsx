@@ -12,7 +12,6 @@ export default function App() {
   const [user, setUser] = useState(getCurrentUser())
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
 
-  // следим за шириной экрана
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
     window.addEventListener('resize', handleResize)
@@ -21,7 +20,7 @@ export default function App() {
 
   return (
     <div className="container">
-      {/* === Верхняя панель (адаптивная) === */}
+      {/* === Верхняя панель (адаптивная, но горизонтальная) === */}
       <div
         style={{
           ...navBar,
@@ -31,51 +30,40 @@ export default function App() {
         }}
       >
         {/* LEFT — навигация */}
-        <div
-          style={{
-            display: 'flex',
-            gap: isMobile ? '8px' : '12px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <button
-            onClick={() => setTab('calendar')}
-            style={{
-              ...navButton,
-              ...(tab === 'calendar' ? activeButton : {}),
-            }}
-          >
-            {t('nav_calendar')}
-          </button>
-          <button
-            onClick={() => setTab('my')}
-            style={{
-              ...navButton,
-              ...(tab === 'my' ? activeButton : {}),
-            }}
-          >
-            {t('nav_my')}
-          </button>
-          <button
-            onClick={() => setTab('admin')}
-            style={{
-              ...navButton,
-              ...(tab === 'admin' ? activeButton : {}),
-            }}
-          >
-            {t('nav_admin')}
-          </button>
+        <div style={navWrapper}>
+          <div style={scrollArea}>
+            <button
+              onClick={() => setTab('calendar')}
+              style={{
+                ...navButton,
+                ...(tab === 'calendar' ? activeButton : {}),
+              }}
+            >
+              {t('nav_calendar')}
+            </button>
+            <button
+              onClick={() => setTab('my')}
+              style={{
+                ...navButton,
+                ...(tab === 'my' ? activeButton : {}),
+              }}
+            >
+              {t('nav_my')}
+            </button>
+            <button
+              onClick={() => setTab('admin')}
+              style={{
+                ...navButton,
+                ...(tab === 'admin' ? activeButton : {}),
+              }}
+            >
+              {t('nav_admin')}
+            </button>
+          </div>
         </div>
 
         {/* RIGHT — языки */}
-        <div
-          style={{
-            display: 'flex',
-            gap: '10px',
-            flexWrap: 'wrap',
-            justifyContent: isMobile ? 'flex-start' : 'flex-end',
-          }}
-        >
+        <div style={langWrapper}>
           <button
             onClick={() => setLang('lt')}
             style={{
@@ -128,8 +116,7 @@ const navBar = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  flexWrap: 'wrap',
-  gap: '8px',
+  padding: '14px 28px',
   background: 'rgba(8, 6, 15, 0.8)',
   backdropFilter: 'blur(18px)',
   boxShadow: `
@@ -141,6 +128,29 @@ const navBar = {
   top: 0,
   zIndex: 1000,
   animation: 'fadeIn 0.6s ease-in-out',
+}
+
+// Контейнер с горизонтальной прокруткой навигации
+const navWrapper = {
+  overflowX: 'auto',
+  flex: 1,
+  display: 'flex',
+  alignItems: 'center',
+  scrollbarWidth: 'none',
+  msOverflowStyle: 'none',
+}
+const scrollArea = {
+  display: 'flex',
+  gap: '10px',
+  flexShrink: 0,
+  whiteSpace: 'nowrap',
+}
+const langWrapper = {
+  display: 'flex',
+  gap: '10px',
+  flexShrink: 0,
+  justifyContent: 'flex-end',
+  alignItems: 'center',
 }
 
 // Кнопки навигации
@@ -155,6 +165,7 @@ const navButton = {
   cursor: 'pointer',
   transition: 'all 0.3s ease',
   boxShadow: '0 0 10px rgba(150,90,255,0.15)',
+  flexShrink: 0,
 }
 
 const activeButton = {
@@ -174,6 +185,7 @@ const langButton = {
   background: 'rgba(25,10,45,0.6)',
   cursor: 'pointer',
   transition: '0.25s ease',
+  flexShrink: 0,
 }
 
 const activeLang = {
@@ -200,5 +212,7 @@ style.innerHTML = `
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
-}`
+}
+::-webkit-scrollbar { display: none; }
+`
 document.head.appendChild(style)
