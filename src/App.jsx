@@ -2,7 +2,7 @@ import Auth from './components/Auth.jsx'
 import Calendar from './components/Calendar.jsx'
 import Admin from './components/Admin.jsx'
 import MyBookings from './components/MyBookings.jsx'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { getCurrentUser } from './lib/storage'
 import { useI18n } from './lib/i18n'
 
@@ -10,46 +10,28 @@ export default function App() {
   const { lang, setLang, t } = useI18n()
   const [tab, setTab] = useState('calendar')
   const [user, setUser] = useState(getCurrentUser())
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  const [showLangBar, setShowLangBar] = useState(true)
-  const [lastScrollY, setLastScrollY] = useState(0)
-
-  // Определяем мобильное устройство
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  // Плавное появление/исчезновение нижней панели языков
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > lastScrollY && window.scrollY > 80) setShowLangBar(false)
-      else setShowLangBar(true)
-      setLastScrollY(window.scrollY)
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [lastScrollY])
 
   return (
     <div className="container" style={containerStyle}>
-      {/* Верхняя панель (НЕ фиксирована) */}
+      {/* Верхняя панель */}
       <div style={navBar}>
         <div style={leftSide}>
           <button
+            className={tab === 'calendar' ? 'active' : ''}
             onClick={() => setTab('calendar')}
             style={navButton(tab === 'calendar')}
           >
             {t('nav_calendar')}
           </button>
           <button
+            className={tab === 'my' ? 'active' : ''}
             onClick={() => setTab('my')}
             style={navButton(tab === 'my')}
           >
             {t('nav_my')}
           </button>
           <button
+            className={tab === 'admin' ? 'active' : ''}
             onClick={() => setTab('admin')}
             style={navButton(tab === 'admin')}
           >
@@ -57,14 +39,26 @@ export default function App() {
           </button>
         </div>
 
-        {/* Языки справа (только для ПК) */}
-        {!isMobile && (
-          <div style={langBlock}>
-            <button onClick={() => setLang('lt')} style={langButton(lang === 'lt')}>LT</button>
-            <button onClick={() => setLang('ru')} style={langButton(lang === 'ru')}>RU</button>
-            <button onClick={() => setLang('en')} style={langButton(lang === 'en')}>GB</button>
-          </div>
-        )}
+        <div style={langBlock}>
+          <button
+            onClick={() => setLang('lt')}
+            style={langButton(lang === 'lt')}
+          >
+            LT
+          </button>
+          <button
+            onClick={() => setLang('ru')}
+            style={langButton(lang === 'ru')}
+          >
+            RU
+          </button>
+          <button
+            onClick={() => setLang('en')}
+            style={langButton(lang === 'en')}
+          >
+            GB
+          </button>
+        </div>
       </div>
 
       {/* Контент */}
@@ -75,30 +69,6 @@ export default function App() {
 
       {/* Футер */}
       <footer style={footerStyle}>© IZ HAIR TREND</footer>
-
-      {/* Нижняя панель языков (только на мобильных) */}
-      {isMobile && (
-        <div
-          style={{
-            ...mobileLangBar,
-            opacity: showLangBar ? 1 : 0,
-            transform: `translate(-50%, ${showLangBar ? '0' : '20px'})`,
-          }}
-        >
-          {['lt', 'ru', 'en'].map(code => (
-            <button
-              key={code}
-              onClick={() => setLang(code)}
-              style={{
-                ...langButtonMobile,
-                ...(lang === code ? activeLangMobile : {}),
-              }}
-            >
-              {code === 'lt' ? '🇱🇹' : code === 'ru' ? '🇷🇺' : '🇬🇧'}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
@@ -126,8 +96,9 @@ const navBar = {
   boxShadow:
     '0 4px 12px rgba(0,0,0,0.45), 0 0 25px rgba(150,85,247,0.12), inset 0 -1px 0 rgba(168,85,247,0.2)',
   borderRadius: '0 0 16px 16px',
-  position: 'static', // ✅ теперь она ДВИЖЕТСЯ при скролле
-  zIndex: 10,
+  position: 'sticky',
+  top: 0,
+  zIndex: 1000,
 }
 
 const leftSide = {
@@ -174,42 +145,6 @@ const langButton = (active) => ({
   boxShadow: active ? '0 0 16px rgba(150,85,247,0.4)' : 'none',
   transition: 'all 0.3s ease',
 })
-
-/* === Мобильная панель языков === */
-const mobileLangBar = {
-  position: 'fixed',
-  bottom: 10,
-  left: '50%',
-  display: 'flex',
-  justifyContent: 'center',
-  gap: '14px',
-  padding: '10px 16px',
-  background: 'rgba(8,6,15,0.8)',
-  border: '1px solid rgba(168,85,247,0.25)',
-  borderRadius: '16px',
-  backdropFilter: 'blur(14px)',
-  boxShadow: '0 0 25px rgba(150,85,247,0.25)',
-  zIndex: 2000,
-  transition: 'all 0.4s ease-in-out',
-}
-
-const langButtonMobile = {
-  borderRadius: '10px',
-  padding: '7px 14px',
-  border: '1px solid rgba(168,85,247,0.35)',
-  background: 'rgba(25,10,45,0.7)',
-  color: '#fff',
-  fontWeight: 500,
-  fontSize: '1rem',
-  cursor: 'pointer',
-  transition: '0.25s ease',
-}
-
-const activeLangMobile = {
-  background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
-  border: '1px solid rgba(180,95,255,0.7)',
-  boxShadow: '0 0 18px rgba(150,90,255,0.4)',
-}
 
 const footerStyle = {
   marginTop: 40,
