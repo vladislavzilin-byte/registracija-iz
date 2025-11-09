@@ -498,18 +498,21 @@ opacity: 0.35,
 animation: "glowBreath 7s ease-in-out infinite alternate",
 };
 const avatarStyle = {
-    minWidth: 44,
-    height: 44,
-    borderRadius: 12,
-    background: 'rgba(168,85,247,0.18)',
-    border: '1px solid rgba(168,85,247,0.35)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: '#fff',
-    fontWeight: 700,
-    fontSize: '1.1rem',
-    animation: 'avatarPulse 3.6s ease-in-out infinite'
+  width: 48,
+  height: 48,
+  borderRadius: 14,
+  background: "rgba(28,0,50,0.85)",
+  border: "1.5px solid rgba(168,85,247,0.45)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontWeight: 700,
+  color: "#fff",
+  fontSize: "1rem",
+  boxShadow:
+    "0 0 10px rgba(168,85,247,0.25), 0 0 25px rgba(168,85,247,0.15)",
+  animation: "avatarBorderPulse 3.6s ease-in-out infinite",
+  transition: "0.4s",
 };
 const nameStyle = {
   fontWeight: 700,
@@ -605,6 +608,29 @@ style.innerHTML = `
 @keyframes avatarGlow {
   0% { box-shadow: 0 0 6px rgba(168,85,247,0.25), inset 0 0 8px rgba(168,85,247,0.2); }
   100% { box-shadow: 0 0 16px rgba(168,85,247,0.45), inset 0 0 14px rgba(168,85,247,0.35); }
+}
+@keyframes avatarBorderPulse {
+  0% {
+    box-shadow:
+      0 0 8px rgba(168,85,247,0.25),
+      0 0 18px rgba(139,92,246,0.25),
+      0 0 28px rgba(168,85,247,0.1);
+    border-color: rgba(168,85,247,0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 16px rgba(168,85,247,0.55),
+      0 0 36px rgba(139,92,246,0.45),
+      0 0 60px rgba(168,85,247,0.35);
+    border-color: rgba(168,85,247,0.75);
+  }
+  100% {
+    box-shadow:
+      0 0 8px rgba(168,85,247,0.25),
+      0 0 18px rgba(139,92,246,0.25),
+      0 0 28px rgba(168,85,247,0.1);
+    border-color: rgba(168,85,247,0.4);
+  }
 }
 `;
 document.head.appendChild(style);
