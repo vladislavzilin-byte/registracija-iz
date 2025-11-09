@@ -471,10 +471,14 @@ const profileCard = {
   position: "relative",
   padding: "24px",
   borderRadius: "20px",
-  background: "linear-gradient(135deg, rgba(18, 0, 36, 0.95), rgba(28, 0, 54, 0.92), rgba(40, 0, 75, 0.9))",
+  background: "linear-gradient(180deg, rgba(46,27,61,1) 0%, rgba(40,20,55,1) 100%)",
   border: "1px solid rgba(168,85,247,0.25)",
   backdropFilter: "blur(22px)",
-  boxShadow: "inset 0 0 18px rgba(120,60,200,0.08), 0 0 45px rgba(90,0,160,0.12)",
+  boxShadow: `
+    inset 0 0 18px rgba(100,40,180,0.08),
+    0 0 35px rgba(90,0,160,0.10),
+    0 0 60px rgba(70,20,130,0.05)
+  `,
   overflow: "hidden",
   color: "#fff",
   animation: "fadeIn 0.6s ease-in-out",
