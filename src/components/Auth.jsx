@@ -20,7 +20,7 @@ const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 // автоформат телефона под +370
 const formatLithuanianPhone = (value) => {
   let digits = value.replace(/\D/g, "");
-  if (!digits.startsWith("")) digits = "" + digits.replace(/^0+/, "");
+  if (!digits.startsWith("370")) digits = "370" + digits.replace(/^0+/, "");
   if (digits.length > 11) digits = digits.slice(0, 11);
   return "+" + digits;
 };
@@ -250,88 +250,132 @@ export default function Auth({ onAuth }) {
     </svg>
   );
 
-// === отображение ===
-if (current) {
-  const initials = current.name
-    ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
-    : "U";
+  // === отображение ===
+  if (current) {
+    const initials = current.name
+      ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
+      : "U";
+
+    return (
+      <>
+        {toast && <div style={toastStyle}>{toast}</div>}
+        <div style={cardStyle}>
+          <div style={auroraBg} />
+          <div style={borderGlow} />
+          <div
+            style={{
+              position: "relative",
+              zIndex: 2,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={avatarStyle}>{initials}</div>
+              <div>
+                <div style={nameStyle}>{current.name}</div>
+                <div style={contactStyle}>{current.phone}</div>
+                {current.email && <div style={contactStyle}>{current.email}</div>}
+                {current.instagram && <div style={contactStyle}>{current.instagram}</div>}
+              </div>
+            </div>
+            <button onClick={logout} style={logoutButton}>
+              Выйти
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
       {toast && <div style={toastStyle}>{toast}</div>}
+      <style>{segmentStyles}</style>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: "rgba(17, 0, 40, 0.45)",
-          border: "1px solid rgba(168,85,247,0.35)",
-          borderRadius: "16px",
-          padding: "16px 22px",
-          color: "#fff",
-          boxShadow: "0 0 22px rgba(168,85,247,0.15)",
-          backdropFilter: "blur(18px)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 12,
-              background: "rgba(168,85,247,0.2)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 600,
-              color: "#fff",
-              fontSize: "1rem",
-            }}
+      <div className="card" style={{ paddingTop: 18 }}>
+        <div className="segmented" style={{ marginBottom: 14 }}>
+          <button
+            type="button"
+            className={mode === "login" ? "active" : ""}
+            onClick={() => setMode("login")}
           >
-            {initials}
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>
-              {current.name}
-            </div>
-            <div style={{ opacity: 0.8, fontSize: "0.95rem" }}>
-              {current.phone}
-            </div>
-            {current.email && (
-              <div style={{ opacity: 0.8, fontSize: "0.95rem" }}>
-                {current.email}
-              </div>
-            )}
-          </div>
+            Вход
+          </button>
+          <button
+            type="button"
+            className={mode === "register" ? "active" : ""}
+            onClick={() => setMode("register")}
+          >
+            Регистрация
+          </button>
         </div>
 
-        <button
-          onClick={logout}
-          style={{
-            borderRadius: "10px",
-            border: "1px solid rgba(168,85,247,0.45)",
-            background: "rgba(31,0,63,0.45)",
-            color: "#fff",
-            padding: "8px 22px",
-            fontWeight: 500,
-            cursor: "pointer",
-            transition: "0.25s",
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.boxShadow = "0 0 18px rgba(168,85,247,0.5)";
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.boxShadow = "none";
-          }}
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "flex", flexDirection: "column", gap: 12 }}
         >
-          Выйти
-        </button>
-      </div>
-    </>
-  );
-}
+          {mode === "login" ? (
+            <>
+              <input
+                className={`glass-input ${errorFields.identifier ? "error" : ""}`}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="+3706... / email"
+              />
+              <div style={{ position: "relative" }}>
+                <input
+                  className={`glass-input ${errorFields.password ? "error" : ""}`}
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Пароль"
+                />
+                <span onClick={() => setShowPassword(!showPassword)} style={eyeIcon}>
+                  {showPassword ? eyeOpen : eyeClosed}
+                </span>
+              </div>
+              <div
+                onClick={() => setRecoverOpen(true)}
+                style={{
+                  textAlign: "right",
+                  color: "#b58fff",
+                  fontSize: "0.9rem",
+                  cursor: "pointer",
+                  marginTop: "-6px",
+                }}
+              >
+                Забыли пароль?
+              </div>
+            </>
+          ) : (
+            <>
+              <input
+                className={`glass-input ${errorFields.name ? "error" : ""}`}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Имя"
+              />
+              <input
+                className="glass-input"
+                value={instagram}
+                onChange={(e) => setInstagram(e.target.value)}
+                placeholder="@instagram"
+              />
+              <input
+                className={`glass-input ${errorFields.email ? "error" : ""}`}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+              />
+           <input
+  className={`glass-input ${errorFields.phone ? "error" : ""}`}
+  value={phone}
+  onChange={(e) => setPhone(formatLithuanianPhone(e.target.value))}
+  placeholder="Телефон +370 61234567"
+  style={{ color: phone ? "#fff" : "#aaa" }}
+/>
               <div style={{ position: "relative" }}>
                 <input
                   className={`glass-input ${errorFields.password ? "error" : ""}`}
