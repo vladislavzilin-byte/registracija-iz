@@ -102,7 +102,7 @@ export default function Auth({ onAuth }) {
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [name, setName] = useState("");
   const [instagram, setInstagram] = useState("");
-  const [phone, setPhone] = useState("+370");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [errorFields, setErrorFields] = useState({});
@@ -369,12 +369,13 @@ export default function Auth({ onAuth }) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
               />
-              <input
-                className={`glass-input ${errorFields.phone ? "error" : ""}`}
-                value={phone}
-                onChange={(e) => setPhone(formatLithuanianPhone(e.target.value))}
-                placeholder="+37060000000"
-              />
+           <input
+  className={`glass-input ${errorFields.phone ? "error" : ""}`}
+  value={phone}
+  onChange={(e) => setPhone(formatLithuanianPhone(e.target.value))}
+  placeholder="Телефон +370 61234567"
+  style={{ color: phone ? "#fff" : "#aaa" }}
+/>
               <div style={{ position: "relative" }}>
                 <input
                   className={`glass-input ${errorFields.password ? "error" : ""}`}
