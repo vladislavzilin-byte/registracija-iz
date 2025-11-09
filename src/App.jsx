@@ -11,6 +11,13 @@ export default function App() {
   const [tab, setTab] = useState('calendar')
   const [user, setUser] = useState(getCurrentUser())
 
+  // 🟣 Проверка, является ли пользователь администратором
+  const isAdmin =
+    user?.role === 'admin' ||
+    user?.isAdmin === true ||
+    user?.email === 'vlados@admin.com' || // замени на свой email
+    user?.email === 'vladislavzilin@gmail.com'
+
   return (
     <div className="container" style={containerStyle}>
       {/* === Верхняя панель === */}
@@ -22,6 +29,7 @@ export default function App() {
           >
             {t('nav_calendar')}
           </button>
+
           <button
             onClick={() => setTab('my')}
             style={navButton(tab === 'my')}
@@ -29,8 +37,8 @@ export default function App() {
             {t('nav_my')}
           </button>
 
-          {/* Плавно появляющаяся кнопка Админ */}
-          {user?.role === 'admin' && (
+          {/* === Кнопка Админ (только для админа) === */}
+          {isAdmin && (
             <button
               onClick={() => setTab('admin')}
               style={{
@@ -61,7 +69,7 @@ export default function App() {
       <Auth onAuth={setUser} />
       {tab === 'calendar' && <Calendar />}
       {tab === 'my' && <MyBookings />}
-      {tab === 'admin' && user?.role === 'admin' && <Admin />}
+      {tab === 'admin' && isAdmin && <Admin />}
 
       {/* === Футер === */}
       <footer style={footerStyle}>© IZ HAIR TREND</footer>
@@ -82,7 +90,6 @@ const containerStyle = {
   animation: 'fadeIn 0.8s ease-in-out',
 }
 
-/* === Верхняя панель === */
 const navBar = {
   display: 'flex',
   justifyContent: 'space-between',
@@ -98,11 +105,7 @@ const navBar = {
   zIndex: 1000,
 }
 
-/* === Кнопки навигации === */
-const leftSide = {
-  display: 'flex',
-  gap: '12px',
-}
+const leftSide = { display: 'flex', gap: '12px' }
 
 const navButton = (active) => ({
   borderRadius: '12px',
@@ -125,11 +128,7 @@ const navButton = (active) => ({
   transform: active ? 'translateY(-1px)' : 'translateY(0)',
 })
 
-/* === Блок языков === */
-const langBlock = {
-  display: 'flex',
-  gap: '8px',
-}
+const langBlock = { display: 'flex', gap: '8px' }
 
 const langButton = (active) => ({
   borderRadius: '10px',
@@ -148,7 +147,6 @@ const langButton = (active) => ({
   transition: 'all 0.25s ease',
 })
 
-/* === Футер === */
 const footerStyle = {
   marginTop: 40,
   textAlign: 'center',
@@ -156,21 +154,12 @@ const footerStyle = {
   fontSize: '0.9rem',
 }
 
-/* === Анимации === */
+/* === Анимация === */
 const style = document.createElement('style')
 style.innerHTML = `
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
-button:hover {
-  filter: brightness(1.12);
-  transform: translateY(-1px);
-}`
+`
 document.head.appendChild(style)
