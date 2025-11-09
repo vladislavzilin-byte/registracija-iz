@@ -20,7 +20,7 @@ const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 // автоформат телефона под +370
 const formatLithuanianPhone = (value) => {
   let digits = value.replace(/\D/g, "");
-  if (!digits.startsWith("370")) digits = "370" + digits.replace(/^0+/, "");
+  if (!digits.startsWith("")) digits = "" + digits.replace(/^0+/, "");
   if (digits.length > 11) digits = digits.slice(0, 11);
   return "+" + digits;
 };
@@ -322,7 +322,7 @@ export default function Auth({ onAuth }) {
                 className={`glass-input ${errorFields.identifier ? "error" : ""}`}
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="+3706... / email"
+                placeholder="tel / email"
               />
               <div style={{ position: "relative" }}>
                 <input
