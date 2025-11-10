@@ -301,20 +301,34 @@ export default function MyBookings() {
               <th style={styles.th}>Статус</th>
             </tr>
           </thead>
-          <tbody>
-            {filteredBookings.length === 0 ? (
-              <tr><td style={styles.td} colSpan={3}>Нет записей</td></tr>
-            ) : filteredBookings.map((b, i) => (
-              <tr key={i}>
-                <td style={styles.td}>{b.date || "-"}</td>
-                <td style={styles.td}>{b.time || "-"}</td>
-                <td style={styles.td}>
-                  <span style={styles.statusDot(!b.cancelled)} />
-                  {b.cancelled ? "Отменена" : "Подтверждена"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
+    <tbody>
+  {filteredBookings.length === 0 ? (
+    <tr>
+      <td style={styles.td} colSpan={3}>
+        Нет записей
+      </td>
+    </tr>
+  ) : (
+    filteredBookings.map((b, i) => (
+      <tr key={i}>
+        <td style={styles.td}>
+          {b.date || b.day || "-"}
+        </td>
+        <td style={styles.td}>
+          {b.time || b.slot || "-"}
+        </td>
+        <td style={styles.td}>
+          <span style={styles.statusDot(!b.cancelled)} />
+          {b.cancelled
+            ? "Отменена"
+            : b.status === "pending"
+            ? "Ожидает подтверждения"
+            : "Подтверждена"}
+        </td>
+      </tr>
+    ))
+  )}
+</tbody>
         </table>
       </div>
 
