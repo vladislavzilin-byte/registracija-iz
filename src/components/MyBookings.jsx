@@ -26,9 +26,8 @@ export default function MyBookings() {
   const [filter, setFilter] = useState('all')
   const [confirmId, setConfirmId] = useState(null)
   const [version, setVersion] = useState(0)
-  const [notif, setNotif] = useState(null)
   const [modal, setModal] = useState(false)
-  const [showProfile, setShowProfile] = useState(true)
+  const [showProfile, setShowProfile] = useState(false) // теперь по умолчанию скрыт
 
   const bookingsAll = getBookings()
   const all = bookingsAll
@@ -99,7 +98,10 @@ export default function MyBookings() {
       <div style={profileCard}>
         <div style={profileHeader} onClick={() => setShowProfile(!showProfile)}>
           <h3 style={{ margin: 0 }}>{t('my_profile')}</h3>
-          <div style={arrow}>{showProfile ? '▲' : '▼'}</div>
+          <div style={editLabel}>
+            <span>{showProfile ? 'Скрыть профиль' : 'Редактировать профиль'}</span>
+            <div style={arrow}>{showProfile ? '▲' : '▼'}</div>
+          </div>
         </div>
 
         <div
@@ -107,10 +109,10 @@ export default function MyBookings() {
             ...profileBody,
             maxHeight: showProfile ? '800px' : '0',
             opacity: showProfile ? 1 : 0,
-            padding: showProfile ? '16px' : '0 16px',
+            padding: showProfile ? '20px' : '0 20px',
           }}
         >
-          <form className="col" style={{ gap: 12 }} onSubmit={saveProfile}>
+          <form className="col" style={{ gap: 12, textAlign: 'center' }} onSubmit={saveProfile}>
             <div><label>Имя</label><input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
             <div><label>Instagram</label><input value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} /></div>
             <div>
@@ -148,7 +150,9 @@ export default function MyBookings() {
           <thead><tr><th>Дата</th><th>Время</th><th>Статус</th><th></th></tr></thead>
           <tbody>
             {list.map(b => {
-              const canCancel = (b.status === 'pending' || b.status === 'approved') && new Date(b.start) > new Date()
+              const canCancel =
+                (b.status === 'pending' || b.status === 'approved') &&
+                new Date(b.end) > new Date() // теперь можно отменять даже в день записи
               return (
                 <tr key={b.id}>
                   <td>{fmtDate(b.start)}</td>
@@ -170,7 +174,7 @@ export default function MyBookings() {
         <div style={modalBackdrop}>
           <div style={modalBox}>
             <h3>{t('confirm_cancel')}</h3>
-            <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <div style={{ display: 'flex', gap: 12, marginTop: 16, justifyContent: 'center' }}>
               <button style={cancelBtn} onClick={doCancel}>{t('yes_cancel')}</button>
               <button style={okBtn} onClick={() => setConfirmId(null)}>{t('back')}</button>
             </div>
@@ -201,7 +205,8 @@ const profileCard = {
   marginBottom: '24px',
   overflow: 'hidden',
   backdropFilter: 'blur(18px)',
-  boxShadow: '0 8px 32px rgba(120,50,200,0.15)'
+  boxShadow: '0 8px 32px rgba(120,50,200,0.15)',
+  color: '#fff'
 }
 
 const profileHeader = {
@@ -212,9 +217,9 @@ const profileHeader = {
   padding: '14px 18px',
   background: 'rgba(40,20,70,0.45)',
   borderBottom: '1px solid rgba(168,85,247,0.25)',
-  color: '#fff'
 }
 
+const editLabel = { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', opacity: 0.8 }
 const arrow = { fontSize: '0.8rem', opacity: 0.8 }
 
 const profileBody = {
