@@ -34,7 +34,7 @@ export default function MyBookings() {
     setMessage('')
     try {
       await updateProfile(profile)
-      setMessage('✅ Профиль успешно обновлён')
+      setMessage('✅ Профиль обновлён')
     } catch (err) {
       setMessage('❌ Ошибка при обновлении')
     } finally {
@@ -44,10 +44,10 @@ export default function MyBookings() {
   }
 
   return (
-    <div style={wrapper}>
+    <div style={page}>
       {/* === Блок профиля === */}
-      <div style={card}>
-        <h2 style={title}>{t('my_profile')}</h2>
+      <div style={glassCard}>
+        <h2 style={sectionTitle}>{t('my_profile')}</h2>
         <div style={form}>
           <input
             style={input}
@@ -68,21 +68,19 @@ export default function MyBookings() {
             value={profile.password}
             onChange={(e) => setProfile({ ...profile, password: e.target.value })}
           />
-
           <button style={saveButton} onClick={handleUpdate} disabled={saving}>
             {saving ? <span style={spinner}></span> : t('save_changes')}
           </button>
-
           {message && <div style={toast}>{message}</div>}
         </div>
       </div>
 
-      {/* === Таблица визитов === */}
-      <div style={card}>
+      {/* === Блок записей === */}
+      <div style={glassCard}>
         <div style={headerRow}>
-          <h2 style={title}>{t('my_bookings')}</h2>
+          <h2 style={sectionTitle}>{t('my_bookings')}</h2>
           <button style={refreshButton} onClick={() => window.location.reload()}>
-            {loading ? <span style={spinner}></span> : '⟳'}
+            {loading ? <span style={spinnerSmall}></span> : '⟳'}
           </button>
         </div>
 
@@ -93,24 +91,19 @@ export default function MyBookings() {
         ) : bookings.length === 0 ? (
           <p style={noBookings}>{t('no_bookings')}</p>
         ) : (
-          <table style={table}>
-            <thead>
-              <tr>
-                <th>{t('date')}</th>
-                <th>{t('time')}</th>
-                <th>{t('service')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookings.map((b, i) => (
-                <tr key={i} style={tableRow}>
-                  <td>{b.date}</td>
-                  <td>{b.time}</td>
-                  <td>{b.service}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div style={tableWrapper}>
+            {bookings.map((b, i) => (
+              <div key={i} style={{ ...bookingRow, animationDelay: `${i * 0.07}s` }}>
+                <div style={bookingCol}>{b.date}</div>
+                <div style={bookingCol}>{b.time}</div>
+                <div style={bookingCol}>
+                  <div style={{ ...statusDot, background: b.statusColor || '#facc15' }}></div>
+                  {b.status || 'Ожидает подтверждения'}
+                </div>
+                <button style={cancelButton}>{t('cancel')}</button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
@@ -119,29 +112,33 @@ export default function MyBookings() {
 
 /* === СТИЛИ === */
 
-const wrapper = {
+const page = {
   display: 'flex',
   flexDirection: 'column',
   gap: '32px',
-  marginTop: 20,
+  marginTop: 25,
 }
 
-const card = {
-  background: 'rgba(18, 10, 30, 0.65)',
+const glassCard = {
+  background: 'rgba(20,10,40,0.55)',
   border: '1px solid rgba(168,85,247,0.25)',
-  borderRadius: '16px',
-  padding: '22px 24px',
-  boxShadow: '0 0 35px rgba(150,85,255,0.1)',
-  backdropFilter: 'blur(14px)',
+  borderRadius: '20px',
+  padding: '24px 26px',
+  backdropFilter: 'blur(18px)',
+  boxShadow: `
+    0 0 25px rgba(150,85,255,0.15),
+    inset 0 0 30px rgba(120,60,200,0.08)
+  `,
   animation: 'fadeIn 0.6s ease-in-out',
+  transition: 'all 0.3s ease',
 }
 
-const title = {
+const sectionTitle = {
   fontSize: '1.2rem',
   fontWeight: 600,
-  marginBottom: 14,
-  color: '#e8d9ff',
-  textShadow: '0 0 8px rgba(170,90,255,0.6)',
+  color: '#E9D8FF',
+  textShadow: '0 0 10px rgba(170,90,255,0.6)',
+  marginBottom: 16,
 }
 
 const form = {
@@ -152,32 +149,32 @@ const form = {
 
 const input = {
   padding: '12px 14px',
-  borderRadius: '10px',
+  borderRadius: '12px',
   border: '1px solid rgba(168,85,247,0.25)',
-  background: 'rgba(255,255,255,0.03)',
+  background: 'rgba(255,255,255,0.04)',
   color: '#fff',
   fontSize: '0.95rem',
   outline: 'none',
-  transition: 'all 0.3s ease',
-  boxShadow: 'inset 0 0 10px rgba(150,85,255,0.05)',
+  transition: '0.3s',
 }
 
 const saveButton = {
   marginTop: 10,
   padding: '10px 20px',
-  borderRadius: '10px',
-  background: 'linear-gradient(90deg, rgba(150,70,255,0.6), rgba(90,40,180,0.6))',
-  border: '1px solid rgba(168,85,247,0.7)',
+  borderRadius: '12px',
+  border: '1px solid rgba(168,85,247,0.6)',
+  background:
+    'linear-gradient(135deg, rgba(150,70,255,0.8), rgba(80,30,150,0.85))',
   color: '#fff',
   fontWeight: 600,
   cursor: 'pointer',
   transition: 'all 0.3s ease',
-  boxShadow: '0 0 15px rgba(160,85,255,0.3)',
+  boxShadow: '0 0 18px rgba(150,85,255,0.35)',
 }
 saveButton[':hover'] = { filter: 'brightness(1.2)' }
 
 const toast = {
-  marginTop: 8,
+  marginTop: 10,
   textAlign: 'center',
   fontSize: '0.9rem',
   color: '#a855f7',
@@ -204,17 +201,50 @@ const refreshButton = {
   justifyContent: 'center',
   transition: '0.25s ease',
 }
-refreshButton[':hover'] = { transform: 'rotate(90deg)' }
 
-const table = {
-  width: '100%',
-  borderCollapse: 'collapse',
-  fontSize: '0.95rem',
-  color: '#f5f0ff',
+const tableWrapper = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+  marginTop: 8,
 }
-const tableRow = {
-  transition: 'background 0.2s ease',
+
+const bookingRow = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr 2fr auto',
+  alignItems: 'center',
+  padding: '12px 16px',
+  borderRadius: '12px',
+  background: 'rgba(25,10,50,0.5)',
+  border: '1px solid rgba(168,85,247,0.15)',
+  color: '#fff',
+  animation: 'fadeUp 0.4s ease forwards',
 }
+
+const bookingCol = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+}
+
+const cancelButton = {
+  borderRadius: '10px',
+  padding: '6px 14px',
+  border: '1px solid rgba(255,100,150,0.5)',
+  background: 'rgba(90,20,50,0.4)',
+  color: '#ff8faa',
+  cursor: 'pointer',
+  transition: '0.25s ease',
+}
+cancelButton[':hover'] = { filter: 'brightness(1.3)' }
+
+const statusDot = {
+  width: 10,
+  height: 10,
+  borderRadius: '50%',
+  boxShadow: '0 0 8px currentColor',
+}
+
 const noBookings = {
   textAlign: 'center',
   color: 'rgba(255,255,255,0.6)',
@@ -232,7 +262,16 @@ const spinner = {
   width: '18px',
   height: '18px',
   borderRadius: '50%',
-  border: '2px solid rgba(255,255,255,0.3)',
+  border: '2px solid rgba(255,255,255,0.25)',
+  borderTopColor: '#a855f7',
+  animation: 'spin 0.8s linear infinite',
+}
+
+const spinnerSmall = {
+  width: '14px',
+  height: '14px',
+  borderRadius: '50%',
+  border: '2px solid rgba(255,255,255,0.25)',
   borderTopColor: '#a855f7',
   animation: 'spin 0.8s linear infinite',
 }
@@ -252,7 +291,11 @@ style.innerHTML = `
   to { transform: rotate(360deg); }
 }
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 `
