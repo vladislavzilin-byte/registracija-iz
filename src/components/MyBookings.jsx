@@ -110,26 +110,76 @@ export default function MyBookings() {
             padding: showProfile ? '20px' : '0 20px',
           }}
         >
-          <form className="col" style={{ gap: 12, textAlign: 'center' }} onSubmit={saveProfile}>
-            <div><label>Имя</label><input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-            <div><label>Instagram</label><input value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} /></div>
-            <div>
-              <label>Телефон</label>
-              <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
-              {errors.phone && <small style={{ color: '#f87171' }}>{errors.phone}</small>}
-            </div>
-            <div>
-              <label>Email</label>
-              <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-              {errors.email && <small style={{ color: '#f87171' }}>{errors.email}</small>}
-            </div>
-            <div><label>Пароль</label><input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></div>
+          <form
+  className="col"
+  style={{ gap: 12, textAlign: 'center' }}
+  onSubmit={(e) => {
+    e.preventDefault()
+    saveProfile(e)
+    // 🔥 после успешного сохранения — уведомляем админку
+    window.dispatchEvent(new Event('profileUpdated'))
+  }}
+>
+  <div>
+    <label>Имя</label>
+    <input
+      value={form.name}
+      onChange={e => setForm({ ...form, name: e.target.value })}
+    />
+  </div>
+  <div>
+    <label>Instagram</label>
+    <input
+      value={form.instagram}
+      onChange={e => setForm({ ...form, instagram: e.target.value })}
+    />
+  </div>
+  <div>
+    <label>Телефон</label>
+    <input
+      value={form.phone}
+      onChange={e => setForm({ ...form, phone: e.target.value })}
+    />
+    {errors.phone && (
+      <small style={{ color: '#f87171' }}>{errors.phone}</small>
+    )}
+  </div>
+  <div>
+    <label>Email</label>
+    <input
+      value={form.email}
+      onChange={e => setForm({ ...form, email: e.target.value })}
+    />
+    {errors.email && (
+      <small style={{ color: '#f87171' }}>{errors.email}</small>
+    )}
+  </div>
+  <div>
+    <label>Пароль</label>
+    <input
+      type="password"
+      value={form.password}
+      onChange={e => setForm({ ...form, password: e.target.value })}
+    />
+  </div>
 
-            {errors.contact && (
-              <div style={{ background: 'rgba(255,0,0,0.1)', padding: 8, borderRadius: 8, color: '#f87171' }}>{errors.contact}</div>
-            )}
-            <button style={saveBtn}><span>💾</span> {t('save')}</button>
-          </form>
+  {errors.contact && (
+    <div
+      style={{
+        background: 'rgba(255,0,0,0.1)',
+        padding: 8,
+        borderRadius: 8,
+        color: '#f87171'
+      }}
+    >
+      {errors.contact}
+    </div>
+  )}
+
+  <button style={saveBtn}>
+    <span>💾</span> {t('save')}
+  </button>
+</form>
         </div>
       </div>
 
