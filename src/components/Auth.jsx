@@ -68,17 +68,13 @@ function ForgotPasswordModal({ open, onClose }) {
         <button onClick={handleRecover} style={buttonStyle}>
           Показать пароль
         </button>
-        {message && (
-          <div style={{ color: "#ff9bbb", marginTop: 10 }}>{message}</div>
-        )}
+        {message && <div style={{ color: "#ff9bbb", marginTop: 10 }}>{message}</div>}
         {foundPassword && (
           <div style={{ color: "#b58fff", marginTop: 10 }}>
             Ваш пароль: <strong>{foundPassword}</strong>
           </div>
         )}
-        <button onClick={onClose} style={closeBtnStyle}>
-          Закрыть
-        </button>
+        <button onClick={onClose} style={closeBtnStyle}>Закрыть</button>
       </div>
     </div>
   );
@@ -87,7 +83,6 @@ function ForgotPasswordModal({ open, onClose }) {
 // === основной компонент Auth ===
 export default function Auth({ onAuth, children }) {
   const { t } = useI18n();
-
   const [mode, setMode] = useState("login");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -104,15 +99,15 @@ export default function Auth({ onAuth, children }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [toast, setToast] = useState("");
 
-  // === автообновление ===
+  // === автообновление данных ===
   useEffect(() => {
     const interval = setInterval(() => {
       const updated = getCurrentUser();
-      if (updated && JSON.stringify(updated) !== JSON.stringify(current)) {
+      if (JSON.stringify(updated) !== JSON.stringify(current)) {
         setCurrent(updated);
         onAuth?.(updated);
       }
-    }, 2000);
+    }, 1000);
     return () => clearInterval(interval);
   }, [current]);
 
@@ -210,14 +205,8 @@ export default function Auth({ onAuth, children }) {
     onAuth?.(null);
   };
 
-  // === SVG-глаз ===
-  const eyeIcon = {
-    position: "absolute",
-    right: 12,
-    top: 10,
-    cursor: "pointer",
-    opacity: 0.85,
-  };
+  // === SVG-глаза ===
+  const eyeIcon = { position: "absolute", right: 12, top: 10, cursor: "pointer", opacity: 0.85 };
   const eyeOpen = (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b58fff" strokeWidth="1.8">
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
@@ -230,7 +219,7 @@ export default function Auth({ onAuth, children }) {
     </svg>
   );
 
-  // === профиль ===
+  // === если пользователь вошёл ===
   if (current) {
     const initials = current.name
       ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
@@ -265,7 +254,7 @@ export default function Auth({ onAuth, children }) {
           </div>
         </div>
 
-        {/* === сюда попадает весь контент страниц === */}
+        {/* Контент под профилем */}
         <div style={{ marginTop: 24 }}>
           {children}
         </div>
@@ -273,7 +262,7 @@ export default function Auth({ onAuth, children }) {
     );
   }
 
-  // === форма логина / регистрации ===
+  // === форма входа / регистрации ===
   return (
     <>
       {toast && <div style={toastStyle}>{toast}</div>}
@@ -285,8 +274,51 @@ export default function Auth({ onAuth, children }) {
           <button type="button" className={mode === "register" ? "active" : ""} onClick={() => setMode("register")}>Регистрация</button>
         </div>
 
+        {/* форма как прежде */}
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* ... остальной код формы без изменений ... */}
+          {mode === "login" ? (
+            <>
+              <input
+                className={`glass-input ${errorFields.identifier ? "error" : ""}`}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="tel / email"
+              />
+              <div style={{ position: "relative" }}>
+                <input
+                  className={`glass-input ${errorFields.password ? "error" : ""}`}
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Пароль"
+                />
+                <span onClick={() => setShowPassword(!showPassword)} style={eyeIcon}>
+                  {showPassword ? eyeOpen : eyeClosed}
+                </span>
+              </div>
+              <div onClick={() => setRecoverOpen(true)} style={{ textAlign: "right", color: "#b58fff", fontSize: "0.9rem", cursor: "pointer" }}>
+                Забыли пароль?
+              </div>
+            </>
+          ) : (
+            <>
+              <input className={`glass-input ${errorFields.name ? "error" : ""}`} value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" />
+              <input className="glass-input" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@instagram" />
+              <input className={`glass-input ${errorFields.email ? "error" : ""}`} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+              <input className={`glass-input ${errorFields.phone ? "error" : ""}`} value={phone} onChange={(e) => setPhone(formatLithuanianPhone(e.target.value))} placeholder="Телефон +370 61234567" />
+              <div style={{ position: "relative" }}>
+                <input className={`glass-input ${errorFields.password ? "error" : ""}`} type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Пароль" />
+                <span onClick={() => setShowPassword(!showPassword)} style={eyeIcon}>{showPassword ? eyeOpen : eyeClosed}</span>
+              </div>
+              <div style={{ position: "relative" }}>
+                <input className={`glass-input ${errorFields.passwordConfirm ? "error" : ""}`} type={showConfirmPassword ? "text" : "password"} value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} placeholder="Подтвердите пароль" />
+                <span onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={eyeIcon}>{showConfirmPassword ? eyeOpen : eyeClosed}</span>
+              </div>
+            </>
+          )}
+
+          {error && <div style={{ color: "#ff88aa", textAlign: "center" }}>{error}</div>}
+          <button type="submit" className="cta">{mode === "login" ? "Войти" : "Регистрация"}</button>
         </form>
       </div>
 
@@ -295,5 +327,4 @@ export default function Auth({ onAuth, children }) {
   );
 }
 
-// === стили остаются без изменений ===
-// (оставь свой прежний стиль, добавления выше не меняют визуал)
+// === стили — оставить как в твоей прошлой версии ===
