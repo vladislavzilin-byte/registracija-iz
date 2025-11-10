@@ -1,4 +1,4 @@
-const ADMINS = ['irina.abramova7@gmail.com','vladislavzilin@gmail.com']
+const ADMINS = ['irina.abramova7@gmail.com', 'vladislavzilin@gmail.com']
 
 import { useState, useMemo, useEffect } from 'react'
 import {
@@ -10,9 +10,9 @@ import { exportBookingsToCSV } from '../lib/export'
 import { useI18n } from '../lib/i18n'
 
 export default function Admin() {
-  const me = (typeof getCurrentUser==='function')
+  const me = (typeof getCurrentUser === 'function')
     ? getCurrentUser()
-    : JSON.parse(localStorage.getItem('currentUser')||'{}')
+    : JSON.parse(localStorage.getItem('currentUser') || '{}')
 
   const isAdmin = me && (me.role === 'admin' || (me.email && ADMINS.includes(me.email)))
   if (!isAdmin) {
@@ -27,30 +27,16 @@ export default function Admin() {
   const { t } = useI18n()
   const [settings, setSettings] = useState(getSettings())
   const [bookings, setBookings] = useState(getBookings())
+
   const [showSettings, setShowSettings] = useState(false)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [toast, setToast] = useState(null)
 
-  // 🔄 Автообновление при изменениях (в том числе из MyProfile/MyBookings)
-useEffect(() => {
-  const sync = () => {
-    setSettings(getSettings())
-    setBookings(getBookings())
-  }
-  window.addEventListener('storage', sync)
-  window.addEventListener('profileUpdated', sync)
-  return () => {
-    window.removeEventListener('storage', sync)
-    window.removeEventListener('profileUpdated', sync)
-  }
-}, [])
-
   const update = (patch) => {
     const next = { ...settings, ...patch }
     setSettings(next)
     saveSettings(next)
-    setBookings(getBookings())
   }
 
   const stats = useMemo(() => {
@@ -71,7 +57,7 @@ useEffect(() => {
       const matchStatus = statusFilter === 'all' ? true : b.status === statusFilter
       return matchQ && matchStatus
     })
-    arr.sort((a,b) => new Date(a.start) - new Date(b.start))
+    arr.sort((a, b) => new Date(a.start) - new Date(b.start))
     return arr
   }, [bookings, search, statusFilter])
 
@@ -102,196 +88,220 @@ useEffect(() => {
     setTimeout(() => setToast(null), 3500)
   }
 
+  // 🔔 Обновление таблицы и подсветка после изменения профиля
+  useEffect(() => {
+    const handler = () => {
+      const updatedBookings = getBookings()
+      setBookings(updatedBookings)
+
+      document.querySelectorAll('tr[data-booking-id]').forEach(row => {
+        row.classList.add('highlight')
+        setTimeout(() => row.classList.remove('highlight'), 1000)
+      })
+    }
+
+    window.addEventListener('profileUpdated', handler)
+    return () => window.removeEventListener('profileUpdated', handler)
+  }, [])
+
   const statusLabel = (b) =>
     b.status === 'approved' ? '🟢 ' + t('approved')
       : b.status === 'pending' ? '🟡 ' + t('pending')
       : (b.status === 'canceled_client' ? '❌ ' + t('canceled_by_client') : '🔴 ' + t('canceled_by_admin'))
 
   return (
-    <div className="col" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* ===== НАСТРОЙКИ ===== */}
-      <div style={cardAurora}>
-        <button
-          onClick={() => setShowSettings(s => !s)}
-          style={headerToggle}
-        >
-          <span style={{display:'inline-flex',alignItems:'center',gap:10}}>
-            <Chevron open={showSettings}/>
-            <span style={{fontWeight:700}}>Редактировать настройки</span>
-          </span>
-        </button>
+    <div className="row" style={{ gap: 16 }}>
+      {/* ======= НАСТРОЙКИ (аккордеон) ======= */}
+      <div className="col" style={{ flex: '0 1 420px' }}>
+        <div style={cardAurora}>
+          <button onClick={() => setShowSettings(s => !s)} style={headerToggle}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+              <Chevron open={showSettings} />
+              <span style={{ fontWeight: 700 }}>Редактировать настройки</span>
+            </span>
+          </button>
 
-        <div style={{
-          maxHeight: showSettings ? 1000 : 0,
-          overflow: 'hidden',
-          transition: 'max-height .35s ease'
-        }}>
-          <div style={{paddingTop: 10}}>
-            <div className="row" style={{gap:12}}>
-              <div className="col">
-                <label style={labelStyle}>{t('master_name')}</label>
-                <input style={inputGlass}
-                       value={settings.masterName}
-                       onChange={e=>update({masterName:e.target.value})}/>
-              </div>
-              <div className="col">
-                <label style={labelStyle}>{t('admin_phone')}</label>
-                <input style={inputGlass}
-                       value={settings.adminPhone}
-                       onChange={e=>update({adminPhone:e.target.value})}/>
-              </div>
-            </div>
-
-            {/* Выбор времени и длительности */}
-            <div className="row" style={{gap:12, marginTop:12}}>
-              <div className="col">
-                <label style={labelStyle}>{t('day_start')}</label>
-                <select
-                  style={inputGlass}
-                  value={settings.workStart}
-                  onChange={e => update({ workStart: e.target.value })}
-                >
-                  {generateTimes(0, 12).map(time => (
-                    <option key={time} value={time}>{time}</option>
-                  ))}
-                </select>
+          <div style={{
+            maxHeight: showSettings ? 1000 : 0,
+            overflow: 'hidden',
+            transition: 'max-height .35s ease'
+          }}>
+            <div style={{ paddingTop: 10 }}>
+              <div className="row" style={{ gap: 12 }}>
+                <div className="col">
+                  <label style={labelStyle}>{t('master_name')}</label>
+                  <input style={inputGlass}
+                         value={settings.masterName}
+                         onChange={e => update({ masterName: e.target.value })} />
+                </div>
+                <div className="col">
+                  <label style={labelStyle}>{t('admin_phone')}</label>
+                  <input style={inputGlass}
+                         value={settings.adminPhone}
+                         onChange={e => update({ adminPhone: e.target.value })} />
+                </div>
               </div>
 
-              <div className="col">
-                <label style={labelStyle}>{t('day_end')}</label>
-                <select
-                  style={inputGlass}
-                  value={settings.workEnd}
-                  onChange={e => update({ workEnd: e.target.value })}
-                >
-                  {generateTimes(12, 24).map(time => (
-                    <option key={time} value={time}>{time}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="col">
-                <label style={labelStyle}>{t('slot_minutes')}</label>
-                <select
-                  style={inputGlass}
-                  value={settings.slotMinutes}
-                  onChange={e => update({ slotMinutes: parseInt(e.target.value, 10) })}
-                >
-                  {[15, 30, 45, 60].map(m => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
+              <div className="row" style={{ gap: 12, marginTop: 12 }}>
+                <div className="col">
+                  <label style={labelStyle}>{t('day_start')}</label>
+                  <select
+                    style={inputGlass}
+                    value={settings.workStart}
+                    onChange={e => update({ workStart: e.target.value })}
+                  >
+                    {generateTimeOptions('00:00', '12:00')}
+                  </select>
+                </div>
+                <div className="col">
+                  <label style={labelStyle}>{t('day_end')}</label>
+                  <select
+                    style={inputGlass}
+                    value={settings.workEnd}
+                    onChange={e => update({ workEnd: e.target.value })}
+                  >
+                    {generateTimeOptions('12:00', '24:00')}
+                  </select>
+                </div>
+                <div className="col">
+                  <label style={labelStyle}>{t('slot_minutes')}</label>
+                  <select
+                    style={inputGlass}
+                    value={settings.slotMinutes}
+                    onChange={e => update({ slotMinutes: parseInt(e.target.value, 10) })}
+                  >
+                    <option value="15">15</option>
+                    <option value="30">30</option>
+                    <option value="45">45</option>
+                    <option value="60">60</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ===== ВСЕ ЗАПИСИ ===== */}
-      <div style={cardAurora}>
-        <div style={topBar}>
-          <div style={{fontWeight:700, fontSize:'1.05rem'}}>Все записи</div>
-        </div>
-
-        <div style={{display:'flex', gap:10, margin:'8px 0 12px 0', flexWrap:'wrap', alignItems:'center'}}>
-          <input
-            style={{...inputGlass, flex:'1 1 260px'}}
-            placeholder={t('search_placeholder')}
-            value={search}
-            onChange={e=>setSearch(e.target.value)}
-          />
-          <div style={segmented}>
-            {[
-              {v:'all', label:t('all')},
-              {v:'pending', label:t('pending')},
-              {v:'approved', label:t('approved')},
-              {v:'canceled_client', label:t('canceled_by_client')},
-              {v:'canceled_admin', label:t('canceled_by_admin')}
-            ].map(it=>(
-              <button
-                key={it.v}
-                onClick={()=>setStatusFilter(it.v)}
-                style={{...segBtn, ...(statusFilter===it.v?segActive:{})}}
-              >
-                {it.label}
-              </button>
-            ))}
+      {/* ======= ВСЕ ЗАПИСИ ======= */}
+      <div className="col" style={{ minWidth: 640 }}>
+        <div style={cardAurora}>
+          <div style={topBar}>
+            <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>Все записи</div>
+            <button style={btnPrimary} onClick={handleExport}>{t('export')}</button>
           </div>
-          <button style={btnPrimary} onClick={handleExport}>{t('export')}</button>
+
+          <div style={{ display: 'flex', gap: 10, margin: '8px 0 12px 0', flexWrap: 'wrap' }}>
+            <input
+              style={{ ...inputGlass, flex: '1 1 260px' }}
+              placeholder={t('search_placeholder')}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <div style={segmented}>
+              {[
+                { v: 'all', label: t('all') },
+                { v: 'pending', label: t('pending') },
+                { v: 'approved', label: t('approved') },
+                { v: 'canceled_client', label: t('canceled_by_client') },
+                { v: 'canceled_admin', label: t('canceled_by_admin') }
+              ].map(it => (
+                <button
+                  key={it.v}
+                  onClick={() => setStatusFilter(it.v)}
+                  style={{ ...segBtn, ...(statusFilter === it.v ? segActive : {}) }}
+                >
+                  {it.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="badge" style={{ marginBottom: 10 }}>
+            {t('total')}: {stats.total} • {t('total_active')}: {stats.active} • {t('total_canceled')}: {stats.canceled}
+          </div>
+
+          <table className="table" style={{ marginTop: 6 }}>
+            <thead>
+              <tr>
+                <th>Клиент</th>
+                <th>Instagram</th>
+                <th>Дата</th>
+                <th>Время</th>
+                <th>{t('status')}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(b => {
+                const inFuture = new Date(b.start) > new Date()
+                return (
+                  <tr key={b.id} data-booking-id={b.id}>
+                    <td>
+                      <b>{b.userName}</b>
+                      <div className="muted" style={{ fontSize: 12 }}>{b.userPhone}</div>
+                    </td>
+                    <td>{b.userInstagram || '-'}</td>
+                    <td>{fmtDate(b.start)}</td>
+                    <td>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
+                    <td>{statusLabel(b)}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      {b.status === 'pending' &&
+                        <button style={btnOk} onClick={() => approveByAdmin(b.id)}>{t('approve')}</button>}
+                      {b.status !== 'canceled_admin' && b.status !== 'canceled_client' && inFuture &&
+                        <button style={btnDanger} onClick={() => cancelByAdmin(b.id)}>{t('rejected')}</button>}
+                    </td>
+                  </tr>
+                )
+              })}
+              {!filtered.length && (
+                <tr><td colSpan="6"><small className="muted">{t('no_records')}</small></td></tr>
+              )}
+            </tbody>
+          </table>
+
+          {toast && <div className="toast" style={{ marginTop: 10 }}>{toast}</div>}
         </div>
-
-        <div className="badge" style={{marginBottom:10}}>
-          {t('total')}: {stats.total} • {t('total_active')}: {stats.active} • {t('total_canceled')}: {stats.canceled}
-        </div>
-
-        <table className="table" style={{ marginTop: 6 }}>
-          <thead>
-            <tr>
-              <th>Клиент</th>
-              <th>Instagram</th>
-              <th>Дата</th>
-              <th>Время</th>
-              <th>{t('status')}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(b => {
-              const inFuture = new Date(b.start) > new Date()
-              return (
-                <tr key={b.id} style={{opacity: b.status==='approved' ? 1 : .97}}>
-                  <td style={{whiteSpace:'nowrap'}}>
-                    <b>{b.userName}</b>
-                    <div className="muted" style={{fontSize:12}}>{b.userPhone}</div>
-                  </td>
-                  <td style={{whiteSpace:'nowrap'}}>{b.userInstagram || '-'}</td>
-                  <td style={{whiteSpace:'nowrap'}}>{fmtDate(b.start)}</td>
-                  <td style={{whiteSpace:'nowrap'}}>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
-                  <td>{statusLabel(b)}</td>
-                  <td style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
-                    {b.status==='pending' &&
-                      <button style={btnOk} onClick={()=>approveByAdmin(b.id)}>{t('approve')}</button>}
-                    {b.status!=='canceled_admin' && b.status!=='canceled_client' && inFuture &&
-                      <button style={btnDanger} onClick={()=>cancelByAdmin(b.id)}>{t('rejected')}</button>}
-                  </td>
-                </tr>
-              )
-            })}
-            {!filtered.length && (
-              <tr><td colSpan="6"><small className="muted">{t('no_records')}</small></td></tr>
-            )}
-          </tbody>
-        </table>
-
-        {toast && <div className="toast" style={{marginTop:10}}>{toast}</div>}
       </div>
+
+      <style>
+        {`
+          .highlight {
+            animation: pulseHighlight 1s ease-out;
+          }
+          @keyframes pulseHighlight {
+            0% { background-color: rgba(150, 90, 255, 0.25); }
+            100% { background-color: transparent; }
+          }
+        `}
+      </style>
     </div>
   )
 }
 
-/* ===== UI-компоненты и стили ===== */
+function generateTimeOptions(start, end) {
+  const [sH, sM] = start.split(':').map(Number)
+  const [eH, eM] = end.split(':').map(Number)
+  const options = []
+  for (let h = sH; h <= eH; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const hh = h.toString().padStart(2, '0')
+      const mm = m.toString().padStart(2, '0')
+      if (h === eH && m > eM) continue
+      options.push(<option key={`${hh}:${mm}`} value={`${hh}:${mm}`}>{`${hh}:${mm}`}</option>)
+    }
+  }
+  return options
+}
 
-function Chevron({open}) {
+function Chevron({ open }) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#cbb6ff" strokeWidth="2">
-      {open
-        ? <path d="M6 15l6-6 6 6" />
-        : <path d="M6 9l6 6 6-6" />}
+      {open ? <path d="M6 15l6-6 6 6" /> : <path d="M6 9l6 6 6-6" />}
     </svg>
   )
 }
 
-/* Генерация времени каждые 30 мин */
-function generateTimes(startHour, endHour) {
-  const times = []
-  for (let h = startHour; h < endHour; h++) {
-    times.push(`${String(h).padStart(2, '0')}:00`)
-    times.push(`${String(h).padStart(2, '0')}:30`)
-  }
-  return times
-}
-
-/* ==== Стили ==== */
+/* ==== Стили элементов ==== */
 const cardAurora = {
   background: 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))',
   border: '1px solid rgba(168,85,247,0.18)',
@@ -299,6 +309,7 @@ const cardAurora = {
   padding: 14,
   boxShadow: '0 8px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.03)'
 }
+
 const headerToggle = {
   width: '100%',
   display: 'flex',
@@ -312,7 +323,9 @@ const headerToggle = {
   color: '#fff',
   cursor: 'pointer'
 }
-const labelStyle = { fontSize: 12, opacity: .8, marginBottom: 6, display:'block' }
+
+const labelStyle = { fontSize: 12, opacity: .8, marginBottom: 6, display: 'block' }
+
 const inputGlass = {
   width: '100%',
   padding: '10px 12px',
@@ -322,11 +335,57 @@ const inputGlass = {
   background: 'rgba(17,0,40,0.45)',
   outline: 'none'
 }
-const topBar = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 2px 10px 2px' }
-const btnBase = { borderRadius: 10, padding: '8px 14px', fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(168,85,247,0.45)', transition: '0.2s' }
-const btnPrimary = { ...btnBase, background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))', boxShadow: '0 0 14px rgba(150,85,247,0.35)', color: '#fff' }
+
+const topBar = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '4px 2px 10px 2px'
+}
+
+const btnBase = {
+  borderRadius: 10,
+  padding: '8px 14px',
+  fontWeight: 600,
+  cursor: 'pointer',
+  border: '1px solid rgba(168,85,247,0.45)',
+  transition: '0.2s'
+}
+
+const btnPrimary = {
+  ...btnBase,
+  background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
+  boxShadow: '0 0 14px rgba(150,85,247,0.35)',
+  color: '#fff'
+}
+
 const btnOk = { ...btnPrimary }
-const btnDanger = { ...btnBase, border: '1px solid rgba(239, 68, 68, .6)', background: 'rgba(110,20,30,.35)', color: '#fff' }
-const segmented = { display: 'flex', gap: 8, background: 'rgba(17,0,40,0.45)', border: '1px solid rgba(168,85,247,0.25)', borderRadius: 12, padding: 6 }
-const segBtn = { ...btnBase, padding: '8px 12px', background: 'rgba(25,10,45,0.35)', border: '1px solid rgba(168,85,247,0.25)' }
-const segActive = { background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))', border: '1px solid rgba(180,95,255,0.7)', boxShadow: '0 0 12px rgba(150,90,255,0.30)' }
+
+const btnDanger = {
+  ...btnBase,
+  border: '1px solid rgba(239, 68, 68, .6)',
+  background: 'rgba(110,20,30,.35)',
+  color: '#fff'
+}
+
+const segmented = {
+  display: 'flex',
+  gap: 8,
+  background: 'rgba(17,0,40,0.45)',
+  border: '1px solid rgba(168,85,247,0.25)',
+  borderRadius: 12,
+  padding: 6
+}
+
+const segBtn = {
+  ...btnBase,
+  padding: '8px 12px',
+  background: 'rgba(25,10,45,0.35)',
+  border: '1px solid rgba(168,85,247,0.25)'
+}
+
+const segActive = {
+  background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
+  border: '1px solid rgba(180,95,255,0.7)',
+  boxShadow: '0 0 12px rgba(150,90,255,0.30)'
+}
