@@ -80,6 +80,7 @@ export default function MyBookings() {
     saveBookings(bookings)
     window.dispatchEvent(new Event('profileUpdated'))
 
+    // ✅ Показываем модальное окно "Сохранено"
     setModal(true)
     setTimeout(() => setModal(false), 2200)
   }
@@ -112,10 +113,7 @@ export default function MyBookings() {
         <h3 style={{ margin: 0, padding: '10px 20px' }}>Профиль</h3>
 
         <div style={innerCard}>
-          <div
-            style={innerHeader}
-            onClick={() => setShowProfile(!showProfile)}
-          >
+          <div style={innerHeader} onClick={() => setShowProfile(!showProfile)}>
             <span style={{ fontWeight: 600 }}>Редактировать профиль</span>
             <span style={{ color: '#a855f7' }}>{showProfile ? '▲' : '▼'}</span>
           </div>
@@ -163,7 +161,7 @@ export default function MyBookings() {
                 </div>
               )}
 
-              <button style={saveBtn}><span>💾</span> {t('save')}</button>
+              <button type="submit" style={saveBtn}><span>💾</span> {t('save')}</button>
             </form>
           </div>
         </div>
@@ -213,6 +211,16 @@ export default function MyBookings() {
           </tbody>
         </table>
       </div>
+
+      {/* === МОДАЛЬНОЕ ОКНО "СОХРАНЕНО" === */}
+      {modal && (
+        <div style={modalBackdrop}>
+          <div style={modalBox}>
+            <div style={loader}></div>
+            <h3 style={{ marginTop: 10 }}>{t('profile_updated')}</h3>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -267,7 +275,7 @@ const saveBtn = {
   transition: 'all 0.3s ease'
 }
 
-/* Остальные стили остаются прежними */
+/* --- стили таблицы и кнопок --- */
 const bookingsCard = { ...outerCard, padding: '18px' }
 const bookingsHeader = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }
 const filterButtons = { display: 'flex', gap: '8px' }
@@ -286,3 +294,36 @@ const table = { width: '100%', borderCollapse: 'collapse', color: '#fff', textAl
 const tableCell = { padding: '12px 0', borderBottom: '1px solid rgba(168,85,247,0.12)' }
 const tableRow = { transition: 'background 0.25s ease' }
 const cancelBtn = { borderRadius: '8px', border: '1px solid rgba(180,95,255,0.4)', background: 'rgba(40,20,70,0.7)', color: '#fff', padding: '6px 14px', cursor: 'pointer', transition: 'all 0.3s ease' }
+
+/* --- модалка --- */
+const modalBackdrop = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(0,0,0,0.6)',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 2000,
+  animation: 'fadeIn 0.3s ease'
+}
+
+const modalBox = {
+  background: 'rgba(20,15,35,0.85)',
+  border: '1px solid rgba(180,95,255,0.4)',
+  borderRadius: '14px',
+  padding: '24px 32px',
+  textAlign: 'center',
+  color: '#fff',
+  boxShadow: '0 0 40px rgba(150,85,247,0.25)',
+  animation: 'popIn 0.3s ease'
+}
+
+const loader = {
+  width: '28px',
+  height: '28px',
+  margin: '0 auto 10px',
+  borderRadius: '50%',
+  border: '3px solid rgba(255,255,255,0.25)',
+  borderTopColor: '#a855f7',
+  animation: 'spin 1s linear infinite'
+}
