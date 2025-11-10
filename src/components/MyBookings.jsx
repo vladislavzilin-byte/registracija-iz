@@ -50,43 +50,43 @@ export default function MyBookings() {
     return Object.keys(e).length === 0
   }
 
-const saveProfile = (ev) => {
-  ev.preventDefault()
-  if (!validate()) return
+  const saveProfile = (ev) => {
+    ev.preventDefault()
+    if (!validate()) return
 
-  const users = getUsers()
-  const idx = users.findIndex(u =>
-    (u.phone && u.phone === user.phone) ||
-    (u.email && u.email === user.email)
-  )
+    const users = getUsers()
+    const idx = users.findIndex(u =>
+      (u.phone && u.phone === user.phone) ||
+      (u.email && u.email === user.email)
+    )
 
-  const updated = { ...user, ...form }
-  if (idx >= 0) users[idx] = updated
-  else users.push(updated)
-  saveUsers(users)
-  setCurrentUser(updated)
+    const updated = { ...user, ...form }
+    if (idx >= 0) users[idx] = updated
+    else users.push(updated)
+    saveUsers(users)
+    setCurrentUser(updated)
 
-  // 🔄 обновляем бронирования пользователя
-  const bookings = getBookings().map(b =>
-    (b.userEmail === user.email || b.userPhone === user.phone)
-      ? {
-          ...b,
-          userName: updated.name,
-          userPhone: updated.phone,
-          userInstagram: updated.instagram,
-          userEmail: updated.email
-        }
-      : b
-  )
-  saveBookings(bookings)
+    // 🔄 обновляем бронирования пользователя
+    const bookings = getBookings().map(b =>
+      (b.userEmail === user.email || b.userPhone === user.phone)
+        ? {
+            ...b,
+            userName: updated.name,
+            userPhone: updated.phone,
+            userInstagram: updated.instagram,
+            userEmail: updated.email
+          }
+        : b
+    )
+    saveBookings(bookings)
 
-  // 🔔 уведомляем админку о том, что профиль изменился
-  window.dispatchEvent(new Event('profileUpdated'))
+    // 🔔 уведомляем админку
+    window.dispatchEvent(new Event('profileUpdated'))
 
-  // 🟣 модальное подтверждение
-  setModal(true)
-  setTimeout(() => setModal(false), 2200)
-}
+    // 🟣 модальное подтверждение
+    setModal(true)
+    setTimeout(() => setModal(false), 2200)
+  }
 
   const cancel = (id) => setConfirmId(id)
 
@@ -114,94 +114,62 @@ const saveProfile = (ev) => {
 
   return (
     <div style={container}>
-      {/* === PROFILE === */}
-      <div style={profileCard}>
-        <div style={profileHeader} onClick={() => setShowProfile(!showProfile)}>
-          <h3 style={{ margin: 0 }}>{t('my_profile')}</h3>
-          <div style={editLabel}>
-            <span>{showProfile ? 'Скрыть профиль' : 'Редактировать профиль'}</span>
-            <div style={arrow}>{showProfile ? '▲' : '▼'}</div>
-          </div>
+      {/* === PROFILE (АККОРДЕОН) === */}
+      <div style={accordionWrap}>
+        <div style={accordionHeader} onClick={() => setShowProfile(!showProfile)}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: '#fff', fontWeight: 500 }}>{t('my_profile')}</span>
+          </span>
+          <span style={{ color: '#a855f7', fontSize: '0.9rem' }}>
+            {showProfile ? 'Скрыть профиль ▲' : 'Редактировать профиль ▼'}
+          </span>
         </div>
 
         <div
           style={{
-            ...profileBody,
+            ...accordionBody,
             maxHeight: showProfile ? '800px' : '0',
             opacity: showProfile ? 1 : 0,
-            padding: showProfile ? '20px' : '0 20px',
+            padding: showProfile ? '20px' : '0 20px'
           }}
         >
-          <form
-  className="col"
-  style={{ gap: 12, textAlign: 'center' }}
-  onSubmit={(e) => {
-    e.preventDefault()
-    saveProfile(e)
-    // 🔥 после успешного сохранения — уведомляем админку
-    window.dispatchEvent(new Event('profileUpdated'))
-  }}
->
-  <div>
-    <label>Имя</label>
-    <input
-      value={form.name}
-      onChange={e => setForm({ ...form, name: e.target.value })}
-    />
-  </div>
-  <div>
-    <label>Instagram</label>
-    <input
-      value={form.instagram}
-      onChange={e => setForm({ ...form, instagram: e.target.value })}
-    />
-  </div>
-  <div>
-    <label>Телефон</label>
-    <input
-      value={form.phone}
-      onChange={e => setForm({ ...form, phone: e.target.value })}
-    />
-    {errors.phone && (
-      <small style={{ color: '#f87171' }}>{errors.phone}</small>
-    )}
-  </div>
-  <div>
-    <label>Email</label>
-    <input
-      value={form.email}
-      onChange={e => setForm({ ...form, email: e.target.value })}
-    />
-    {errors.email && (
-      <small style={{ color: '#f87171' }}>{errors.email}</small>
-    )}
-  </div>
-  <div>
-    <label>Пароль</label>
-    <input
-      type="password"
-      value={form.password}
-      onChange={e => setForm({ ...form, password: e.target.value })}
-    />
-  </div>
+          <form className="col" style={{ gap: 12, textAlign: 'center' }} onSubmit={saveProfile}>
+            <div>
+              <label>Имя</label>
+              <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div>
+              <label>Instagram</label>
+              <input value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} />
+            </div>
+            <div>
+              <label>Телефон</label>
+              <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+              {errors.phone && <small style={{ color: '#f87171' }}>{errors.phone}</small>}
+            </div>
+            <div>
+              <label>Email</label>
+              <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+              {errors.email && <small style={{ color: '#f87171' }}>{errors.email}</small>}
+            </div>
+            <div>
+              <label>Пароль</label>
+              <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+            </div>
 
-  {errors.contact && (
-    <div
-      style={{
-        background: 'rgba(255,0,0,0.1)',
-        padding: 8,
-        borderRadius: 8,
-        color: '#f87171'
-      }}
-    >
-      {errors.contact}
-    </div>
-  )}
+            {errors.contact && (
+              <div style={{
+                background: 'rgba(255,0,0,0.1)',
+                padding: 8,
+                borderRadius: 8,
+                color: '#f87171'
+              }}>
+                {errors.contact}
+              </div>
+            )}
 
-  <button style={saveBtn}>
-    <span>💾</span> {t('save')}
-  </button>
-</form>
+            <button style={saveBtn}><span>💾</span> {t('save')}</button>
+          </form>
         </div>
       </div>
 
@@ -279,34 +247,31 @@ const saveProfile = (ev) => {
 /* === STYLES === */
 const container = { animation: 'fadeIn 0.5s ease', paddingBottom: '40px' }
 
-const profileCard = {
-  background: 'rgba(20,15,30,0.65)',
+const accordionWrap = {
+  background: 'rgba(15,10,25,0.8)',
+  borderRadius: '12px',
   border: '1px solid rgba(168,85,247,0.25)',
-  borderRadius: '14px',
   marginBottom: '24px',
   overflow: 'hidden',
   backdropFilter: 'blur(18px)',
-  boxShadow: '0 8px 32px rgba(120,50,200,0.15)',
   color: '#fff'
 }
 
-const profileHeader = {
+const accordionHeader = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
   cursor: 'pointer',
-  padding: '14px 18px',
-  background: 'rgba(40,20,70,0.45)',
+  padding: '14px 20px',
+  background: 'rgba(25,15,45,0.85)',
   borderBottom: '1px solid rgba(168,85,247,0.25)',
+  transition: 'background 0.3s ease'
 }
 
-const editLabel = { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', opacity: 0.8 }
-const arrow = { fontSize: '0.8rem', opacity: 0.8 }
-
-const profileBody = {
-  color: '#fff',
+const accordionBody = {
   overflow: 'hidden',
-  transition: 'all 0.45s ease'
+  transition: 'all 0.45s ease',
+  color: '#fff'
 }
 
 const saveBtn = {
@@ -322,7 +287,7 @@ const saveBtn = {
   transition: 'all 0.3s ease'
 }
 
-const bookingsCard = { ...profileCard, padding: '18px' }
+const bookingsCard = { ...accordionWrap, padding: '18px' }
 const bookingsHeader = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }
 const filterButtons = { display: 'flex', gap: '8px' }
 
@@ -349,12 +314,7 @@ const tableCell = {
   verticalAlign: 'middle'
 }
 
-const tableRow = {
-  transition: 'background 0.25s ease',
-}
-tableRow[':hover'] = {
-  background: 'rgba(130,60,255,0.05)'
-}
+const tableRow = { transition: 'background 0.25s ease' }
 
 const cancelBtn = {
   borderRadius: '8px',
