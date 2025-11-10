@@ -1,5 +1,9 @@
 import React, { useState } from 'react'
-import { getCurrentUser, setCurrentUser, getUsers, saveUsers } from '../lib/storage'
+import {
+  getCurrentUser, setCurrentUser,
+  getUsers, saveUsers,
+  getBookings, saveBookings
+} from '../lib/storage'
 import { useI18n } from '../lib/i18n'
 
 export default function Profile() {
@@ -28,20 +32,37 @@ export default function Profile() {
 
   const save = e => {
     e.preventDefault()
+
     const users = getUsers()
     const idx = users.findIndex(u => (u.phone === user.phone) || (u.email === user.email))
     const updated = { ...user, ...form }
 
+    // 🔄 обновляем профиль пользователя
     if (idx >= 0) users[idx] = updated
     else users.push(updated)
-
     saveUsers(users)
     setCurrentUser(updated)
+
+    // 🔄 обновляем его брони
+    const bookings = getBookings().map(b =>
+      b.userEmail === user.email || b.userPhone === user.phone
+        ? {
+            ...b,
+            userName: updated.name,
+            userPhone: updated.phone,
+            userInstagram: updated.instagram,
+            userEmail: updated.email
+          }
+        : b
+    )
+    saveBookings(bookings)
+
+    // 🔔 уведомляем админку, чтобы обновилась таблица
+    window.dispatchEvent(new Event('profileUpdated'))
+
+    // ✅ показываем уведомление
     setToast(t('profile_saved'))
     setTimeout(() => setToast(null), 1500)
-
-    // 🔄 уведомляем админку, что профиль обновлён
-    window.dispatchEvent(new Event('profileUpdated'))
   }
 
   return (
@@ -66,7 +87,11 @@ export default function Profile() {
         </div>
         <div>
           <label>{t('password')}</label>
-          <input type="password" value={form.password} onChange={onChange('password')} />
+          <input
+            type="password"
+            value={form.password}
+            onChange={onChange('password')}
+          />
         </div>
         <div>
           <button type="submit">{t('save')}</button>
