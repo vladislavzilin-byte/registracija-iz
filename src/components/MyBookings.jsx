@@ -1,259 +1,209 @@
-import { useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
+import { 
+  getCurrentUser, 
+  getBookings, 
+  saveBookings, 
+  fmtDate, 
+  fmtTime, 
+  getUsers, 
+  saveUsers, 
+  setCurrentUser 
+} from '../lib/storage'
 import { useI18n } from '../lib/i18n'
 
 export default function MyBookings() {
   const { t } = useI18n()
+  const user = getCurrentUser()
+  const [form, setForm] = useState({
+    name: user?.name || '',
+    instagram: user?.instagram || '',
+    phone: user?.phone || '',
+    email: user?.email || '',
+    password: user?.password || ''
+  })
+  const [errors, setErrors] = useState({})
+  const [saved, setSaved] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [filter, setFilter] = useState('all')
+  const [confirmId, setConfirmId] = useState(null)
+  const [version, setVersion] = useState(0)
+  const [notif, setNotif] = useState(null)
 
-  // === STATE ===
-  const [bookings, setBookings] = useState([])
-  const [profile, setProfile] = useState({ name: '', phone: '', email: '' })
-  const [showProfile, setShowProfile] = useState(false)
-  const [showModal, setShowModal] = useState(false)
+  const validate = () => {
+    const e = {}
+    if (!form.phone && !form.email) e.contact = 'Нужен телефон или email'
+    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) e.email = 'Некорректный email'
+    if (form.phone && !/^[+\d][\d\s\-()]{5,}$/.test(form.phone)) e.phone = 'Некорректный телефон'
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
 
-  // === LOAD BOOKINGS & PROFILE ===
+  const saveProfile = (ev) => {
+    ev.preventDefault()
+    if (!validate()) return
+    const users = getUsers()
+    const idx = users.findIndex(u => 
+      (u.phone && u.phone === user.phone) || 
+      (u.email && u.email === user.email)
+    )
+    const updated = { ...user, ...form }
+    if (idx >= 0) users[idx] = updated; else users.push(updated)
+    saveUsers(users)
+    setCurrentUser(updated)
+    setSaved(true)
+    setToast('Данные сохранены')
+    setTimeout(() => {
+      setSaved(false)
+      setToast(null)
+    }, 1500)
+  }
+
+  const bookingsAll = getBookings()
+  const all = bookingsAll
+    .filter(b => user && b.userPhone === user.phone)
+    .sort((a, b) => new Date(a.start) - new Date(b.start))
+
+  const list = useMemo(() => {
+    if (filter === 'active') return all.filter(b => b.status === 'approved')
+    if (filter === 'canceled') 
+      return all.filter(b => b.status === 'canceled_client' || b.status === 'canceled_admin')
+    return all
+  }, [filter, version, bookingsAll.length])
+
+  const cancel = (id) => setConfirmId(id)
+
+  const doCancel = () => {
+    const id = confirmId
+    const arr = getBookings().map(b =>
+      b.id === id ? { ...b, status: 'canceled_client', canceledAt: new Date().toISOString() } : b
+    )
+    saveBookings(arr)
+    setConfirmId(null)
+    setVersion(v => v + 1)
+  }
+
+  const refresh = () => setVersion(v => v + 1)
+
   useEffect(() => {
-    const storedBookings = JSON.parse(localStorage.getItem('bookings') || '[]')
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    setBookings(storedBookings)
-    setProfile(user)
-  }, [])
+    if (!user) return
+    const list = getBookings()
+    const mine = list.filter(
+      b => b.userPhone === user.phone &&
+      (b.status === 'approved' || b.status === 'canceled_admin') &&
+      !b.notified
+    )
+    if (mine.length) {
+      const b = mine[0]
+      const msg = b.status === 'approved' ? t('notif_approved') : t('notif_canceled')
+      setNotif({ msg })
+      const next = list.map(x => x.id === b.id ? { ...x, notified: true } : x)
+      saveBookings(next)
+    }
+  }, [version])
 
-  // === HELPERS ===
-  const fmtDate = (d) =>
-    new Date(d).toLocaleDateString('lt-LT', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
-
-  const fmtTime = (t) => t.slice(0, 5)
-
-  // === CANCEL BOOKING ===
-  const cancelBooking = (id) => {
-    const updated = bookings.filter((b) => b.id !== id)
-    setBookings(updated)
-    localStorage.setItem('bookings', JSON.stringify(updated))
+  if (!user) {
+    return <div className="card"><b>{t('login_or_register')}</b></div>
   }
 
-  // === UPDATE PROFILE ===
-  const updateProfile = () => {
-    localStorage.setItem('user', JSON.stringify(profile))
-    setShowModal(true)
-    setTimeout(() => setShowModal(false), 2500)
+  const statusLabel = (b) => {
+    if (b.status === 'pending') return '🟡 ' + t('pending')
+    if (b.status === 'approved') return '🟢 ' + t('approved')
+    if (b.status === 'canceled_client') return '❌ ' + t('canceled_by_client')
+    if (b.status === 'canceled_admin') return '🔴 ' + t('canceled_by_admin')
+    return b.status
   }
 
-  // === RENDER ===
   return (
-    <div style={container}>
-      {/* === PROFILE HEADER === */}
-      <div style={profileHeader}>
-        <h2 style={{ margin: 0 }}>{t('my_profile')}</h2>
-        <button style={arrowBtn} onClick={() => setShowProfile(!showProfile)}>
-          {showProfile ? '▲' : '▼'}
-        </button>
+    <div className="row">
+      <div className="col">
+        <div className="card">
+          {/* === PROFILE === */}
+          <div className="card" style={{ marginBottom: 16 }}>
+            <h3 style={{ marginTop: 0 }}>Мой профиль</h3>
+            <form className="col" style={{ gap: 12 }} onSubmit={saveProfile}>
+              <div><label>Имя</label><input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+              <div><label>Instagram</label><input value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} /></div>
+              <div>
+                <label>Телефон</label>
+                <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+                {errors.phone && <small className="muted">{errors.phone}</small>}
+              </div>
+              <div>
+                <label>Email</label>
+                <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                {errors.email && <small className="muted">{errors.email}</small>}
+              </div>
+              <div>
+                <label>Пароль</label>
+                <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+              </div>
+              {errors.contact && <div className="badge" style={{ background: 'rgba(255,0,0,0.1)' }}>{errors.contact}</div>}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button type="submit">{saved ? 'Сохранено ✔' : 'Сохранить'}</button>
+                {saved && <small className="muted">Обновлено</small>}
+              </div>
+            </form>
+          </div>
+
+          {/* === BOOKINGS === */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ marginTop: 0 }}>{t('my_bookings')}</h3>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className={filter === 'all' ? '' : 'ghost'} onClick={() => setFilter('all')}>{t('all')}</button>
+              <button className={filter === 'active' ? '' : 'ghost'} onClick={() => setFilter('active')}>{t('active')}</button>
+              <button className={filter === 'canceled' ? '' : 'ghost'} onClick={() => setFilter('canceled')}>{t('canceled')}</button>
+              <button className="ghost" onClick={refresh}>🔁 {t('refresh')}</button>
+            </div>
+          </div>
+
+          <table className="table">
+            <thead><tr><th>Дата</th><th>Время</th><th>{t('status')}</th><th></th></tr></thead>
+            <tbody>
+              {list.map(b => {
+                const canCancel = (b.status === 'pending' || b.status === 'approved') && new Date(b.start) > new Date()
+                return (
+                  <tr key={b.id} style={{ opacity: b.status === 'approved' ? 1 : 0.9 }}>
+                    <td>{fmtDate(b.start)}</td>
+                    <td>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
+                    <td>{statusLabel(b)}</td>
+                    <td style={{ width: 160 }}>
+                      {canCancel ? <button className="danger" onClick={() => cancel(b.id)}>{t('cancel')}</button> : null}
+                    </td>
+                  </tr>
+                )
+              })}
+              {!list.length && <tr><td colSpan="4"><small className="muted">{t('no_records')}</small></td></tr>}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* === COLLAPSIBLE PROFILE FORM === */}
-      {showProfile && (
-        <div style={profileBox}>
-          <div style={row}>
-            <label>{t('name')}</label>
-            <input
-              type="text"
-              value={profile.name}
-              onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-            />
-          </div>
-          <div style={row}>
-            <label>{t('phone')}</label>
-            <input
-              type="tel"
-              value={profile.phone}
-              onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-            />
-          </div>
-          <div style={row}>
-            <label>{t('email')}</label>
-            <input
-              type="email"
-              value={profile.email}
-              onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-            />
-          </div>
-          <button style={saveBtn} onClick={updateProfile}>
-            {t('update_profile')}
-          </button>
-        </div>
-      )}
-
-      {/* === MODAL === */}
-      {showModal && (
-        <div style={modalBackdrop}>
-          <div style={modal}>
-            <div style={spinner}></div>
-            <h3>{t('profile_updated')}</h3>
-            <button style={okBtn} onClick={() => setShowModal(false)}>
-              OK
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* === BOOKINGS LIST === */}
-      <h2 style={{ marginTop: 40, marginBottom: 16 }}>{t('my_bookings')}</h2>
-      {bookings.length === 0 ? (
-        <p style={{ opacity: 0.6 }}>{t('no_bookings')}</p>
-      ) : (
-        <div style={bookingGrid}>
-          {bookings.map((b) => (
-            <div key={b.id} style={bookingCard}>
-              <div style={bookingRow}>
-                <strong>{b.service}</strong>
-                <span>
-                  {fmtDate(b.date)} · {fmtTime(b.time)}
-                </span>
-              </div>
-              <button style={cancelBtn} onClick={() => cancelBooking(b.id)}>
-                {t('cancel')}
-              </button>
+      {/* === CANCEL CONFIRM === */}
+      {confirmId && (
+        <div className="modal-backdrop" onClick={() => setConfirmId(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3>{t('confirm_cancel')}</h3>
+            <p><small className="muted">{t('irreversible')}</small></p>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <button className="danger" onClick={doCancel}>{t('yes_cancel')}</button>
+              <button className="ghost" onClick={() => setConfirmId(null)}>{t('back')}</button>
             </div>
-          ))}
+          </div>
+        </div>
+      )}
+
+      {/* === TOASTS / NOTIFS === */}
+      {toast && <div className="toast">{toast}</div>}
+      {notif && (
+        <div className="modal-backdrop" onClick={() => setNotif(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3>{notif.msg}</h3>
+            <div style={{ marginTop: 12 }}>
+              <button onClick={() => setNotif(null)}>{t('notif_ok')}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
   )
 }
-
-/* === STYLES === */
-const container = {
-  animation: 'fadeIn 0.5s ease',
-  paddingBottom: '60px',
-}
-
-const profileHeader = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '10px',
-}
-
-const arrowBtn = {
-  border: '1px solid rgba(168,85,247,0.4)',
-  background: 'rgba(30,15,50,0.6)',
-  color: '#fff',
-  borderRadius: '8px',
-  padding: '4px 10px',
-  cursor: 'pointer',
-  transition: '0.3s ease',
-}
-
-const profileBox = {
-  background: 'rgba(20,15,30,0.65)',
-  border: '1px solid rgba(168,85,247,0.25)',
-  borderRadius: '14px',
-  padding: '16px',
-  boxShadow: '0 8px 25px rgba(150,85,247,0.15)',
-  animation: 'fadeIn 0.4s ease',
-}
-
-const row = {
-  display: 'flex',
-  flexDirection: 'column',
-  marginBottom: '12px',
-}
-
-const saveBtn = {
-  marginTop: '6px',
-  padding: '10px 18px',
-  borderRadius: '10px',
-  border: '1px solid rgba(168,85,247,0.4)',
-  background:
-    'linear-gradient(180deg, rgba(80,30,130,0.85), rgba(40,15,70,0.9))',
-  color: '#fff',
-  cursor: 'pointer',
-  fontWeight: 500,
-  transition: 'all 0.3s ease',
-}
-
-const bookingGrid = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '12px',
-}
-
-const bookingCard = {
-  background: 'rgba(20,15,30,0.6)',
-  border: '1px solid rgba(168,85,247,0.25)',
-  borderRadius: '12px',
-  padding: '14px',
-  boxShadow: '0 4px 15px rgba(150,85,247,0.1)',
-  transition: 'transform 0.25s ease',
-}
-
-const bookingRow = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '8px',
-}
-
-const cancelBtn = {
-  background: 'rgba(60,25,90,0.7)',
-  border: '1px solid rgba(180,95,255,0.5)',
-  color: '#fff',
-  borderRadius: '8px',
-  padding: '6px 14px',
-  cursor: 'pointer',
-  transition: 'all 0.3s ease',
-}
-
-const modalBackdrop = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0,0,0,0.55)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 3000,
-  animation: 'fadeIn 0.25s ease',
-}
-
-const modal = {
-  background: 'rgba(20,15,35,0.85)',
-  border: '1px solid rgba(180,95,255,0.35)',
-  borderRadius: '14px',
-  padding: '22px 26px',
-  textAlign: 'center',
-  boxShadow: '0 0 40px rgba(160,85,255,0.25)',
-  animation: 'popIn 0.25s ease',
-  color: '#fff',
-}
-
-const spinner = {
-  width: '26px',
-  height: '26px',
-  borderRadius: '50%',
-  margin: '0 auto 12px',
-  border: '3px solid rgba(255,255,255,0.25)',
-  borderTopColor: '#a855f7',
-  animation: 'spin 1s linear infinite',
-}
-
-const okBtn = {
-  marginTop: '10px',
-  padding: '8px 16px',
-  borderRadius: '10px',
-  background: 'rgba(40,20,70,0.8)',
-  border: '1px solid rgba(168,85,247,0.5)',
-  color: '#fff',
-  cursor: 'pointer',
-  transition: '0.3s ease',
-}
-
-const style = document.createElement('style')
-style.innerHTML = `
-@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-@keyframes spin { to { transform: rotate(360deg); } }
-`
-document.head.appendChild(style)
