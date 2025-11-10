@@ -50,21 +50,43 @@ export default function MyBookings() {
     return Object.keys(e).length === 0
   }
 
-  const saveProfile = (ev) => {
-    ev.preventDefault()
-    if (!validate()) return
-    const users = getUsers()
-    const idx = users.findIndex(u =>
-      (u.phone && u.phone === user.phone) ||
-      (u.email && u.email === user.email)
-    )
-    const updated = { ...user, ...form }
-    if (idx >= 0) users[idx] = updated; else users.push(updated)
-    saveUsers(users)
-    setCurrentUser(updated)
-    setModal(true)
-    setTimeout(() => setModal(false), 2200)
-  }
+const saveProfile = (ev) => {
+  ev.preventDefault()
+  if (!validate()) return
+
+  const users = getUsers()
+  const idx = users.findIndex(u =>
+    (u.phone && u.phone === user.phone) ||
+    (u.email && u.email === user.email)
+  )
+
+  const updated = { ...user, ...form }
+  if (idx >= 0) users[idx] = updated
+  else users.push(updated)
+  saveUsers(users)
+  setCurrentUser(updated)
+
+  // 🔄 обновляем бронирования пользователя
+  const bookings = getBookings().map(b =>
+    (b.userEmail === user.email || b.userPhone === user.phone)
+      ? {
+          ...b,
+          userName: updated.name,
+          userPhone: updated.phone,
+          userInstagram: updated.instagram,
+          userEmail: updated.email
+        }
+      : b
+  )
+  saveBookings(bookings)
+
+  // 🔔 уведомляем админку о том, что профиль изменился
+  window.dispatchEvent(new Event('profileUpdated'))
+
+  // 🟣 модальное подтверждение
+  setModal(true)
+  setTimeout(() => setModal(false), 2200)
+}
 
   const cancel = (id) => setConfirmId(id)
 
