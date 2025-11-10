@@ -1,4 +1,4 @@
-const ADMINS = ['irina.abramova7@gmail.com', 'vladislavzilin@gmail.com']
+const ADMINS = ['irina.abramova7@gmail.com','vladislavzilin@gmail.com']
 
 import { useState, useMemo, useEffect } from 'react'
 import {
@@ -10,9 +10,9 @@ import { exportBookingsToCSV } from '../lib/export'
 import { useI18n } from '../lib/i18n'
 
 export default function Admin() {
-  const me = (typeof getCurrentUser === 'function')
+  const me = (typeof getCurrentUser==='function')
     ? getCurrentUser()
-    : JSON.parse(localStorage.getItem('currentUser') || '{}')
+    : JSON.parse(localStorage.getItem('currentUser')||'{}')
 
   const isAdmin = me && (me.role === 'admin' || (me.email && ADMINS.includes(me.email)))
   if (!isAdmin) {
@@ -31,6 +31,7 @@ export default function Admin() {
   const [showSettings, setShowSettings] = useState(false)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState(null)
 
   const update = (patch) => {
@@ -38,6 +39,12 @@ export default function Admin() {
     setSettings(next)
     saveSettings(next)
   }
+
+  useEffect(() => {
+    const handler = () => setBookings(getBookings())
+    window.addEventListener('profileUpdated', handler)
+    return () => window.removeEventListener('profileUpdated', handler)
+  }, [])
 
   const stats = useMemo(() => {
     const total = bookings.length
@@ -57,9 +64,17 @@ export default function Admin() {
       const matchStatus = statusFilter === 'all' ? true : b.status === statusFilter
       return matchQ && matchStatus
     })
-    arr.sort((a, b) => new Date(a.start) - new Date(b.start))
+    arr.sort((a,b) => new Date(a.start) - new Date(b.start))
     return arr
   }, [bookings, search, statusFilter])
+
+  const refresh = () => {
+    setLoading(true)
+    setTimeout(() => {
+      setBookings(getBookings())
+      setLoading(false)
+    }, 400)
+  }
 
   const cancelByAdmin = (id) => {
     if (!confirm('Отменить эту запись?')) return
@@ -88,22 +103,6 @@ export default function Admin() {
     setTimeout(() => setToast(null), 3500)
   }
 
-  // 🔔 Обновление таблицы и подсветка после изменения профиля
-  useEffect(() => {
-    const handler = () => {
-      const updatedBookings = getBookings()
-      setBookings(updatedBookings)
-
-      document.querySelectorAll('tr[data-booking-id]').forEach(row => {
-        row.classList.add('highlight')
-        setTimeout(() => row.classList.remove('highlight'), 1000)
-      })
-    }
-
-    window.addEventListener('profileUpdated', handler)
-    return () => window.removeEventListener('profileUpdated', handler)
-  }, [])
-
   const statusLabel = (b) =>
     b.status === 'approved' ? '🟢 ' + t('approved')
       : b.status === 'pending' ? '🟡 ' + t('pending')
@@ -114,10 +113,13 @@ export default function Admin() {
       {/* ======= НАСТРОЙКИ (аккордеон) ======= */}
       <div className="col" style={{ flex: '0 1 420px' }}>
         <div style={cardAurora}>
-          <button onClick={() => setShowSettings(s => !s)} style={headerToggle}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-              <Chevron open={showSettings} />
-              <span style={{ fontWeight: 700 }}>Редактировать настройки</span>
+          <button
+            onClick={() => setShowSettings(s => !s)}
+            style={headerToggle}
+          >
+            <span style={{display:'inline-flex',alignItems:'center',gap:10}}>
+              <Chevron open={showSettings}/>
+              <span style={{fontWeight:700}}>Редактировать настройки</span>
             </span>
           </button>
 
@@ -126,54 +128,45 @@ export default function Admin() {
             overflow: 'hidden',
             transition: 'max-height .35s ease'
           }}>
-            <div style={{ paddingTop: 10 }}>
-              <div className="row" style={{ gap: 12 }}>
+            <div style={{paddingTop: 10}}>
+              <div className="row" style={{gap:12}}>
                 <div className="col">
                   <label style={labelStyle}>{t('master_name')}</label>
                   <input style={inputGlass}
                          value={settings.masterName}
-                         onChange={e => update({ masterName: e.target.value })} />
+                         onChange={e=>update({masterName:e.target.value})}/>
                 </div>
                 <div className="col">
                   <label style={labelStyle}>{t('admin_phone')}</label>
                   <input style={inputGlass}
                          value={settings.adminPhone}
-                         onChange={e => update({ adminPhone: e.target.value })} />
+                         onChange={e=>update({adminPhone:e.target.value})}/>
                 </div>
               </div>
 
-              <div className="row" style={{ gap: 12, marginTop: 12 }}>
+              <div className="row" style={{gap:12, marginTop:12}}>
                 <div className="col">
                   <label style={labelStyle}>{t('day_start')}</label>
-                  <select
-                    style={inputGlass}
-                    value={settings.workStart}
-                    onChange={e => update({ workStart: e.target.value })}
-                  >
-                    {generateTimeOptions('00:00', '12:00')}
+                  <select style={inputGlass}
+                          value={settings.workStart}
+                          onChange={e=>update({workStart:e.target.value})}>
+                    {generateTimes(0,12).map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div className="col">
                   <label style={labelStyle}>{t('day_end')}</label>
-                  <select
-                    style={inputGlass}
-                    value={settings.workEnd}
-                    onChange={e => update({ workEnd: e.target.value })}
-                  >
-                    {generateTimeOptions('12:00', '24:00')}
+                  <select style={inputGlass}
+                          value={settings.workEnd}
+                          onChange={e=>update({workEnd:e.target.value})}>
+                    {generateTimes(12,24).map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div className="col">
                   <label style={labelStyle}>{t('slot_minutes')}</label>
-                  <select
-                    style={inputGlass}
-                    value={settings.slotMinutes}
-                    onChange={e => update({ slotMinutes: parseInt(e.target.value, 10) })}
-                  >
-                    <option value="15">15</option>
-                    <option value="30">30</option>
-                    <option value="45">45</option>
-                    <option value="60">60</option>
+                  <select style={inputGlass}
+                          value={settings.slotMinutes}
+                          onChange={e=>update({slotMinutes:parseInt(e.target.value,10)})}>
+                    {[15,30,45,60].map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
               </div>
@@ -183,40 +176,40 @@ export default function Admin() {
       </div>
 
       {/* ======= ВСЕ ЗАПИСИ ======= */}
-      <div className="col" style={{ minWidth: 640 }}>
+      <div className="col" style={{minWidth: 640}}>
         <div style={cardAurora}>
           <div style={topBar}>
-            <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>Все записи</div>
-            <button style={btnPrimary} onClick={handleExport}>{t('export')}</button>
+            <div style={{fontWeight:700, fontSize:'1.05rem'}}>Все записи</div>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, margin: '8px 0 12px 0', flexWrap: 'wrap' }}>
+          <div style={{display:'flex', gap:10, margin:'8px 0 12px 0', flexWrap:'wrap'}}>
             <input
-              style={{ ...inputGlass, flex: '1 1 260px' }}
+              style={{...inputGlass, flex:'1 1 260px'}}
               placeholder={t('search_placeholder')}
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e=>setSearch(e.target.value)}
             />
             <div style={segmented}>
               {[
-                { v: 'all', label: t('all') },
-                { v: 'pending', label: t('pending') },
-                { v: 'approved', label: t('approved') },
-                { v: 'canceled_client', label: t('canceled_by_client') },
-                { v: 'canceled_admin', label: t('canceled_by_admin') }
-              ].map(it => (
+                {v:'all', label:t('all')},
+                {v:'pending', label:t('pending')},
+                {v:'approved', label:t('approved')},
+                {v:'canceled_client', label:t('canceled_by_client')},
+                {v:'canceled_admin', label:t('canceled_by_admin')}
+              ].map(it=>(
                 <button
                   key={it.v}
-                  onClick={() => setStatusFilter(it.v)}
-                  style={{ ...segBtn, ...(statusFilter === it.v ? segActive : {}) }}
+                  onClick={()=>setStatusFilter(it.v)}
+                  style={{...segBtn, ...(statusFilter===it.v?segActive:{})}}
                 >
                   {it.label}
                 </button>
               ))}
             </div>
+            <button style={{...btnPrimary, flex:'1'}} onClick={handleExport}>{t('export')}</button>
           </div>
 
-          <div className="badge" style={{ marginBottom: 10 }}>
+          <div className="badge" style={{marginBottom:10}}>
             {t('total')}: {stats.total} • {t('total_active')}: {stats.active} • {t('total_canceled')}: {stats.canceled}
           </div>
 
@@ -235,20 +228,20 @@ export default function Admin() {
               {filtered.map(b => {
                 const inFuture = new Date(b.start) > new Date()
                 return (
-                  <tr key={b.id} data-booking-id={b.id}>
-                    <td>
+                  <tr key={b.id} style={{opacity: b.status==='approved' ? 1 : .97}}>
+                    <td style={{whiteSpace:'nowrap'}}>
                       <b>{b.userName}</b>
-                      <div className="muted" style={{ fontSize: 12 }}>{b.userPhone}</div>
+                      <div className="muted" style={{fontSize:12}}>{b.userPhone}</div>
                     </td>
-                    <td>{b.userInstagram || '-'}</td>
-                    <td>{fmtDate(b.start)}</td>
-                    <td>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
+                    <td style={{whiteSpace:'nowrap'}}>{b.userInstagram || '-'}</td>
+                    <td style={{whiteSpace:'nowrap'}}>{fmtDate(b.start)}</td>
+                    <td style={{whiteSpace:'nowrap'}}>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
                     <td>{statusLabel(b)}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      {b.status === 'pending' &&
-                        <button style={btnOk} onClick={() => approveByAdmin(b.id)}>{t('approve')}</button>}
-                      {b.status !== 'canceled_admin' && b.status !== 'canceled_client' && inFuture &&
-                        <button style={btnDanger} onClick={() => cancelByAdmin(b.id)}>{t('rejected')}</button>}
+                    <td style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
+                      {b.status==='pending' &&
+                        <button style={btnOk} onClick={()=>approveByAdmin(b.id)}>{t('approve')}</button>}
+                      {b.status!=='canceled_admin' && b.status!=='canceled_client' && inFuture &&
+                        <button style={btnDanger} onClick={()=>cancelByAdmin(b.id)}>{t('rejected')}</button>}
                     </td>
                   </tr>
                 )
@@ -259,49 +252,37 @@ export default function Admin() {
             </tbody>
           </table>
 
-          {toast && <div className="toast" style={{ marginTop: 10 }}>{toast}</div>}
+          {toast && <div className="toast" style={{marginTop:10}}>{toast}</div>}
         </div>
       </div>
-
-      <style>
-        {`
-          .highlight {
-            animation: pulseHighlight 1s ease-out;
-          }
-          @keyframes pulseHighlight {
-            0% { background-color: rgba(150, 90, 255, 0.25); }
-            100% { background-color: transparent; }
-          }
-        `}
-      </style>
     </div>
   )
 }
 
-function generateTimeOptions(start, end) {
-  const [sH, sM] = start.split(':').map(Number)
-  const [eH, eM] = end.split(':').map(Number)
-  const options = []
-  for (let h = sH; h <= eH; h++) {
-    for (let m = 0; m < 60; m += 30) {
-      const hh = h.toString().padStart(2, '0')
-      const mm = m.toString().padStart(2, '0')
-      if (h === eH && m > eM) continue
-      options.push(<option key={`${hh}:${mm}`} value={`${hh}:${mm}`}>{`${hh}:${mm}`}</option>)
-    }
-  }
-  return options
-}
-
-function Chevron({ open }) {
+function Chevron({open}) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#cbb6ff" strokeWidth="2">
-      {open ? <path d="M6 15l6-6 6 6" /> : <path d="M6 9l6 6 6-6" />}
+      {open
+        ? <path d="M6 15l6-6 6 6" />
+        : <path d="M6 9l6 6 6-6" />}
     </svg>
   )
 }
 
-/* ==== Стили элементов ==== */
+function generateTimes(start, end) {
+  const result = []
+  for (let h = start; h < end; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const hh = String(h).padStart(2, '0')
+      const mm = String(m).padStart(2, '0')
+      result.push(`${hh}:${mm}`)
+    }
+  }
+  return result
+}
+
+/* ====== Стили ====== */
+
 const cardAurora = {
   background: 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))',
   border: '1px solid rgba(168,85,247,0.18)',
@@ -311,21 +292,20 @@ const cardAurora = {
 }
 
 const headerToggle = {
-const headerToggle = {
-  width: '100%', // ← оставляем на всю ширину
+  width: '100%',
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
   gap: 10,
   borderRadius: 12,
-  padding: '14px 18px', // ← немного больше внутренний отступ
+  padding: '14px 18px',
   border: '1px solid rgba(168,85,247,0.25)',
-  background: 'rgba(25,10,45,0.55)', // чуть плотнее фон
+  background: 'rgba(25,10,45,0.55)',
   color: '#fff',
   cursor: 'pointer'
 }
 
-const labelStyle = { fontSize: 12, opacity: .8, marginBottom: 6, display: 'block' }
+const labelStyle = { fontSize: 12, opacity: .8, marginBottom: 6, display:'block' }
 
 const inputGlass = {
   width: '100%',
@@ -377,14 +357,12 @@ const segmented = {
   borderRadius: 12,
   padding: 6
 }
-
 const segBtn = {
   ...btnBase,
   padding: '8px 12px',
   background: 'rgba(25,10,45,0.35)',
   border: '1px solid rgba(168,85,247,0.25)'
 }
-
 const segActive = {
   background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
   border: '1px solid rgba(180,95,255,0.7)',
