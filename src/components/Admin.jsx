@@ -33,14 +33,18 @@ export default function Admin() {
   const [toast, setToast] = useState(null)
 
   // 🔄 Автообновление при изменениях (в том числе из MyProfile/MyBookings)
-  useEffect(() => {
-    const sync = () => {
-      setSettings(getSettings())
-      setBookings(getBookings())
-    }
-    window.addEventListener('storage', sync)
-    return () => window.removeEventListener('storage', sync)
-  }, [])
+useEffect(() => {
+  const sync = () => {
+    setSettings(getSettings())
+    setBookings(getBookings())
+  }
+  window.addEventListener('storage', sync)
+  window.addEventListener('profileUpdated', sync)
+  return () => {
+    window.removeEventListener('storage', sync)
+    window.removeEventListener('profileUpdated', sync)
+  }
+}, [])
 
   const update = (patch) => {
     const next = { ...settings, ...patch }
