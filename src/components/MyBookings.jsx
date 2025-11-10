@@ -1,177 +1,333 @@
-import React from 'react'
+import { useEffect, useMemo, useState } from "react";
+import { getUsers, saveUsers, setCurrentUser, getCurrentUser } from "../lib/storage";
+import { useI18n } from "../lib/i18n";
 
-import { useMemo, useState } from 'react'
-import { getCurrentUser, getBookings, saveBookings, fmtDate, fmtTime, getUsers, saveUsers, setCurrentUser } from '../lib/storage'
-import { useI18n } from '../lib/i18n'
+export default function MyBookings() {
+  const { t } = useI18n();
+  const [current, setCurrent] = useState(getCurrentUser());
+  const [expanded, setExpanded] = useState(false);
+  const [showSavedModal, setShowSavedModal] = useState(false);
 
-export default function MyBookings(){
-  const { t } = useI18n()
-  const user = getCurrentUser()
-  const [form, setForm] = useState({
-    name: user?.name || '',
-    instagram: user?.instagram || '',
-    phone: user?.phone || '',
-    email: user?.email || '',
-    password: user?.password || ''
-  })
-  const [errors, setErrors] = useState({})
-  const [saved, setSaved] = useState(false)
-  const [toast, setToast] = useState(null)
+  const [name, setName] = useState(current?.name || "");
+  const [instagram, setInstagram] = useState(current?.instagram || "");
+  const [phone, setPhone] = useState(current?.phone || "");
+  const [email, setEmail] = useState(current?.email || "");
+  const [password, setPassword] = useState("");
 
-  const validate = () => {
-    const e = {}
-    if(!form.phone && !form.email) e.contact = 'Нужен телефон или email'
-    if(form.email && !/^\S+@\S+\.\S+$/.test(form.email)) e.email = 'Некорректный email'
-    if(form.phone && !/^[+\d][\d\s\-()]{5,}$/.test(form.phone)) e.phone = 'Некорректный телефон'
-    setErrors(e)
-    return Object.keys(e).length===0
-  }
+  const [filter, setFilter] = useState("all");
+  const bookings = useMemo(() => Array.isArray(current?.bookings) ? current.bookings : [], [current]);
+  const filteredBookings = useMemo(() => {
+    if (filter === "active") return bookings.filter(b => !b.cancelled);
+    if (filter === "cancelled") return bookings.filter(b => b.cancelled);
+    return bookings;
+  }, [bookings, filter]);
 
-  const saveProfile = (ev) => {
-    ev.preventDefault()
-    if(!validate()) return
-    const users = getUsers()
-    const idx = users.findIndex(u => (u.phone && u.phone===user.phone) || (u.email && u.email===user.email))
-    const updated = { ...user, ...form }
-    if(idx>=0) users[idx] = updated; else users.push(updated)
-    saveUsers(users)
-    setCurrentUser(updated)
-    setSaved(true); setToast('Данные сохранены')
-    setTimeout(()=>{ setSaved(false); setToast(null) }, 1500)
-  }
-  const [filter,setFilter] = useState('all')
-  const [confirmId, setConfirmId] = useState(null)
-  const [version, setVersion] = useState(0) // trigger re-read
-  const bookingsAll = getBookings()
+  useEffect(() => {
+    const u = getCurrentUser();
+    setCurrent(u);
+    if (u) {
+      setName(u.name || "");
+      setInstagram(u.instagram || "");
+      setPhone(u.phone || "");
+      setEmail(u.email || "");
+    }
+  }, []);
 
-  const all = bookingsAll
-    .filter(b=> user && b.userPhone===user.phone)
-    .sort((a,b)=> new Date(a.start) - new Date(b.start))
+  const handleSave = () => {
+    const users = getUsers() || [];
+    let updatedUser = { ...(current || {}) };
 
-  const list = useMemo(()=>{
-    if(filter==='active') return all.filter(b=> b.status==='approved')
-    if(filter==='canceled') return all.filter(b=> b.status==='canceled_client' || b.status==='canceled_admin')
-    return all
-  }, [filter, version, bookingsAll.length])
+    updatedUser.name = name.trim();
+    updatedUser.instagram = instagram.trim();
+    updatedUser.phone = phone.trim();
+    updatedUser.email = email.trim();
+    if (password.trim()) updatedUser.password = password;
 
-  const activeCount = all.filter(b=> b.status==='approved' && new Date(b.end)>=new Date()).length
+    const idx = users.findIndex(
+      u =>
+        (u.email && updatedUser.email && u.email.toLowerCase() === updatedUser.email.toLowerCase()) ||
+        (u.phone && updatedUser.phone && `${u.phone}` === `${updatedUser.phone}`)
+    );
+    if (idx >= 0) users[idx] = { ...users[idx], ...updatedUser };
+    else users.push(updatedUser);
 
-const [notif, setNotif] = useState(null)
+    saveUsers(users);
+    setCurrentUser(updatedUser);
+    setCurrent(updatedUser);
+    setShowSavedModal(true);
+  };
 
-// Check for new approvals/cancellations on mount or refresh
-React.useEffect(()=>{
-  if(!user) return
-  const list = getBookings()
-  const mine = list.filter(b=> b.userPhone===user.phone && (b.status==='approved' || b.status==='canceled_admin') && !b.notified)
-  if(mine.length){
-    const b = mine[0]
-    const msg = b.status==='approved' ? t('notif_approved') : t('notif_canceled')
-    setNotif({ msg })
-    // mark as notified
-    const next = list.map(x=> x.id===b.id ? { ...x, notified:true } : x)
-    saveBookings(next)
-  }
-}, [version])
+  const styles = {
+    sectionCard: {
+      background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderRadius: 16,
+      padding: 14,
+      boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
+      backdropFilter: "blur(6px)",
+    },
+    headerRow: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      cursor: "pointer",
+      userSelect: "none",
+      padding: "4px 4px 8px",
+    },
+    hTitle: { fontWeight: 700, fontSize: "1.05rem" },
+    chevronBtn: {
+      minWidth: 36,
+      height: 32,
+      borderRadius: 10,
+      border: "1px solid rgba(168,85,247,0.35)",
+      background: "rgba(25,10,45,0.6)",
+      color: "#fff",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      transition: ".25s",
+    },
+    collapseWrap: {
+      overflow: "hidden",
+      transition: "max-height .4s ease, opacity .35s ease, filter .35s ease",
+      maxHeight: expanded ? 1200 : 0,
+      opacity: expanded ? 1 : 0,
+      filter: expanded ? "blur(0)" : "blur(1px)",
+    },
 
+    // ——— Новый стиль Glass Aurora формы профиля
+    profileFormWrap: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 14,
+      paddingTop: 6,
+    },
+    fieldWrap: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 5,
+    },
+    label: {
+      fontSize: "0.9rem",
+      color: "rgba(220,220,255,0.75)",
+      fontWeight: 500,
+      marginLeft: 4,
+      transition: "0.2s ease",
+    },
+    inputAurora: {
+      width: "100%",
+      height: 42,
+      borderRadius: 12,
+      padding: "10px 14px",
+      background:
+        "linear-gradient(180deg, rgba(25,10,45,0.55), rgba(15,5,30,0.5))",
+      border: "1px solid rgba(168,85,247,0.35)",
+      boxShadow:
+        "inset 0 0 10px rgba(80,0,160,0.2), 0 0 8px rgba(168,85,247,0.15)",
+      color: "#fff",
+      fontSize: "0.95rem",
+      outline: "none",
+      transition: "all 0.25s ease",
+    },
+    saveBtnAurora: {
+      marginTop: 10,
+      height: 46,
+      borderRadius: 12,
+      border: "1px solid rgba(168,85,247,0.4)",
+      background: "rgba(31,0,63,0.55)",
+      color: "#fff",
+      fontWeight: 600,
+      letterSpacing: "0.2px",
+      cursor: "pointer",
+      boxShadow:
+        "0 0 15px rgba(168,85,247,0.25), inset 0 0 6px rgba(255,255,255,0.05)",
+      transition: "all 0.25s ease",
+    },
 
-  const cancel = (id) => setConfirmId(id)
-  const doCancel = () => {
-    const id = confirmId
-    const arr = getBookings().map(b=> b.id===id ? { ...b, status:'canceled_client', canceledAt:new Date().toISOString() } : b)
-    saveBookings(arr)
-    setConfirmId(null)
-    setVersion(v=>v+1)
-  }
+    chipRow: { display: "flex", gap: 10, margin: "14px 0" },
+    chip: (active) => ({
+      borderRadius: 12,
+      padding: "10px 16px",
+      border: `1px solid rgba(168,85,247,${active ? 0.9 : 0.35})`,
+      background: active ? "rgba(31,0,63,0.6)" : "rgba(25,10,45,0.5)",
+      color: "#fff",
+      cursor: "pointer",
+      fontWeight: 600,
+      boxShadow: active ? "0 0 18px rgba(150,90,255,0.4)" : "none",
+      transition: ".2s",
+    }),
+    table: {
+      width: "100%",
+      borderCollapse: "collapse",
+      borderRadius: 12,
+      overflow: "hidden",
+    },
+    th: {
+      textAlign: "left",
+      padding: "12px 10px",
+      color: "rgba(255,255,255,0.7)",
+      fontWeight: 600,
+      borderBottom: "1px solid rgba(255,255,255,0.08)",
+      background: "rgba(255,255,255,0.02)",
+    },
+    td: {
+      padding: "12px 10px",
+      borderBottom: "1px solid rgba(255,255,255,0.06)",
+    },
+    statusDot: (ok) => ({
+      display: "inline-block",
+      width: 9,
+      height: 9,
+      borderRadius: "50%",
+      marginRight: 8,
+      background: ok ? "#22c55e" : "#ef4444",
+      boxShadow: ok ? "0 0 10px rgba(34,197,94,0.6)" : "0 0 10px rgba(239,68,68,0.5)",
+    }),
+    sectionTitle: { fontSize: "1.05rem", fontWeight: 700, marginBottom: 8 },
 
-  const refresh = () => setVersion(v=>v+1)
+    // Модалка
+    backdrop: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.6)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 3000,
+      animation: "fadeIn .18s ease",
+    },
+    modal: {
+      width: 360,
+      maxWidth: "90vw",
+      padding: "18px 18px 14px",
+      borderRadius: 16,
+      background: "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))",
+      border: "1px solid rgba(168,85,247,0.26)",
+      boxShadow: "0 12px 40px rgba(168,85,247,0.2)",
+      textAlign: "center",
+      color: "#fff",
+      backdropFilter: "blur(10px)",
+      animation: "popIn .16s ease",
+    },
+    modalBtn: {
+      marginTop: 12,
+      height: 38,
+      borderRadius: 10,
+      border: "1px solid rgba(168,85,247,0.45)",
+      background: "rgba(31,0,63,0.6)",
+      color: "#fff",
+      fontWeight: 600,
+      padding: "6px 14px",
+      cursor: "pointer",
+      width: "100%",
+    },
+  };
 
-  if(!user){
-    return <div className="card"><b>{t('login_or_register')}</b></div>
-  }
-
-  const statusLabel = (b) => {
-    if(b.status==='pending') return '🟡 ' + t('pending')
-    if(b.status==='approved') return '🟢 ' + t('approved')
-    if(b.status==='canceled_client') return '❌ ' + t('canceled_by_client')
-    if(b.status==='canceled_admin') return '🔴 ' + t('canceled_by_admin')
-    return b.status
-  }
+  useEffect(() => {
+    const s = document.createElement("style");
+    s.innerHTML = `
+      @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+      @keyframes popIn { from { opacity: .0; transform: translateY(-6px) } to { opacity: 1; transform: translateY(0) } }
+      input:focus {
+        border-color: rgba(180,100,255,0.9) !important;
+        box-shadow: 0 0 15px rgba(160,80,255,0.35), inset 0 0 8px rgba(150,70,255,0.2);
+      }
+    `;
+    document.head.appendChild(s);
+    return () => document.head.removeChild(s);
+  }, []);
 
   return (
-    <div className="row">
-      <div className="col">
-        <div className="card">
-          
-        <div className="card" style={{marginBottom:16}}>
-          <h3 style={{marginTop:0}}>Мой профиль</h3>
-          <form className="col" style={{gap:12}} onSubmit={saveProfile}>
-            <div><label>Имя</label><input value={form.name} onChange={e=>{ setForm({...form, name:e.target.value}); setSaved(false) }} /></div>
-            <div><label>Instagram</label><input value={form.instagram} onChange={e=>{ setForm({...form, instagram:e.target.value}); setSaved(false) }} /></div>
-            <div><label>Телефон</label><input value={form.phone} onChange={e=>{ setForm({...form, phone:e.target.value}); setSaved(false) }} />{errors.phone && <small className="muted">{errors.phone}</small>}</div>
-            <div><label>Email</label><input value={form.email} onChange={e=>{ setForm({...form, email:e.target.value}); setSaved(false) }} />{errors.email && <small className="muted">{errors.email}</small>}</div>
-            <div><label>Пароль</label><input type="password" value={form.password} onChange={e=>{ setForm({...form, password:e.target.value}); setSaved(false) }} /></div>
-            {errors.contact && <div className="badge" style={{background:'rgba(255,0,0,0.1)'}}>{errors.contact}</div>}
-            <div style={{display:'flex',gap:8,alignItems:'center'}}>
-              <button type="submit">{saved ? 'Сохранено ✔' : 'Сохранить'}</button>
-              {saved && <small className="muted">Обновлено</small>}
-            </div>
-          </form>
+    <div style={{ display: "grid", gap: 16 }}>
+      {/* Профиль */}
+      <div style={styles.sectionCard}>
+        <div style={styles.headerRow} onClick={() => setExpanded(v => !v)}>
+          <div style={styles.hTitle}>{t?.("my_profile") || "Мой профиль"}</div>
+          <button style={styles.chevronBtn}>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#b78cff"
+              strokeWidth="1.8"
+              style={{ transform: `rotate(${expanded ? 180 : 0}deg)`, transition: ".25s" }}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
         </div>
-        
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-            <h3 style={{marginTop:0}}>{t('my_bookings')}</h3>
-            <div style={{display:'flex',gap:8}}>
-              <button className={filter==='all'?'':'ghost'} onClick={()=>setFilter('all')}>{t('all')}</button>
-              <button className={filter==='active'?'':'ghost'} onClick={()=>setFilter('active')}>{t('active')}</button>
-              <button className={filter==='canceled'?'':'ghost'} onClick={()=>setFilter('canceled')}>{t('canceled')}</button>
-              <button className="ghost" onClick={refresh}>🔁 {t('refresh')}</button>
-            </div>
+
+        <div style={styles.collapseWrap}>
+          <div style={styles.profileFormWrap}>
+            {[
+              { label: "Имя", value: name, set: setName },
+              { label: "Instagram", value: instagram, set: setInstagram, placeholder: "@handle" },
+              { label: "Телефон", value: phone, set: setPhone },
+              { label: "Email", value: email, set: setEmail },
+              { label: "Пароль", value: password, set: setPassword, type: "password", placeholder: "••••••••" },
+            ].map((f, i) => (
+              <div key={i} style={styles.fieldWrap}>
+                <label style={styles.label}>{f.label}</label>
+                <input
+                  type={f.type || "text"}
+                  value={f.value}
+                  onChange={(e) => f.set(e.target.value)}
+                  placeholder={f.placeholder || ""}
+                  style={styles.inputAurora}
+                />
+              </div>
+            ))}
+
+            <button style={styles.saveBtnAurora} onClick={handleSave}>💾 Сохранить</button>
           </div>
-          <table className="table">
-            <thead><tr><th>Дата</th><th>Время</th><th>{t('status')}</th><th></th></tr></thead>
-            <tbody>
-              {list.map(b=>{
-                const canCancel = (b.status==='pending' || b.status==='approved') && new Date(b.start)>new Date()
-                return (
-                  <tr key={b.id} style={{opacity: b.status==='approved' ? 1 : .9}}>
-                    <td>{fmtDate(b.start)}</td>
-                    <td>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
-                    <td>{statusLabel(b)}</td>
-                    <td style={{width:160}}>{canCancel ? <button className="danger" onClick={()=>cancel(b.id)}>{t('cancel')}</button> : null}</td>
-                  </tr>
-                )
-              })}
-              {!list.length && <tr><td colSpan="4"><small className="muted">{t('no_records')}</small></td></tr>}
-            </tbody>
-          </table>
         </div>
       </div>
 
-      {confirmId && (
-        <div className="modal-backdrop" onClick={()=>setConfirmId(null)}>
-          <div className="modal" onClick={e=>e.stopPropagation()}>
-            <h3>{t('confirm_cancel')}</h3>
-            <p><small className="muted">{t('irreversible')}</small></p>
-            <div style={{display:'flex',gap:8,marginTop:10}}>
-              <button className="danger" onClick={doCancel}>{t('yes_cancel')}</button>
-              <button className="ghost" onClick={()=>setConfirmId(null)}>{t('back')}</button>
-            </div>
+      {/* Мои записи */}
+      <div style={styles.sectionCard}>
+        <div style={styles.sectionTitle}>{t?.("my_bookings") || "Мои записи"}</div>
+        <div style={styles.chipRow}>
+          <button style={styles.chip(filter === "all")} onClick={() => setFilter("all")}>Все</button>
+          <button style={styles.chip(filter === "active")} onClick={() => setFilter("active")}>Активные</button>
+          <button style={styles.chip(filter === "cancelled")} onClick={() => setFilter("cancelled")}>Отменённые</button>
+        </div>
+
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th style={styles.th}>Дата</th>
+              <th style={styles.th}>Время</th>
+              <th style={styles.th}>Статус</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredBookings.length === 0 ? (
+              <tr><td style={styles.td} colSpan={3}>Нет записей</td></tr>
+            ) : filteredBookings.map((b, i) => (
+              <tr key={i}>
+                <td style={styles.td}>{b.date || "-"}</td>
+                <td style={styles.td}>{b.time || "-"}</td>
+                <td style={styles.td}>
+                  <span style={styles.statusDot(!b.cancelled)} />
+                  {b.cancelled ? "Отменена" : "Подтверждена"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Модалка */}
+      {showSavedModal && (
+        <div style={styles.backdrop} onClick={() => setShowSavedModal(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>✅ Профиль обновлён</div>
+            <div style={{ opacity: 0.8 }}>Ваши изменения сохранены успешно.</div>
+            <button style={styles.modalBtn} onClick={() => setShowSavedModal(false)}>OK</button>
           </div>
         </div>
       )}
-    
-
-{toast && (<div className='toast'>{toast}</div>)}
-
-{notif && (
-  <div className="modal-backdrop" onClick={()=>setNotif(null)}>
-    <div className="modal" onClick={e=>e.stopPropagation()}>
-      <h3>{notif.msg}</h3>
-      <div style={{marginTop:12}}><button onClick={()=>setNotif(null)}>{t('notif_ok')}</button></div>
     </div>
-  </div>
-)}
-
-    </div>
-  )
+  );
 }
