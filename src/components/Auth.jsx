@@ -232,45 +232,92 @@ export default function Auth({ onAuth }) {
     </svg>
   );
 
-  // === отображение профиля ===
-  if (current) {
-    const initials = current.name
-      ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
-      : "U";
+ // === отображение профиля ===
+if (current) {
+  const initials = current.name
+    ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
+    : "U";
 
-    return (
-      <>
-        {toast && <div style={toastStyle}>{toast}</div>}
-        <div style={profileCard}>
-          <div style={auroraBg} />
-          <div style={borderGlow} />
+  return (
+    <>
+      {toast && <div style={toastStyle}>{toast}</div>}
+
+      <div
+        style={{
+          background: "rgba(20,10,35,0.9)",
+          border: "1px solid rgba(168,85,247,0.3)",
+          borderRadius: "14px",
+          boxShadow: "0 0 25px rgba(168,85,247,0.15)",
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "12px 20px",
+          gap: "20px",
+        }}
+      >
+        {/* Левая часть — аватар + инфо */}
+        <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1 }}>
           <div
             style={{
-              position: "relative",
-              zIndex: 2,
+              width: 46,
+              height: 46,
+              borderRadius: "10px",
+              background: "linear-gradient(180deg, rgba(46,27,61,1), rgba(36,17,50,1))",
+              border: "1px solid rgba(150,90,255,0.4)",
               display: "flex",
-              justifyContent: "space-between",
               alignItems: "center",
-              padding: "6px 8px",
+              justifyContent: "center",
+              fontWeight: 700,
+              fontSize: "1rem",
+              color: "#fff",
+              flexShrink: 0,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={avatarStyle}>{initials}</div>
-              <div>
-                <div style={nameStyle}>{current.name}</div>
-                {current.phone && <div style={contactStyle}>{current.phone}</div>}
-                {current.email && <div style={contactStyle}>{current.email}</div>}
-                {current.instagram && <div style={contactStyle}>{current.instagram}</div>}
-              </div>
-            </div>
-            <button onClick={logout} style={logoutButton}>
-              Выйти
-            </button>
+            {initials}
+          </div>
+
+          <div
+            style={{
+              border: "1px solid rgba(168,85,247,0.25)",
+              borderRadius: "10px",
+              padding: "10px 16px",
+              flex: 1,
+            }}
+          >
+            <div style={{ fontWeight: 600, fontSize: "1rem" }}>{current.name}</div>
+            {current.phone && (
+              <div style={{ opacity: 0.85, fontSize: "0.9rem" }}>{current.phone}</div>
+            )}
+            {current.email && (
+              <div style={{ opacity: 0.85, fontSize: "0.9rem" }}>{current.email}</div>
+            )}
+            {current.instagram && (
+              <div style={{ opacity: 0.85, fontSize: "0.9rem" }}>{current.instagram}</div>
+            )}
           </div>
         </div>
-      </>
-    );
-  }
+
+        {/* Кнопка «Выйти» */}
+        <button
+          onClick={logout}
+          style={{
+            border: "1px solid rgba(168,85,247,0.45)",
+            background: "rgba(31,0,63,0.3)",
+            color: "#fff",
+            padding: "8px 26px",
+            borderRadius: "10px",
+            cursor: "pointer",
+            transition: "all 0.3s ease",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Выйти
+        </button>
+      </div>
+    </>
+  );
+}
 
   // === форма входа / регистрации ===
   return (
