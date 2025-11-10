@@ -66,7 +66,6 @@ export default function MyBookings() {
     saveUsers(users)
     setCurrentUser(updated)
 
-    // обновляем бронирования
     const bookings = getBookings().map(b =>
       (b.userEmail === user.email || b.userPhone === user.phone)
         ? {
@@ -96,9 +95,7 @@ export default function MyBookings() {
     setVersion(v => v + 1)
   }
 
-  if (!user) {
-    return <div className="card"><b>{t('login_or_register')}</b></div>
-  }
+  if (!user) return <div className="card"><b>{t('login_or_register')}</b></div>
 
   const statusLabel = (b) => {
     if (b.status === 'pending') return '🟡 ' + t('pending')
@@ -110,17 +107,17 @@ export default function MyBookings() {
 
   return (
     <div style={container}>
-      {/* === МОЙ ПРОФИЛЬ === */}
-      <div style={profileOuter}>
-        <div style={profileInner}>
-          <div style={profileTop}>
-            <h3 style={{ margin: 0 }}>{t('my_profile')}</h3>
-            <button
-              style={editBtn}
-              onClick={() => setShowProfile(!showProfile)}
-            >
-              {showProfile ? 'Скрыть профиль ▲' : 'Редактировать профиль ▼'}
-            </button>
+      {/* === ВНЕШНИЙ БЛОК ПРОФИЛЯ === */}
+      <div style={outerCard}>
+        <h3 style={{ margin: 0, padding: '10px 20px' }}>Профиль</h3>
+
+        <div style={innerCard}>
+          <div
+            style={innerHeader}
+            onClick={() => setShowProfile(!showProfile)}
+          >
+            <span style={{ fontWeight: 600 }}>Редактировать профиль</span>
+            <span style={{ color: '#a855f7' }}>{showProfile ? '▲' : '▼'}</span>
           </div>
 
           <div
@@ -172,7 +169,7 @@ export default function MyBookings() {
         </div>
       </div>
 
-      {/* === БРОНИРОВАНИЯ === */}
+      {/* === МОИ ЗАПИСИ === */}
       <div style={bookingsCard}>
         <div style={bookingsHeader}>
           <h3 style={{ margin: 0 }}>{t('my_bookings')}</h3>
@@ -216,27 +213,6 @@ export default function MyBookings() {
           </tbody>
         </table>
       </div>
-
-      {confirmId && (
-        <div style={modalBackdrop}>
-          <div style={modalBox}>
-            <h3>{t('confirm_cancel')}</h3>
-            <div style={{ display: 'flex', gap: 12, marginTop: 16, justifyContent: 'center' }}>
-              <button style={cancelBtn} onClick={doCancel}>{t('yes_cancel')}</button>
-              <button style={okBtn} onClick={() => setConfirmId(null)}>{t('back')}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {modal && (
-        <div style={modalBackdrop}>
-          <div style={modalBox}>
-            <div style={loader}></div>
-            <h3 style={{ marginTop: 10 }}>{t('profile_updated')}</h3>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -244,32 +220,32 @@ export default function MyBookings() {
 /* === СТИЛИ === */
 const container = { animation: 'fadeIn 0.5s ease', paddingBottom: '40px' }
 
-const profileOuter = {
-  background: 'rgba(15,10,25,0.85)',
-  borderRadius: '14px',
+const outerCard = {
+  background: 'rgba(15,10,25,0.9)',
   border: '1px solid rgba(168,85,247,0.3)',
-  boxShadow: '0 0 20px rgba(168,85,247,0.15)',
+  borderRadius: '14px',
+  boxShadow: '0 0 25px rgba(168,85,247,0.15)',
+  color: '#fff',
   marginBottom: '24px',
   overflow: 'hidden'
 }
 
-const profileInner = { color: '#fff', width: '100%' }
+const innerCard = {
+  margin: '0 20px 20px',
+  border: '1px solid rgba(168,85,247,0.2)',
+  borderRadius: '12px',
+  background: 'rgba(20,10,35,0.8)',
+  overflow: 'hidden'
+}
 
-const profileTop = {
+const innerHeader = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '14px 18px',
-  borderBottom: '1px solid rgba(168,85,247,0.25)',
-  background: 'rgba(25,15,45,0.9)'
-}
-
-const editBtn = {
-  background: 'transparent',
-  border: 'none',
-  color: '#a855f7',
+  padding: '12px 16px',
   cursor: 'pointer',
-  fontSize: '0.9rem'
+  background: 'rgba(25,15,45,0.8)',
+  borderBottom: '1px solid rgba(168,85,247,0.25)'
 }
 
 const profileBody = {
@@ -291,8 +267,8 @@ const saveBtn = {
   transition: 'all 0.3s ease'
 }
 
-/* --- остальные стили остаются прежними --- */
-const bookingsCard = { ...profileOuter, padding: '18px' }
+/* Остальные стили остаются прежними */
+const bookingsCard = { ...outerCard, padding: '18px' }
 const bookingsHeader = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }
 const filterButtons = { display: 'flex', gap: '8px' }
 
@@ -306,66 +282,7 @@ const filterBtn = (active) => ({
   transition: '0.3s'
 })
 
-const table = {
-  width: '100%',
-  borderCollapse: 'collapse',
-  color: '#fff',
-  textAlign: 'center'
-}
-
-const tableCell = {
-  padding: '12px 0',
-  borderBottom: '1px solid rgba(168,85,247,0.12)',
-  verticalAlign: 'middle'
-}
-
-const cancelBtn = {
-  borderRadius: '8px',
-  border: '1px solid rgba(180,95,255,0.4)',
-  background: 'rgba(40,20,70,0.7)',
-  color: '#fff',
-  padding: '6px 14px',
-  cursor: 'pointer',
-  transition: 'all 0.3s ease'
-}
-
-const modalBackdrop = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0,0,0,0.6)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 2000,
-  animation: 'fadeIn 0.3s ease'
-}
-
-const modalBox = {
-  background: 'rgba(20,15,35,0.85)',
-  border: '1px solid rgba(180,95,255,0.4)',
-  borderRadius: '14px',
-  padding: '24px 32px',
-  textAlign: 'center',
-  color: '#fff',
-  boxShadow: '0 0 40px rgba(150,85,247,0.25)',
-  animation: 'popIn 0.3s ease'
-}
-
-const okBtn = {
-  borderRadius: '8px',
-  border: '1px solid rgba(168,85,247,0.5)',
-  background: 'rgba(40,20,70,0.7)',
-  color: '#fff',
-  padding: '6px 16px',
-  cursor: 'pointer'
-}
-
-const loader = {
-  width: '28px',
-  height: '28px',
-  margin: '0 auto 10px',
-  borderRadius: '50%',
-  border: '3px solid rgba(255,255,255,0.25)',
-  borderTopColor: '#a855f7',
-  animation: 'spin 1s linear infinite'
-}
+const table = { width: '100%', borderCollapse: 'collapse', color: '#fff', textAlign: 'center' }
+const tableCell = { padding: '12px 0', borderBottom: '1px solid rgba(168,85,247,0.12)' }
+const tableRow = { transition: 'background 0.25s ease' }
+const cancelBtn = { borderRadius: '8px', border: '1px solid rgba(180,95,255,0.4)', background: 'rgba(40,20,70,0.7)', color: '#fff', padding: '6px 14px', cursor: 'pointer', transition: 'all 0.3s ease' }
