@@ -111,7 +111,7 @@ export default function Admin() {
   return (
     <div className="row" style={{ gap: 16 }}>
       {/* ======= НАСТРОЙКИ (аккордеон) ======= */}
-      <div className="col" style={{ flex: '0 1 420px' }}>
+      <div className="col" style={{ width: '100%', maxWidth: '100%' }}>
         <div style={cardAurora}>
           <button
             onClick={() => setShowSettings(s => !s)}
