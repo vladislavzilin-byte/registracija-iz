@@ -232,7 +232,7 @@ export default function Auth({ onAuth }) {
     </svg>
   );
 
- // === отображение профиля ===
+// === отображение профиля ===
 if (current) {
   const initials = current.name
     ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
@@ -263,8 +263,9 @@ if (current) {
               width: 46,
               height: 46,
               borderRadius: "10px",
-              background: "linear-gradient(180deg, rgba(46,27,61,1), rgba(36,17,50,1))",
-              border: "1px solid rgba(150,90,255,0.4)",
+              background:
+                "linear-gradient(180deg, rgba(46,27,61,1), rgba(36,17,50,1))",
+              border: "1px solid rgba(150,90,255,0.35)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -272,6 +273,11 @@ if (current) {
               fontSize: "1rem",
               color: "#fff",
               flexShrink: 0,
+              animation: "auroraBorderPulse 6s ease-in-out infinite",
+              boxShadow: `
+                0 0 12px rgba(120,60,210,0.08),
+                0 0 22px rgba(140,70,230,0.06)
+              `,
             }}
           >
             {initials}
@@ -315,6 +321,35 @@ if (current) {
           Выйти
         </button>
       </div>
+
+      {/* Добавляем анимацию, если её нет */}
+      <style>
+        {`
+        @keyframes auroraBorderPulse {
+          0% {
+            box-shadow:
+              0 0 0px 0 rgba(168,85,247,0.0),
+              0 0 0px 0 rgba(139,92,246,0.0),
+              0 0 0px 0 rgba(99,102,241,0.0);
+            border-color: rgba(168,85,247,0.3);
+          }
+          50% {
+            box-shadow:
+              0 0 12px 3px rgba(168,85,247,0.25),
+              0 0 28px 8px rgba(139,92,246,0.18),
+              0 0 42px 16px rgba(99,102,241,0.12);
+            border-color: rgba(168,85,247,0.55);
+          }
+          100% {
+            box-shadow:
+              0 0 0px 0 rgba(168,85,247,0.0),
+              0 0 0px 0 rgba(139,92,246,0.0),
+              0 0 0px 0 rgba(99,102,241,0.0);
+            border-color: rgba(168,85,247,0.3);
+          }
+        }
+        `}
+      </style>
     </>
   );
 }
