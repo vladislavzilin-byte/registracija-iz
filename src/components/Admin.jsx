@@ -311,15 +311,16 @@ const cardAurora = {
 }
 
 const headerToggle = {
-  width: '100%',
+const headerToggle = {
+  width: '100%', // ← оставляем на всю ширину
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
   gap: 10,
   borderRadius: 12,
-  padding: '10px 12px',
+  padding: '14px 18px', // ← немного больше внутренний отступ
   border: '1px solid rgba(168,85,247,0.25)',
-  background: 'rgba(25,10,45,0.45)',
+  background: 'rgba(25,10,45,0.55)', // чуть плотнее фон
   color: '#fff',
   cursor: 'pointer'
 }
