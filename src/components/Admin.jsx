@@ -27,15 +27,17 @@ export default function Admin() {
   const { t } = useI18n()
   const [settings, setSettings] = useState(getSettings())
   const [bookings, setBookings] = useState(getBookings())
-
   const [showSettings, setShowSettings] = useState(false)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [toast, setToast] = useState(null)
 
-  // Автообновление при изменении настроек
+  // 🔄 Автообновление при изменениях (в том числе из MyProfile/MyBookings)
   useEffect(() => {
-    const sync = () => setBookings(getBookings())
+    const sync = () => {
+      setSettings(getSettings())
+      setBookings(getBookings())
+    }
     window.addEventListener('storage', sync)
     return () => window.removeEventListener('storage', sync)
   }, [])
@@ -44,7 +46,6 @@ export default function Admin() {
     const next = { ...settings, ...patch }
     setSettings(next)
     saveSettings(next)
-    // автообновление списка при изменении настроек
     setBookings(getBookings())
   }
 
@@ -104,7 +105,7 @@ export default function Admin() {
 
   return (
     <div className="col" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* ======= НАСТРОЙКИ ======= */}
+      {/* ===== НАСТРОЙКИ ===== */}
       <div style={cardAurora}>
         <button
           onClick={() => setShowSettings(s => !s)}
@@ -137,37 +138,57 @@ export default function Admin() {
               </div>
             </div>
 
+            {/* Выбор времени и длительности */}
             <div className="row" style={{gap:12, marginTop:12}}>
               <div className="col">
                 <label style={labelStyle}>{t('day_start')}</label>
-                <input type="time" style={inputGlass}
-                       value={settings.workStart}
-                       onChange={e=>update({workStart:e.target.value})}/>
+                <select
+                  style={inputGlass}
+                  value={settings.workStart}
+                  onChange={e => update({ workStart: e.target.value })}
+                >
+                  {generateTimes(0, 12).map(time => (
+                    <option key={time} value={time}>{time}</option>
+                  ))}
+                </select>
               </div>
+
               <div className="col">
                 <label style={labelStyle}>{t('day_end')}</label>
-                <input type="time" style={inputGlass}
-                       value={settings.workEnd}
-                       onChange={e=>update({workEnd:e.target.value})}/>
+                <select
+                  style={inputGlass}
+                  value={settings.workEnd}
+                  onChange={e => update({ workEnd: e.target.value })}
+                >
+                  {generateTimes(12, 24).map(time => (
+                    <option key={time} value={time}>{time}</option>
+                  ))}
+                </select>
               </div>
+
               <div className="col">
                 <label style={labelStyle}>{t('slot_minutes')}</label>
-                <input type="number" min="15" step="15" style={inputGlass}
-                       value={settings.slotMinutes}
-                       onChange={e=>update({slotMinutes:parseInt(e.target.value||'60',10)})}/>
+                <select
+                  style={inputGlass}
+                  value={settings.slotMinutes}
+                  onChange={e => update({ slotMinutes: parseInt(e.target.value, 10) })}
+                >
+                  {[15, 30, 45, 60].map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ======= ВСЕ ЗАПИСИ ======= */}
+      {/* ===== ВСЕ ЗАПИСИ ===== */}
       <div style={cardAurora}>
         <div style={topBar}>
           <div style={{fontWeight:700, fontSize:'1.05rem'}}>Все записи</div>
         </div>
 
-        {/* Поиск + фильтры */}
         <div style={{display:'flex', gap:10, margin:'8px 0 12px 0', flexWrap:'wrap', alignItems:'center'}}>
           <input
             style={{...inputGlass, flex:'1 1 260px'}}
@@ -244,7 +265,7 @@ export default function Admin() {
   )
 }
 
-/* ====== Мелкие UI-компоненты / стили ====== */
+/* ===== UI-компоненты и стили ===== */
 
 function Chevron({open}) {
   return (
@@ -256,7 +277,17 @@ function Chevron({open}) {
   )
 }
 
-/* Стиль карточек и кнопок */
+/* Генерация времени каждые 30 мин */
+function generateTimes(startHour, endHour) {
+  const times = []
+  for (let h = startHour; h < endHour; h++) {
+    times.push(`${String(h).padStart(2, '0')}:00`)
+    times.push(`${String(h).padStart(2, '0')}:30`)
+  }
+  return times
+}
+
+/* ==== Стили ==== */
 const cardAurora = {
   background: 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))',
   border: '1px solid rgba(168,85,247,0.18)',
@@ -264,7 +295,6 @@ const cardAurora = {
   padding: 14,
   boxShadow: '0 8px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.03)'
 }
-
 const headerToggle = {
   width: '100%',
   display: 'flex',
@@ -278,9 +308,7 @@ const headerToggle = {
   color: '#fff',
   cursor: 'pointer'
 }
-
 const labelStyle = { fontSize: 12, opacity: .8, marginBottom: 6, display:'block' }
-
 const inputGlass = {
   width: '100%',
   padding: '10px 12px',
@@ -290,55 +318,11 @@ const inputGlass = {
   background: 'rgba(17,0,40,0.45)',
   outline: 'none'
 }
-
-const topBar = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '4px 2px 10px 2px'
-}
-
-const btnBase = {
-  borderRadius: 10,
-  padding: '8px 14px',
-  fontWeight: 600,
-  cursor: 'pointer',
-  border: '1px solid rgba(168,85,247,0.45)',
-  transition: '0.2s'
-}
-
-const btnPrimary = {
-  ...btnBase,
-  background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
-  boxShadow: '0 0 14px rgba(150,85,247,0.35)',
-  color: '#fff'
-}
-
+const topBar = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 2px 10px 2px' }
+const btnBase = { borderRadius: 10, padding: '8px 14px', fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(168,85,247,0.45)', transition: '0.2s' }
+const btnPrimary = { ...btnBase, background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))', boxShadow: '0 0 14px rgba(150,85,247,0.35)', color: '#fff' }
 const btnOk = { ...btnPrimary }
-
-const btnDanger = {
-  ...btnBase,
-  border: '1px solid rgba(239, 68, 68, .6)',
-  background: 'rgba(110,20,30,.35)',
-  color: '#fff'
-}
-
-const segmented = {
-  display: 'flex',
-  gap: 8,
-  background: 'rgba(17,0,40,0.45)',
-  border: '1px solid rgba(168,85,247,0.25)',
-  borderRadius: 12,
-  padding: 6
-}
-const segBtn = {
-  ...btnBase,
-  padding: '8px 12px',
-  background: 'rgba(25,10,45,0.35)',
-  border: '1px solid rgba(168,85,247,0.25)'
-}
-const segActive = {
-  background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
-  border: '1px solid rgba(180,95,255,0.7)',
-  boxShadow: '0 0 12px rgba(150,90,255,0.30)'
-}
+const btnDanger = { ...btnBase, border: '1px solid rgba(239, 68, 68, .6)', background: 'rgba(110,20,30,.35)', color: '#fff' }
+const segmented = { display: 'flex', gap: 8, background: 'rgba(17,0,40,0.45)', border: '1px solid rgba(168,85,247,0.25)', borderRadius: 12, padding: 6 }
+const segBtn = { ...btnBase, padding: '8px 12px', background: 'rgba(25,10,45,0.35)', border: '1px solid rgba(168,85,247,0.25)' }
+const segActive = { background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))', border: '1px solid rgba(180,95,255,0.7)', boxShadow: '0 0 12px rgba(150,90,255,0.30)' }
