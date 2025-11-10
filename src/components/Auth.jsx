@@ -283,7 +283,28 @@ if (current) {
             {initials}
           </div>
 
-                 {/* Кнопка «Выйти» */}
+          <div
+            style={{
+              border: "1px solid rgba(168,85,247,0.25)",
+              borderRadius: "10px",
+              padding: "10px 16px",
+              flex: 1,
+            }}
+          >
+            <div style={{ fontWeight: 600, fontSize: "1rem" }}>{current.name}</div>
+            {current.phone && (
+              <div style={{ opacity: 0.85, fontSize: "0.9rem" }}>{current.phone}</div>
+            )}
+            {current.email && (
+              <div style={{ opacity: 0.85, fontSize: "0.9rem" }}>{current.email}</div>
+            )}
+            {current.instagram && (
+              <div style={{ opacity: 0.85, fontSize: "0.9rem" }}>{current.instagram}</div>
+            )}
+          </div>
+        </div>
+
+        {/* Кнопка «Выйти» */}
         <button
           onClick={logout}
           style={{
