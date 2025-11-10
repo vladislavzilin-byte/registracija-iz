@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   getCurrentUser,
   getBookings,
@@ -27,6 +27,7 @@ export default function MyBookings() {
   const [confirmId, setConfirmId] = useState(null)
   const [version, setVersion] = useState(0)
   const [modal, setModal] = useState(false)
+  const [approvedModal, setApprovedModal] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
 
   const bookingsAll = getBookings()
@@ -40,6 +41,17 @@ export default function MyBookings() {
       return all.filter(b => b.status === 'canceled_client' || b.status === 'canceled_admin')
     return all
   }, [filter, version, bookingsAll.length])
+
+  // ✅ Проверяем новые подтверждения от админа
+  useEffect(() => {
+    const prev = JSON.parse(localStorage.getItem('prevBookings') || '[]')
+    const approvedNow = all.find(b => b.status === 'approved' && !prev.find(p => p.id === b.id && p.status === 'approved'))
+    if (approvedNow) {
+      setApprovedModal(true)
+      setTimeout(() => setApprovedModal(false), 2500)
+    }
+    localStorage.setItem('prevBookings', JSON.stringify(all))
+  }, [all])
 
   const validate = () => {
     const e = {}
@@ -66,21 +78,15 @@ export default function MyBookings() {
     saveUsers(users)
     setCurrentUser(updated)
 
+    // 🔄 обновляем бронирования
     const bookings = getBookings().map(b =>
       (b.userEmail === user.email || b.userPhone === user.phone)
-        ? {
-            ...b,
-            userName: updated.name,
-            userPhone: updated.phone,
-            userInstagram: updated.instagram,
-            userEmail: updated.email
-          }
+        ? { ...b, userName: updated.name, userPhone: updated.phone, userInstagram: updated.instagram, userEmail: updated.email }
         : b
     )
     saveBookings(bookings)
     window.dispatchEvent(new Event('profileUpdated'))
 
-    // ✅ Показываем модальное окно "Сохранено"
     setModal(true)
     setTimeout(() => setModal(false), 2200)
   }
@@ -108,14 +114,14 @@ export default function MyBookings() {
 
   return (
     <div style={container}>
-      {/* === ВНЕШНИЙ БЛОК ПРОФИЛЯ === */}
+      {/* === ПРОФИЛЬ === */}
       <div style={outerCard}>
         <h3 style={{ margin: 0, padding: '10px 20px' }}>Профиль</h3>
 
         <div style={innerCard}>
           <div style={innerHeader} onClick={() => setShowProfile(!showProfile)}>
+            <span style={{ color: '#a855f7', transition: 'transform 0.3s', transform: showProfile ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
             <span style={{ fontWeight: 600 }}>Редактировать профиль</span>
-            <span style={{ color: '#a855f7' }}>{showProfile ? '▲' : '▼'}</span>
           </div>
 
           <div
@@ -127,14 +133,8 @@ export default function MyBookings() {
             }}
           >
             <form className="col" style={{ gap: 12, textAlign: 'center' }} onSubmit={saveProfile}>
-              <div>
-                <label>Имя</label>
-                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-              </div>
-              <div>
-                <label>Instagram</label>
-                <input value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} />
-              </div>
+              <div><label>Имя</label><input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+              <div><label>Instagram</label><input value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} /></div>
               <div>
                 <label>Телефон</label>
                 <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
@@ -151,14 +151,7 @@ export default function MyBookings() {
               </div>
 
               {errors.contact && (
-                <div style={{
-                  background: 'rgba(255,0,0,0.1)',
-                  padding: 8,
-                  borderRadius: 8,
-                  color: '#f87171'
-                }}>
-                  {errors.contact}
-                </div>
+                <div style={{ background: 'rgba(255,0,0,0.1)', padding: 8, borderRadius: 8, color: '#f87171' }}>{errors.contact}</div>
               )}
 
               <button type="submit" style={saveBtn}><span>💾</span> {t('save')}</button>
@@ -212,12 +205,20 @@ export default function MyBookings() {
         </table>
       </div>
 
-      {/* === МОДАЛЬНОЕ ОКНО "СОХРАНЕНО" === */}
+      {/* === МОДАЛКИ === */}
       {modal && (
         <div style={modalBackdrop}>
           <div style={modalBox}>
             <div style={loader}></div>
             <h3 style={{ marginTop: 10 }}>{t('profile_updated')}</h3>
+          </div>
+        </div>
+      )}
+
+      {approvedModal && (
+        <div style={modalBackdrop}>
+          <div style={modalBox}>
+            <h3 style={{ color: '#4ade80' }}>✅ Ваша запись подтверждена!</h3>
           </div>
         </div>
       )}
@@ -248,19 +249,15 @@ const innerCard = {
 
 const innerHeader = {
   display: 'flex',
-  justifyContent: 'space-between',
   alignItems: 'center',
+  gap: '8px',
   padding: '12px 16px',
   cursor: 'pointer',
   background: 'rgba(25,15,45,0.8)',
   borderBottom: '1px solid rgba(168,85,247,0.25)'
 }
 
-const profileBody = {
-  overflow: 'hidden',
-  transition: 'all 0.45s ease',
-  color: '#fff'
-}
+const profileBody = { overflow: 'hidden', transition: 'all 0.45s ease', color: '#fff' }
 
 const saveBtn = {
   marginTop: '10px',
@@ -275,7 +272,6 @@ const saveBtn = {
   transition: 'all 0.3s ease'
 }
 
-/* --- стили таблицы и кнопок --- */
 const bookingsCard = { ...outerCard, padding: '18px' }
 const bookingsHeader = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }
 const filterButtons = { display: 'flex', gap: '8px' }
@@ -295,35 +291,8 @@ const tableCell = { padding: '12px 0', borderBottom: '1px solid rgba(168,85,247,
 const tableRow = { transition: 'background 0.25s ease' }
 const cancelBtn = { borderRadius: '8px', border: '1px solid rgba(180,95,255,0.4)', background: 'rgba(40,20,70,0.7)', color: '#fff', padding: '6px 14px', cursor: 'pointer', transition: 'all 0.3s ease' }
 
-/* --- модалка --- */
-const modalBackdrop = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0,0,0,0.6)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 2000,
-  animation: 'fadeIn 0.3s ease'
-}
+const modalBackdrop = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, animation: 'fadeIn 0.3s ease' }
 
-const modalBox = {
-  background: 'rgba(20,15,35,0.85)',
-  border: '1px solid rgba(180,95,255,0.4)',
-  borderRadius: '14px',
-  padding: '24px 32px',
-  textAlign: 'center',
-  color: '#fff',
-  boxShadow: '0 0 40px rgba(150,85,247,0.25)',
-  animation: 'popIn 0.3s ease'
-}
+const modalBox = { background: 'rgba(20,15,35,0.85)', border: '1px solid rgba(180,95,255,0.4)', borderRadius: '14px', padding: '24px 32px', textAlign: 'center', color: '#fff', boxShadow: '0 0 40px rgba(150,85,247,0.25)', animation: 'popIn 0.3s ease' }
 
-const loader = {
-  width: '28px',
-  height: '28px',
-  margin: '0 auto 10px',
-  borderRadius: '50%',
-  border: '3px solid rgba(255,255,255,0.25)',
-  borderTopColor: '#a855f7',
-  animation: 'spin 1s linear infinite'
-}
+const loader = { width: '28px', height: '28px', margin: '0 auto 10px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.25)', borderTopColor: '#a855f7', animation: 'spin 1s linear infinite' }
