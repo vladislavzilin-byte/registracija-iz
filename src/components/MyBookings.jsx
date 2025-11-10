@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   getCurrentUser,
   getBookings,
@@ -27,7 +27,7 @@ export default function MyBookings() {
   const [confirmId, setConfirmId] = useState(null)
   const [version, setVersion] = useState(0)
   const [modal, setModal] = useState(false)
-  const [showProfile, setShowProfile] = useState(false) // теперь по умолчанию скрыт
+  const [showProfile, setShowProfile] = useState(false)
 
   const bookingsAll = getBookings()
   const all = bookingsAll
@@ -77,8 +77,6 @@ export default function MyBookings() {
     setConfirmId(null)
     setVersion(v => v + 1)
   }
-
-  const refresh = () => setVersion(v => v + 1)
 
   if (!user) {
     return <div className="card"><b>{t('login_or_register')}</b></div>
@@ -147,29 +145,40 @@ export default function MyBookings() {
         </div>
 
         <table style={table}>
-          <thead><tr><th>Дата</th><th>Время</th><th>Статус</th><th></th></tr></thead>
+          <thead>
+            <tr style={{ borderBottom: '1px solid rgba(168,85,247,0.25)' }}>
+              <th style={tableCell}>Дата</th>
+              <th style={tableCell}>Время</th>
+              <th style={tableCell}>Статус</th>
+              <th style={tableCell}></th>
+            </tr>
+          </thead>
           <tbody>
             {list.map(b => {
               const canCancel =
                 (b.status === 'pending' || b.status === 'approved') &&
-                new Date(b.end) > new Date() // теперь можно отменять даже в день записи
+                new Date(b.end) > new Date()
               return (
-                <tr key={b.id}>
-                  <td>{fmtDate(b.start)}</td>
-                  <td>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
-                  <td>{statusLabel(b)}</td>
-                  <td>
+                <tr key={b.id} style={tableRow}>
+                  <td style={tableCell}>{fmtDate(b.start)}</td>
+                  <td style={tableCell}>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
+                  <td style={tableCell}>{statusLabel(b)}</td>
+                  <td style={tableCell}>
                     {canCancel && <button style={cancelBtn} onClick={() => cancel(b.id)}>{t('cancel')}</button>}
                   </td>
                 </tr>
               )
             })}
-            {!list.length && <tr><td colSpan="4" style={{ opacity: 0.6 }}>{t('no_records')}</td></tr>}
+            {!list.length && (
+              <tr>
+                <td colSpan="4" style={{ ...tableCell, opacity: 0.6 }}>{t('no_records')}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* === CANCEL CONFIRM === */}
+      {/* === CONFIRM MODAL === */}
       {confirmId && (
         <div style={modalBackdrop}>
           <div style={modalBox}>
@@ -182,7 +191,7 @@ export default function MyBookings() {
         </div>
       )}
 
-      {/* === SUCCESS MODAL === */}
+      {/* === SAVED MODAL === */}
       {modal && (
         <div style={modalBackdrop}>
           <div style={modalBox}>
@@ -258,7 +267,21 @@ const filterBtn = (active) => ({
 const table = {
   width: '100%',
   borderCollapse: 'collapse',
-  color: '#fff'
+  color: '#fff',
+  textAlign: 'center'
+}
+
+const tableCell = {
+  padding: '12px 0',
+  borderBottom: '1px solid rgba(168,85,247,0.12)',
+  verticalAlign: 'middle'
+}
+
+const tableRow = {
+  transition: 'background 0.25s ease',
+}
+tableRow[':hover'] = {
+  background: 'rgba(130,60,255,0.05)'
 }
 
 const cancelBtn = {
