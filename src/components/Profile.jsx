@@ -1,15 +1,14 @@
-
 import React, { useState } from 'react'
 import { getCurrentUser, setCurrentUser, getUsers, saveUsers } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
 
-export default function Profile(){
+export default function Profile() {
   const { t } = useI18n()
   const user = getCurrentUser()
 
-  if(!user){
+  if (!user) {
     return (
-      <div className="card" style={{marginTop:16}}>
+      <div className="card" style={{ marginTop: 16 }}>
         <h3>{t('my_profile')}</h3>
         <p className="muted">{t('profile_login_hint')}</p>
       </div>
@@ -25,24 +24,30 @@ export default function Profile(){
   })
   const [toast, setToast] = useState(null)
 
-  const onChange = k => e => setForm(prev => ({...prev, [k]: e.target.value}))
+  const onChange = k => e => setForm(prev => ({ ...prev, [k]: e.target.value }))
 
   const save = e => {
     e.preventDefault()
     const users = getUsers()
-    const idx = users.findIndex(u => (u.phone===user.phone) || (u.email===user.email))
-    const updated = {...user, ...form}
-    if(idx>=0) users[idx] = updated; else users.push(updated)
+    const idx = users.findIndex(u => (u.phone === user.phone) || (u.email === user.email))
+    const updated = { ...user, ...form }
+
+    if (idx >= 0) users[idx] = updated
+    else users.push(updated)
+
     saveUsers(users)
     setCurrentUser(updated)
     setToast(t('profile_saved'))
-    setTimeout(()=>setToast(null),1500)
+    setTimeout(() => setToast(null), 1500)
+
+    // 🔄 уведомляем админку, что профиль обновлён
+    window.dispatchEvent(new Event('profileUpdated'))
   }
 
   return (
-    <div className="card" style={{marginTop:16}}>
+    <div className="card" style={{ marginTop: 16 }}>
       <h3>{t('my_profile')}</h3>
-      <form onSubmit={save} className="col" style={{gap:12}}>
+      <form onSubmit={save} className="col" style={{ gap: 12 }}>
         <div>
           <label>{t('name')}</label>
           <input value={form.name} onChange={onChange('name')} />
