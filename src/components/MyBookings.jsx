@@ -188,43 +188,76 @@ export default function MyBookings() {
               new Date(b.end) > new Date()
 
             return (
-              <div key={b.id} style={cardItem}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  {statusDot(b)}
-                  <b>{fmtDate(b.start)}</b>
-                </div>
+            <div key={b.id} style={cardItem}>
+  {/* Дата + статус */}
+  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    {statusDot(b)}
+    <b>{fmtDate(b.start)}</b>
+  </div>
 
-                <div style={{ opacity: .8, marginTop: 4 }}>
-                  {fmtTime(b.start)} – {fmtTime(b.end)}
-                </div>
+  {/* Время (24h формат работает в storage.js) */}
+  <div style={{ opacity: .8, marginTop: 4 }}>
+    {fmtTime(b.start)} – {fmtTime(b.end)}
+  </div>
 
-                {/* Теги услуг */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                  {b.services?.map(s => (
-                    <span key={s} style={{
-                      padding: '4px 8px',
-                      borderRadius: 8,
-                      background: 'rgba(255,255,255,0.08)',
-                      border: `1px solid ${tagColors[s]}55`,
-                      color: tagColors[s],
-                      fontSize: 13,
-                      animation: 'fadeIn .3s ease'
-                    }}>
-                      {s}
-                    </span>
-                  ))}
-                </div>
+  {/* Теги услуг */}
+  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+    {b.services?.map(s => (
+      <span key={s} style={{
+        padding: '4px 8px',
+        borderRadius: 8,
+        background: 'rgba(255,255,255,0.08)',
+        border: `1px solid ${tagColors[s]}55`,
+        color: tagColors[s],
+        fontSize: 13
+      }}>
+        {s}
+      </span>
+    ))}
+  </div>
 
-                {/* Оплата */}
-                {b.status === 'approved' && (
-                  <button style={payBtn} onClick={() => pay(b.id)}>💳 Apmokėti</button>
-                )}
+  {/* 💰 ДЕПОЗИТ */}
+  {b.price && (
+    <div style={{
+      marginTop: 10,
+      padding: '10px 12px',
+      borderRadius: 10,
+      background: 'rgba(255,255,255,0.06)',
+      border: '1px solid rgba(148,163,184,0.3)',
+      fontSize: 14,
+      color: '#fff'
+    }}>
+      Avansas (€): <b>{b.price}</b>
+    </div>
+  )}
 
-                {/* Отмена */}
-                {canCancel && (
-                  <button style={cancelBtn} onClick={() => cancel(b.id)}>Отменить</button>
-                )}
-              </div>
+  {/* 📌 СТАТУС */}
+  <div style={{ marginTop: 10, fontSize: 14 }}>
+    <b>Статус: </b>
+    {b.status === 'approved_paid' && (
+      <span style={{ color: '#4ade80' }}>🟢 Оплачено</span>
+    )}
+    {b.status === 'approved' && (
+      <span style={{ color: '#22c55e' }}>🟢 Подтверждена</span>
+    )}
+    {b.status === 'pending' && (
+      <span style={{ color: '#eab308' }}>🟡 Ожидает подтверждения</span>
+    )}
+    {(b.status === 'canceled_client' || b.status === 'canceled_admin') && (
+      <span style={{ color: '#ef4444' }}>🔴 Отменена</span>
+    )}
+  </div>
+
+  {/* Оплата */}
+  {b.status === 'approved' && (
+    <button style={payBtn} onClick={() => pay(b.id)}>💳 Apmokėti</button>
+  )}
+
+  {/* Отмена */}
+  {canCancel && (
+    <button style={cancelBtn} onClick={() => cancel(b.id)}>Отменить</button>
+  )}
+</div>
             )
           })}
         </div>
