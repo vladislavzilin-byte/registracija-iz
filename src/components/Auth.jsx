@@ -28,6 +28,7 @@ function ForgotPasswordModal({ open, onClose }) {
   const [phoneInput, setPhoneInput] = useState("");
   const [foundPassword, setFoundPassword] = useState("");
   const [message, setMessage] = useState("");
+
   if (!open) return null;
 
   const handleRecover = () => {
@@ -57,7 +58,9 @@ function ForgotPasswordModal({ open, onClose }) {
   return (
     <div style={overlayStyle}>
       <div style={modalStyle}>
-        <h3 style={{ color: "#fff", marginBottom: 12 }}>Восстановление пароля</h3>
+        <h3 style={{ color: "#fff", marginBottom: 12 }}>
+          Восстановление пароля
+        </h3>
         <input
           type="text"
           placeholder="Введите номер телефона"
@@ -104,7 +107,7 @@ export default function Auth({ onAuth }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [toast, setToast] = useState("");
 
-  // === автообновление данных ===
+  // === автообновление ===
   useEffect(() => {
     const interval = setInterval(() => {
       const updated = getCurrentUser();
@@ -127,8 +130,7 @@ export default function Auth({ onAuth }) {
       if (!name.trim()) errs.name = "Введите имя";
       if (!phone.trim()) errs.phone = "Введите телефон";
       if (email && !validateEmail(email)) errs.email = "Неверный email";
-      if (password.length < 6)
-        errs.password = "Минимум 6 символов";
+      if (password.length < 6) errs.password = "Минимум 6 символов";
       if (password !== passwordConfirm)
         errs.passwordConfirm = "Пароли не совпадают";
     } else {
@@ -142,6 +144,7 @@ export default function Auth({ onAuth }) {
     e.preventDefault();
     setError("");
     setErrorFields({});
+
     const errs = validateForm();
     if (Object.keys(errs).length) {
       setError(Object.values(errs)[0]);
@@ -159,12 +162,14 @@ export default function Auth({ onAuth }) {
           normalizePhone(u.phone) === phoneNorm ||
           (u.email && u.email.toLowerCase() === email.toLowerCase())
       );
+
       if (existing) {
         setError("Такой пользователь уже существует");
         return;
       }
 
       const passwordHash = await sha256(password);
+
       const newUser = {
         name: name.trim(),
         instagram,
@@ -188,7 +193,8 @@ export default function Auth({ onAuth }) {
     const passwordHash = await sha256(password);
 
     const found = users.find((u) => {
-      const phoneMatch = normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
+      const phoneMatch =
+        normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
       const emailMatch = u.email && u.email.toLowerCase() === emailNorm;
       const hashMatch =
         (u.passwordHash && u.passwordHash === passwordHash) ||
@@ -220,12 +226,14 @@ export default function Auth({ onAuth }) {
     cursor: "pointer",
     opacity: 0.85,
   };
+
   const eyeOpen = (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b58fff" strokeWidth="1.8">
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
       <circle cx="12" cy="12" r="3"></circle>
     </svg>
   );
+
   const eyeClosed = (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b58fff" strokeWidth="1.8">
       <path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.36 21.36 0 015.1-6.36M1 1l22 22"></path>
@@ -241,6 +249,7 @@ export default function Auth({ onAuth }) {
     return (
       <>
         {toast && <div style={toastStyle}>{toast}</div>}
+
         <div style={profileCard}>
           <div style={auroraBg} />
           <div style={borderGlow} />
@@ -256,14 +265,35 @@ export default function Auth({ onAuth }) {
           >
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div style={avatarStyle}>{initials}</div>
-              <div>
+
+              <div style={{ lineHeight: "1.2" }}>
                 <div style={nameStyle}>{current.name}</div>
-                {current.phone && <div style={contactStyle}>{current.phone}</div>}
-                {current.email && <div style={contactStyle}>{current.email}</div>}
-                {current.instagram && <div style={contactStyle}>{current.instagram}</div>}
+                {current.phone && (
+                  <div style={contactStyle}>{current.phone}</div>
+                )}
+                {current.email && (
+                  <div style={contactStyle}>{current.email}</div>
+                )}
+                {current.instagram && (
+                  <div style={contactStyle}>
+                    @{current.instagram.replace("@", "")}
+                  </div>
+                )}
               </div>
             </div>
-            <button onClick={logout} style={logoutButton}>
+
+            {/* УКОРOЧЕННАЯ КНОПКА */}
+            <button
+              onClick={logout}
+              style={{
+                ...logoutButton,
+                padding: "8px 18px",
+                fontSize: "0.95rem",
+                whiteSpace: "nowrap",
+                minWidth: "90px",
+                textAlign: "center",
+              }}
+            >
               Выйти
             </button>
           </div>
@@ -300,96 +330,103 @@ export default function Auth({ onAuth }) {
           onSubmit={handleSubmit}
           style={{ display: "flex", flexDirection: "column", gap: 12 }}
         >
-          {mode === "login"
-            ? (
-              <>
+          {mode === "login" ? (
+            <>
+              <input
+                className={`glass-input ${errorFields.identifier ? "error" : ""}`}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="tel / email"
+              />
+              <div style={{ position: "relative" }}>
                 <input
-                  className={`glass-input ${errorFields.identifier ? "error" : ""}`}
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="tel / email"
+                  className={`glass-input ${errorFields.password ? "error" : ""}`}
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Пароль"
                 />
-                <div style={{ position: "relative" }}>
-                  <input
-                    className={`glass-input ${errorFields.password ? "error" : ""}`}
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Пароль"
-                  />
-                  <span onClick={() => setShowPassword(!showPassword)} style={eyeIcon}>
-                    {showPassword ? eyeOpen : eyeClosed}
-                  </span>
-                </div>
-                <div
-                  onClick={() => setRecoverOpen(true)}
-                  style={{
-                    textAlign: "right",
-                    color: "#b58fff",
-                    fontSize: "0.9rem",
-                    cursor: "pointer",
-                    marginTop: "-6px",
-                  }}
+                <span
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={eyeIcon}
                 >
-                  Забыли пароль?
-                </div>
-              </>
-            ) : (
-              <>
+                  {showPassword ? eyeOpen : eyeClosed}
+                </span>
+              </div>
+              <div
+                onClick={() => setRecoverOpen(true)}
+                style={{
+                  textAlign: "right",
+                  color: "#b58fff",
+                  fontSize: "0.9rem",
+                  cursor: "pointer",
+                  marginTop: "-6px",
+                }}
+              >
+                Забыли пароль?
+              </div>
+            </>
+          ) : (
+            <>
+              <input
+                className={`glass-input ${errorFields.name ? "error" : ""}`}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Имя"
+              />
+              <input
+                className="glass-input"
+                value={instagram}
+                onChange={(e) => setInstagram(e.target.value)}
+                placeholder="@instagram"
+              />
+              <input
+                className={`glass-input ${errorFields.email ? "error" : ""}`}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+              />
+              <input
+                className={`glass-input ${errorFields.phone ? "error" : ""}`}
+                value={phone}
+                onChange={(e) => setPhone(formatLithuanianPhone(e.target.value))}
+                placeholder="Телефон +370 61234567"
+                style={{ color: phone ? "#fff" : "#aaa" }}
+              />
+              <div style={{ position: "relative" }}>
                 <input
-                  className={`glass-input ${errorFields.name ? "error" : ""}`}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Имя"
+                  className={`glass-input ${errorFields.password ? "error" : ""}`}
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Пароль"
                 />
+                <span
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={eyeIcon}
+                >
+                  {showPassword ? eyeOpen : eyeClosed}
+                </span>
+              </div>
+              <div style={{ position: "relative" }}>
                 <input
-                  className="glass-input"
-                  value={instagram}
-                  onChange={(e) => setInstagram(e.target.value)}
-                  placeholder="@instagram"
+                  className={`glass-input ${
+                    errorFields.passwordConfirm ? "error" : ""
+                  }`}
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={passwordConfirm}
+                  onChange={(e) => setPasswordConfirm(e.target.value)}
+                  placeholder="Подтвердите пароль"
                 />
-                <input
-                  className={`glass-input ${errorFields.email ? "error" : ""}`}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email"
-                />
-                <input
-                  className={`glass-input ${errorFields.phone ? "error" : ""}`}
-                  value={phone}
-                  onChange={(e) => setPhone(formatLithuanianPhone(e.target.value))}
-                  placeholder="Телефон +370 61234567"
-                  style={{ color: phone ? "#fff" : "#aaa" }}
-                />
-                <div style={{ position: "relative" }}>
-                  <input
-                    className={`glass-input ${errorFields.password ? "error" : ""}`}
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Пароль"
-                  />
-                  <span onClick={() => setShowPassword(!showPassword)} style={eyeIcon}>
-                    {showPassword ? eyeOpen : eyeClosed}
-                  </span>
-                </div>
-                <div style={{ position: "relative" }}>
-                  <input
-                    className={`glass-input ${errorFields.passwordConfirm ? "error" : ""}`}
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={passwordConfirm}
-                    onChange={(e) => setPasswordConfirm(e.target.value)}
-                    placeholder="Подтвердите пароль"
-                  />
-                  <span
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    style={eyeIcon}
-                  >
-                    {showConfirmPassword ? eyeOpen : eyeClosed}
-                  </span>
-                </div>
-              </>
-            )}
+                <span
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={eyeIcon}
+                >
+                  {showConfirmPassword ? eyeOpen : eyeClosed}
+                </span>
+              </div>
+            </>
+          )}
 
           {error && (
             <div
@@ -402,6 +439,7 @@ export default function Auth({ onAuth }) {
               {error}
             </div>
           )}
+
           <button type="submit" className="cta">
             {mode === "login" ? "Войти" : "Регистрация"}
           </button>
@@ -439,7 +477,8 @@ const segmentStyles = `
 .segmented button.active {
   border: 1.5px solid rgba(168,85,247,0.9);
   background: rgba(31,0,63,0.45);
-  box-shadow: 0 0 12px rgba(168,85,247,0.55), 0 0 22px rgba(168,85,247,0.35);
+  box-shadow: 0 0 12px rgba(168,85,247,0.55),
+              0 0 22px rgba(168,85,247,0.35);
 }
 .glass-input {
   width: 100%;
@@ -456,7 +495,8 @@ const segmentStyles = `
   height: 42px;
   border-radius: 12px;
   border: 1px solid rgba(168,85,247,0.45);
-  background: linear-gradient(180deg, rgba(86,0,145,0.9), rgba(44,0,77,0.85));
+  background: linear-gradient(180deg, rgba(86,0,145,0.9),
+                                       rgba(44,0,77,0.85));
   color: #fff;
   font-weight: 500;
   transition: 0.25s;
@@ -466,11 +506,13 @@ const segmentStyles = `
   transform: translateY(-1px);
 }
 `;
+
 const profileCard = {
   position: "relative",
   padding: "24px",
   borderRadius: "20px",
-  background: "linear-gradient(180deg, rgba(32,18,45,1) 0%, rgba(22,10,33,1) 100%)",
+  background:
+    "linear-gradient(180deg, rgba(32,18,45,1) 0%, rgba(22,10,33,1) 100%)",
   border: "1px solid rgba(150,90,255,0.25)",
   boxShadow:
     "inset 0 0 10px rgba(80,40,150,0.08), 0 0 25px rgba(90,40,160,0.06), 0 0 45px rgba(70,20,130,0.05)",
@@ -479,6 +521,7 @@ const profileCard = {
   color: "#fff",
   animation: "fadeIn 0.6s ease-in-out",
 };
+
 const auroraBg = {
   position: "absolute",
   inset: 0,
@@ -488,11 +531,12 @@ const auroraBg = {
     "radial-gradient(800px 450px at 50% 120%, rgba(80,70,200,0.05), transparent 75%)",
   animation: "auroraPulse 8s ease-in-out infinite alternate",
 };
+
 const borderGlow = {
   position: "absolute",
   inset: 0,
   borderRadius: "20px",
-  border: "4px solid rgba(175,95,255,1)", // ← было 2px, теперь в 2 раза шире
+  border: "4px solid rgba(175,95,255,1)",
   boxShadow: `
     0 0 8px rgba(175,95,255,0.9),
     0 0 18px rgba(175,95,255,0.7),
@@ -500,11 +544,13 @@ const borderGlow = {
   `,
   animation: "glowBreath 4s ease-in-out infinite alternate",
 };
+
 const avatarStyle = {
   width: 48,
   height: 48,
   borderRadius: 14,
-  background: "linear-gradient(180deg, rgba(46,27,61,1) 0%, rgba(36,17,50,1) 100%)",
+  background:
+    "linear-gradient(180deg, rgba(46,27,61,1) 0%, rgba(36,17,50,1) 100%)",
   border: "1px solid rgba(150,90,255,0.35)",
   display: "flex",
   alignItems: "center",
@@ -519,14 +565,17 @@ const avatarStyle = {
   `,
   animation: "auroraBorderPulse 6s ease-in-out infinite",
 };
+
 const nameStyle = {
   fontWeight: 700,
   fontSize: "1.15rem",
 };
+
 const contactStyle = {
   opacity: 0.85,
   fontSize: "0.9rem",
 };
+
 const logoutButton = {
   borderRadius: "12px",
   border: "1px solid rgba(168,85,247,0.45)",
@@ -537,6 +586,7 @@ const logoutButton = {
   cursor: "pointer",
   transition: "0.25s",
 };
+
 const overlayStyle = {
   position: "fixed",
   top: 0,
@@ -550,6 +600,7 @@ const overlayStyle = {
   justifyContent: "center",
   zIndex: 2000,
 };
+
 const modalStyle = {
   background: "rgba(25,0,50,0.65)",
   border: "1px solid rgba(168,85,247,0.4)",
@@ -557,6 +608,7 @@ const modalStyle = {
   padding: "24px 28px",
   color: "#fff",
 };
+
 const inputStyle = {
   width: "100%",
   borderRadius: 10,
@@ -565,6 +617,7 @@ const inputStyle = {
   padding: "10px 12px",
   color: "#fff",
 };
+
 const buttonStyle = {
   width: "100%",
   marginTop: 12,
@@ -576,6 +629,7 @@ const buttonStyle = {
   padding: "10px 0",
   cursor: "pointer",
 };
+
 const closeBtnStyle = {
   marginTop: 16,
   color: "#d0b3ff",
@@ -584,6 +638,7 @@ const closeBtnStyle = {
   cursor: "pointer",
   textDecoration: "underline",
 };
+
 const toastStyle = {
   position: "fixed",
   top: 25,
@@ -595,7 +650,7 @@ const toastStyle = {
   color: "#fff",
 };
 
-// === анимации ===
+// === animations ===
 const style = document.createElement("style");
 style.innerHTML = `
 @keyframes fadeIn {
