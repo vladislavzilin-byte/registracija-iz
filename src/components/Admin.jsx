@@ -18,13 +18,13 @@ const DEFAULT_SERVICES = [
   { name: 'Šukuosena', duration: 60, deposit: 50 },
   { name: 'Tresų nuoma', duration: 15, deposit: 25 },
   { name: 'Papuošalų nuoma', duration: 15, deposit: 10 },
-  { name: 'Atvykimas', duration: 180, deposit: 50 },
+  { name: 'Atvykimas', duration: 180, deposit: 50 }, // 3 часа
   { name: 'Konsultacija', duration: 30, deposit: 10 },
 ]
 
 // цвета для тегов услуг
 const serviceStyles = {
-  'Šukuosena': {
+  Šukuosena: {
     bg: 'rgba(99,102,241,0.16)',
     border: '1px solid rgba(129,140,248,0.8)',
   },
@@ -77,8 +77,12 @@ export default function Admin() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [toast, setToast] = useState(null)
 
-  // модалка редактирования записи
-  const [editModal, setEditModal] = useState(null) // { id, date, timeFrom, timeTo, price }
+  // 🔧 состояние редактирования одной записи (дата/время/аванс)
+  const [editingId, setEditingId] = useState(null)
+  const [editDate, setEditDate] = useState('')
+  const [editStart, setEditStart] = useState('')
+  const [editEnd, setEditEnd] = useState('')
+  const [editPrice, setEditPrice] = useState('')
 
   const updateSettings = (patch) => {
     const next = { ...settings, ...patch }
@@ -112,14 +116,12 @@ export default function Admin() {
     const arr = bookings.filter((b) => {
       const matchQ =
         !q ||
-        (b.userName?.toLowerCase().includes(q) ||
-          b.userPhone?.toLowerCase().includes(q) ||
-          b.userInstagram?.toLowerCase().includes(q))
+        b.userName?.toLowerCase().includes(q) ||
+        b.userPhone?.toLowerCase().includes(q) ||
+        b.userInstagram?.toLowerCase().includes(q)
 
       const matchStatus =
-        statusFilter === 'all'
-          ? true
-          : b.status === statusFilter
+        statusFilter === 'all' ? true : b.status === statusFilter
 
       return matchQ && matchStatus
     })
@@ -189,10 +191,7 @@ export default function Admin() {
   }
 
   const addService = () => {
-    const next = [
-      ...services,
-      { name: 'Новая услуга', duration: 60, deposit: 0 },
-    ]
+    const next = [...services, { name: 'Новая услуга', duration: 60, deposit: 0 }]
     updateSettings({ serviceList: next })
   }
 
@@ -202,81 +201,87 @@ export default function Admin() {
     updateSettings({ serviceList: next })
   }
 
-  // === РЕДАКТИРОВАНИЕ ЗАПИСИ (дата, время, аванс) ===
-  const openEditModal = (b) => {
+  // === РЕДАКТИРОВАНИЕ ДАТЫ / ВРЕМЕНИ / АВАНСА ===
+
+  const pad2 = (n) => String(n).padStart(2, '0')
+
+  const beginEdit = (b) => {
     const start = new Date(b.start)
     const end = new Date(b.end)
 
-    const toHM = (d) =>
-      String(d.getHours()).padStart(2, '0') +
-      ':' +
-      String(d.getMinutes()).padStart(2, '0')
+    const dateStr = `${start.getFullYear()}-${pad2(start.getMonth() + 1)}-${pad2(
+      start.getDate()
+    )}`
+    const startStr = `${pad2(start.getHours())}:${pad2(start.getMinutes())}`
+    const endStr = `${pad2(end.getHours())}:${pad2(end.getMinutes())}`
 
-    setEditModal({
-      id: b.id,
-      date: start.toISOString().slice(0, 10), // YYYY-MM-DD
-      timeFrom: toHM(start),
-      timeTo: toHM(end),
-      price: b.price ?? 0,
-    })
+    setEditingId(b.id)
+    setEditDate(dateStr)
+    setEditStart(startStr)
+    setEditEnd(endStr)
+    setEditPrice(
+      typeof b.price === 'number' && !Number.isNaN(b.price) ? String(b.price) : ''
+    )
   }
 
-  const parseTimeHM = (str) => {
-    if (!str) return null
-    const [hStr, mStr] = str.split(':')
-    const h = Number(hStr)
-    const m = Number(mStr)
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditDate('')
+    setEditStart('')
+    setEditEnd('')
+    setEditPrice('')
+  }
+
+  const saveEdit = () => {
+    const target = bookings.find((b) => b.id === editingId)
+    if (!target) return
+
+    if (!editDate || !editStart || !editEnd) {
+      alert('Įveskite datą ir laiką')
+      return
+    }
+
+    const [y, m, d] = editDate.split('-').map(Number)
+    const [sh, sm] = editStart.split(':').map(Number)
+    const [eh, em] = editEnd.split(':').map(Number)
+
     if (
-      Number.isNaN(h) ||
+      Number.isNaN(y) ||
       Number.isNaN(m) ||
-      h < 0 ||
-      h > 23 ||
-      m < 0 ||
-      m > 59
+      Number.isNaN(d) ||
+      Number.isNaN(sh) ||
+      Number.isNaN(sm) ||
+      Number.isNaN(eh) ||
+      Number.isNaN(em)
     ) {
-      return null
-    }
-    return { h, m }
-  }
-
-  const saveEditModal = () => {
-    if (!editModal) return
-    const { id, date, timeFrom, timeTo, price } = editModal
-    if (!date || !timeFrom || !timeTo) {
-      alert('Укажите дату и время от/до в формате ЧЧ:ММ')
+      alert('Neteisingas datos arba laiko formatas')
       return
     }
 
-    const tf = parseTimeHM(timeFrom)
-    const tt = parseTimeHM(timeTo)
-    if (!tf || !tt) {
-      alert('Неверный формат времени. Пример: 09:30 или 18:45')
-      return
+    const start = new Date(target.start)
+    start.setFullYear(y, m - 1, d)
+    start.setHours(sh, sm || 0, 0, 0)
+
+    const end = new Date(target.end)
+    end.setFullYear(y, m - 1, d)
+    end.setHours(eh, em || 0, 0, 0)
+
+    let priceNum = target.price
+    if (editPrice === '') {
+      priceNum = undefined
+    } else {
+      const parsed = Number(editPrice)
+      if (!Number.isNaN(parsed)) priceNum = parsed
     }
 
-    const base = new Date(date + 'T00:00:00')
-    const start = new Date(base)
-    start.setHours(tf.h, tf.m, 0, 0)
-    const end = new Date(base)
-    end.setHours(tt.h, tt.m, 0, 0)
-
-    const next = getBookings().map((b) =>
-      b.id === id
-        ? {
-            ...b,
-            start: start.toISOString(),
-            end: end.toISOString(),
-            price: Number(price) || 0,
-          }
-        : b
+    const next = bookings.map((b) =>
+      b.id === editingId ? { ...b, start, end, price: priceNum } : b
     )
 
     saveBookings(next)
     setBookings(next)
-    setEditModal(null)
+    cancelEdit()
   }
-
-  const closeEditModal = () => setEditModal(null)
 
   return (
     <div className="col" style={{ gap: 16 }}>
@@ -401,6 +406,8 @@ export default function Admin() {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     marginBottom: 8,
+                    gap: 10,
+                    flexWrap: 'wrap',
                   }}
                 >
                   <div>
@@ -578,6 +585,8 @@ export default function Admin() {
                 }
               }
 
+              const isEditing = editingId === b.id
+
               return (
                 <div
                   key={b.id}
@@ -598,63 +607,36 @@ export default function Admin() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 10,
-                      justifyContent: 'space-between',
                       flexWrap: 'wrap',
                     }}
                   >
-                    <div
+                    <span
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        background:
+                          b.status === 'approved'
+                            ? '#22c55e'
+                            : b.status === 'pending'
+                            ? '#eab308'
+                            : '#ef4444',
+                        boxShadow:
+                          b.status === 'approved'
+                            ? '0 0 8px rgba(34,197,94,0.9)'
+                            : b.status === 'pending'
+                            ? '0 0 8px rgba(234,179,8,0.9)'
+                            : '0 0 8px rgba(248,113,113,0.9)',
                       }}
-                    >
-                      <span
-                        style={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: '50%',
-                          background:
-                            b.status === 'approved'
-                              ? '#22c55e'
-                              : b.status === 'pending'
-                              ? '#eab308'
-                              : '#ef4444',
-                          boxShadow:
-                            b.status === 'approved'
-                              ? '0 0 8px rgba(34,197,94,0.9)'
-                              : b.status === 'pending'
-                              ? '0 0 8px rgba(234,179,8,0.9)'
-                              : '0 0 8px rgba(248,113,113,0.9)',
-                        }}
-                      />
+                    />
 
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 17 }}>
-                          {fmtDate(b.start)}
-                        </div>
-                        <div style={{ opacity: 0.9 }}>
-                          {fmtTime(b.start)} — {fmtTime(b.end)}
-                        </div>
-                      </div>
+                    <div style={{ fontWeight: 700, fontSize: 17 }}>
+                      {fmtDate(b.start)}
                     </div>
 
-                    {/* маленькая кнопка редактирования */}
-                    <button
-                      type="button"
-                      onClick={() => openEditModal(b)}
-                      style={{
-                        borderRadius: 999,
-                        padding: '6px 12px',
-                        border: '1px solid rgba(148,163,184,0.7)',
-                        background: 'rgba(15,23,42,0.9)',
-                        color: '#e5e7eb',
-                        fontSize: 12,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      ✏️ Изменить дату/время
-                    </button>
+                    <div style={{ opacity: 0.9 }}>
+                      {fmtTime(b.start)} — {fmtTime(b.end)}
+                    </div>
                   </div>
 
                   {/* УСЛУГИ — цветные теги */}
@@ -671,6 +653,11 @@ export default function Admin() {
                         {s}
                       </span>
                     ))}
+                    {servicesArr.length === 0 && (
+                      <span className="muted" style={{ fontSize: 13 }}>
+                        —
+                      </span>
+                    )}
                   </div>
 
                   {/* КЛИЕНТ */}
@@ -686,7 +673,192 @@ export default function Admin() {
                     )}
                   </div>
 
-                  {/* ОПЛАТА + сумма аванса */}
+                  {/* БЛОК РЕДАКТИРОВАНИЯ ДАТЫ / ВРЕМЕНИ / АВАНСА */}
+                  <div
+                    style={{
+                      marginTop: 6,
+                      padding: '10px 12px',
+                      borderRadius: 12,
+                      border: '1px solid rgba(129,140,248,0.35)',
+                      background: 'rgba(17,24,39,0.7)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                    }}
+                  >
+                    {!isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => beginEdit(b)}
+                        style={{
+                          alignSelf: 'flex-start',
+                          borderRadius: 999,
+                          padding: '6px 12px',
+                          border: '1px solid rgba(148,163,184,0.6)',
+                          background: 'rgba(15,23,42,0.9)',
+                          color: '#e5e7eb',
+                          fontSize: 12,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ✏️ Редактировать дату / время / аванс
+                      </button>
+                    )}
+
+                    {isEditing && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 8,
+                        }}
+                      >
+                        {/* ДАТА */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <label
+                            style={{
+                              fontSize: 12,
+                              opacity: 0.85,
+                            }}
+                          >
+                            Дата
+                          </label>
+                          <input
+                            type="date"
+                            value={editDate}
+                            onChange={(e) => setEditDate(e.target.value)}
+                            style={editInput}
+                          />
+                        </div>
+
+                        {/* ВРЕМЯ ОТ / ДО */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: 8,
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <div
+                            style={{
+                              flex: 1,
+                              minWidth: 120,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 4,
+                            }}
+                          >
+                            <label
+                              style={{
+                                fontSize: 12,
+                                opacity: 0.85,
+                              }}
+                            >
+                              Время nuo
+                            </label>
+                            <input
+                              type="time"
+                              value={editStart}
+                              onChange={(e) => setEditStart(e.target.value)}
+                              style={editInput}
+                            />
+                          </div>
+
+                          <div
+                            style={{
+                              flex: 1,
+                              minWidth: 120,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 4,
+                            }}
+                          >
+                            <label
+                              style={{
+                                fontSize: 12,
+                                opacity: 0.85,
+                              }}
+                            >
+                              Время iki
+                            </label>
+                            <input
+                              type="time"
+                              value={editEnd}
+                              onChange={(e) => setEditEnd(e.target.value)}
+                              style={editInput}
+                            />
+                          </div>
+                        </div>
+
+                        {/* АВАНС / ЦЕНА */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <label
+                            style={{
+                              fontSize: 12,
+                              opacity: 0.85,
+                            }}
+                          >
+                            Avansas (€)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={editPrice}
+                            onChange={(e) => setEditPrice(e.target.value)}
+                            style={editInput}
+                            placeholder="Pvz. 50"
+                          />
+                        </div>
+
+                        {/* КНОПКИ СОХРАНИТЬ / ОТМЕНА */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: 8,
+                            flexWrap: 'wrap',
+                            marginTop: 4,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={saveEdit}
+                            style={{
+                              flex: 1,
+                              minWidth: 120,
+                              borderRadius: 10,
+                              padding: '9px 12px',
+                              border: '1px solid rgba(34,197,94,0.8)',
+                              background:
+                                'linear-gradient(180deg, rgba(22,163,74,0.9), rgba(21,128,61,0.9))',
+                              color: '#fff',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Сохранить
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEdit}
+                            style={{
+                              flex: 1,
+                              minWidth: 120,
+                              borderRadius: 10,
+                              padding: '9px 12px',
+                              border: '1px solid rgba(148,163,184,0.7)',
+                              background: 'rgba(15,23,42,0.9)',
+                              color: '#e5e7eb',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Отмена
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ОПЛАТА */}
                   <div
                     style={{
                       marginTop: 6,
@@ -694,9 +866,6 @@ export default function Admin() {
                       borderRadius: 10,
                       border: '1px solid rgba(148,163,184,0.25)',
                       background: 'rgba(30,20,40,0.55)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 6,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -722,16 +891,23 @@ export default function Admin() {
                       </span>
                     </div>
 
-                    <div style={{ fontSize: 13, opacity: 0.9 }}>
-                      Сумма аванса:{' '}
-                      <b>{b.price ? `${b.price} €` : '—'}</b>
-                    </div>
+                    {typeof b.price === 'number' && !Number.isNaN(b.price) && (
+                      <div
+                        style={{
+                          marginTop: 6,
+                          fontSize: 14,
+                          color: '#e5e7eb',
+                        }}
+                      >
+                        Avansas: <b>{b.price} €</b>
+                      </div>
+                    )}
 
-                    {b.price && (
+                    {typeof b.price === 'number' && !Number.isNaN(b.price) && (
                       <button
                         onClick={() => togglePaid(b.id)}
                         style={{
-                          marginTop: 4,
+                          marginTop: 8,
                           width: '100%',
                           padding: '8px 0',
                           borderRadius: 8,
@@ -739,7 +915,6 @@ export default function Admin() {
                           background: 'rgba(0,0,0,0.25)',
                           color: '#fff',
                           cursor: 'pointer',
-                          fontSize: 13,
                         }}
                       >
                         {b.paid ? 'Снять оплату' : 'Пометить оплаченой'}
@@ -753,7 +928,7 @@ export default function Admin() {
                     {statusLabel(b)}
                   </div>
 
-                  {/* КНОПКИ */}
+                  {/* КНОПКИ ПОДТВЕРДИТЬ / ОТМЕНИТЬ */}
                   <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
                     {b.status === 'pending' && (
                       <button
@@ -810,89 +985,6 @@ export default function Admin() {
           )}
         </div>
       </div>
-
-      {/* === МОДАЛКА РЕДАКТИРОВАНИЯ ДАТЫ/ВРЕМЕНИ === */}
-      {editModal && (
-        <div style={modalBackdrop} onClick={closeEditModal}>
-          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, marginBottom: 12 }}>
-              Редактировать запись
-            </h3>
-
-            <div className="col" style={{ gap: 10 }}>
-              <label style={labelStyle}>Дата</label>
-              <input
-                type="date"
-                style={inputGlass}
-                value={editModal.date}
-                onChange={(e) =>
-                  setEditModal((m) => ({ ...m, date: e.target.value }))
-                }
-              />
-
-              <label style={labelStyle}>Время от (ЧЧ:ММ)</label>
-              <input
-                type="text"
-                style={inputGlass}
-                placeholder="10:00"
-                value={editModal.timeFrom}
-                onChange={(e) =>
-                  setEditModal((m) => ({ ...m, timeFrom: e.target.value }))
-                }
-              />
-
-              <label style={labelStyle}>Время до (ЧЧ:ММ)</label>
-              <input
-                type="text"
-                style={inputGlass}
-                placeholder="13:00"
-                value={editModal.timeTo}
-                onChange={(e) =>
-                  setEditModal((m) => ({ ...m, timeTo: e.target.value }))
-                }
-              />
-
-              <label style={labelStyle}>Сумма аванса (€)</label>
-              <input
-                type="number"
-                min="0"
-                style={inputGlass}
-                value={editModal.price}
-                onChange={(e) =>
-                  setEditModal((m) => ({
-                    ...m,
-                    price: e.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: 8,
-                marginTop: 18,
-              }}
-            >
-              <button
-                type="button"
-                onClick={closeEditModal}
-                style={{
-                  ...btnBase,
-                  background: 'rgba(15,23,42,0.9)',
-                  border: '1px solid rgba(148,163,184,0.7)',
-                }}
-              >
-                Отмена
-              </button>
-              <button type="button" style={btnPrimary} onClick={saveEditModal}>
-                Сохранить
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -1014,23 +1106,14 @@ const segActive = {
   boxShadow: '0 0 12px rgba(150,90,255,0.30)',
 }
 
-const modalBackdrop = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0,0,0,0.65)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 3000,
-}
-
-const modalCard = {
-  background: 'rgba(17,0,40,0.9)',
-  border: '1px solid rgba(168,85,247,0.5)',
-  borderRadius: 18,
-  padding: '18px 20px 20px',
-  color: '#fff',
+// поля в карточке (дата / время / аванс) — крупные, мобильные
+const editInput = {
   width: '100%',
-  maxWidth: 420,
-  boxShadow: '0 18px 45px rgba(0,0,0,0.6)',
+  padding: '10px 12px',
+  borderRadius: 10,
+  border: '1px solid rgba(148,163,184,0.8)',
+  background: 'rgba(15,23,42,0.95)',
+  color: '#e5e7eb',
+  fontSize: 15,
+  outline: 'none',
 }
