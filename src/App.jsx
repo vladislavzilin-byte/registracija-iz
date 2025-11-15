@@ -21,30 +21,53 @@ export default function App() {
   return (
     <div className="container" style={containerStyle}>
       
-      {/* === Верхняя панель === */}
-      <div style={navBar}>
-        <div style={leftSide}>
-          <button
-            onClick={() => setTab('calendar')}
-            style={navButton(tab === 'calendar')}
-          >
-            {t('nav_calendar')}
-          </button>
+  {/* === Верхняя панель === */}
+<div style={navBar}>
+  <div style={leftSide}>
 
-          <button
-            onClick={() => setTab('my')}
-            style={navButton(tab === 'my')}
-          >
-            {t('nav_my')}
-          </button>
+    {/* КАЛЕНДАРЬ */}
+    <button
+      onClick={() => setTab('calendar')}
+      style={navButton(tab === 'calendar')}
+    >
+      {t('nav_calendar')}
+    </button>
 
-          {/* === Новая кнопка: KAINAS === */}
-          <button
-            onClick={() => setTab('prices')}
-            style={navButton(tab === 'prices')}
-          >
-            Kainas
-          </button>
+    {/* МОИ ЗАПИСИ */}
+    <button
+      onClick={() => setTab('my')}
+      style={navButton(tab === 'my')}
+    >
+      {t('nav_my')}
+    </button>
+
+    {/* === НОВАЯ КНОПКА: KAINAS === */}
+    <button
+      style={{
+        ...navButton(tab === 'prices'),
+        transform: kPress ? "translateY(6px)" : "translateY(0)",
+        transition: "transform .25s ease",
+      }}
+      onClick={() => {
+        // визуальное "нажатие вниз"
+        setKPress(true)
+        setTimeout(() => setKPress(false), 250)
+
+        // остаёмся на календаре
+        setTab("calendar")
+
+        // автоскролл к секции KAINAS
+        setTimeout(() => {
+          const section = document.getElementById("kainas-section")
+          section?.scrollIntoView({ behavior: "smooth", block: "start" })
+        }, 140)
+
+        // открыть аккордеон в Calendar.jsx
+        window.dispatchEvent(new Event("openPrices"))
+      }}
+    >
+      Kainas
+    </button>
 
           {/* === Кнопка Админ (только для админа) === */}
           {isAdmin && (
