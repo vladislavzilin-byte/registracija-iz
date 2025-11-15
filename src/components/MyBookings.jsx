@@ -198,6 +198,7 @@ export default function MyBookings() {
                             backdropFilter: "blur(6px)",
                             animation: "fadeTag .35s ease"
                           }}>
+                            <span>{st.icon}</span>
                             <span>{s}</span>
                           </div>
                         )
