@@ -15,11 +15,12 @@ export default function App() {
   const isAdmin =
     user?.role === 'admin' ||
     user?.isAdmin === true ||
-    user?.email === 'vlados@admin.com' || // замени на свой email
+    user?.email === 'vlados@admin.com' ||
     user?.email === 'vladislavzilin@gmail.com'
 
   return (
     <div className="container" style={containerStyle}>
+      
       {/* === Верхняя панель === */}
       <div style={navBar}>
         <div style={leftSide}>
@@ -37,6 +38,14 @@ export default function App() {
             {t('nav_my')}
           </button>
 
+          {/* === Новая кнопка: KAINAS === */}
+          <button
+            onClick={() => setTab('prices')}
+            style={navButton(tab === 'prices')}
+          >
+            Kainas
+          </button>
+
           {/* === Кнопка Админ (только для админа) === */}
           {isAdmin && (
             <button
@@ -51,7 +60,7 @@ export default function App() {
           )}
         </div>
 
-        {/* Языки */}
+        {/* === Языки === */}
         <div style={langBlock}>
           <button onClick={() => setLang('lt')} style={langButton(lang === 'lt')}>
             LT
@@ -67,9 +76,13 @@ export default function App() {
 
       {/* === Контент === */}
       <Auth onAuth={setUser} />
+
       {tab === 'calendar' && <Calendar />}
       {tab === 'my' && <MyBookings />}
       {tab === 'admin' && isAdmin && <Admin />}
+
+      {/* === Новый раздел KAINAS === */}
+      {tab === 'prices' && <Calendar showPrices={true} />}
 
       {/* === Футер === */}
       <footer style={footerStyle}>© IZ HAIR TREND</footer>
