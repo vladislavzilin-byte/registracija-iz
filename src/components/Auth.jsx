@@ -259,21 +259,31 @@ export default function Auth({ onAuth }) {
             zIndex: 2,
             display: "flex",
             alignItems: "center",
-            padding: "14px 20px",
+            justifyContent: "space-between",
+            padding: "18px 26px",
           }}
         >
-          {/* Аватар + текст */}
+          {/* Левая часть */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "32px", // ← 2 см между VZ и текстом (≈32px)
-              flexShrink: 0,
+              gap: "32px", // ≈2 см
+              flexShrink: 1,
+              minWidth: 0,
             }}
           >
             <div style={avatarStyle}>{initials}</div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {/* Текст аккаунта — центрирован и не ломает блок */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                minWidth: 0,
+              }}
+            >
               <div style={nameStyle}>{current.name}</div>
               {current.phone && <div style={contactStyle}>{current.phone}</div>}
               {current.email && <div style={contactStyle}>{current.email}</div>}
@@ -283,22 +293,20 @@ export default function Auth({ onAuth }) {
             </div>
           </div>
 
-          {/* Пустая область — 4 см */}
-          <div style={{ width: "64px", flexShrink: 0 }} /> 
-          {/* 4 см ≈ 64px */}
-
-          {/* Кнопка */}
-          <button
-            onClick={logout}
-            style={{
-              ...logoutButton,
-              padding: "10px 22px",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
-          >
-            Выйти
-          </button>
+          {/* Правая часть (кнопка) */}
+          <div style={{ marginLeft: "64px", flexShrink: 0 }}>
+            {/* 4 см = ~64px */}
+            <button
+              onClick={logout}
+              style={{
+                ...logoutButton,
+                padding: "10px 26px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Выйти
+            </button>
+          </div>
         </div>
       </div>
     </>
