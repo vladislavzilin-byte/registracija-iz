@@ -9,6 +9,22 @@ import {
 } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
 
+const SERVICE_PRICES = {
+  "Šukuosena": 50,
+  "Tresų nuoma": 25,
+  "Papuošalų nuoma": 10,
+  "Atvykimas": 50,
+  "Konsultacija": 10,
+}
+
+const SERVICE_DURATIONS = {
+  "Šukuosena": 60,      // 1 час
+  "Tresų nuoma": 15,    // 15 мин
+  "Papuošalų nuoma": 15,// 15 мин
+  "Atvykimas": 120,     // 2 часа
+  "Konsultacija": 30,   // 30 мин
+}
+
 function dayISO(d){ return new Date(d).toISOString().slice(0,10) }
 function toDateOnly(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()) }
 
