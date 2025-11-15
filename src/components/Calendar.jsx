@@ -222,21 +222,21 @@ export default function Calendar(){
   style={{
     width: "100%",
     border: "1px solid rgba(170, 90, 255, 0.22)",
-    background: "linear-gradient(180deg, rgba(18,18,30,0.95) 0%, rgba(10,10,20,0.92) 100%)",
-    borderRadius: 18,
-    padding: "20px 24px 24px",
+    background: "linear-gradient(180deg, rgba(18,18,30,0.96) 0%, rgba(12,12,22,0.92) 100%)",
+    borderRadius: 20,
+    padding: "22px 24px 26px",
     marginTop: 0,
-    marginBottom: 26,
+    marginBottom: 32,
     backdropFilter: "blur(22px)",
-    boxShadow: "0 0 25px rgba(150, 70, 255, 0.10)",
+    boxShadow: "0 0 28px rgba(170, 90, 255, 0.18)",
   }}
 >
 
   {/* Заголовок */}
   <h2
     style={{
-      margin: "0 0 16px 0",
-      fontSize: 24,
+      margin: "0 0 18px 0",
+      fontSize: 25,
       fontWeight: 700,
       color: "#ffffff",
       letterSpacing: "0.3px",
@@ -249,35 +249,35 @@ export default function Calendar(){
   <div
     onClick={() => setOpenPrices(!openPrices)}
     style={{
-      border: "1px solid rgba(180, 90, 255, 0.28)",
+      border: "1px solid rgba(180, 90, 255, 0.32)",
       background: "rgba(22, 22, 35, 0.90)",
-      borderRadius: 14,
+      borderRadius: 16,
       padding: "14px 16px",
       display: "flex",
       alignItems: "center",
-      justifyContent: "space-between",
+      gap: 12,
       cursor: "pointer",
-      transition: ".25s ease",
+      transition: ".28s ease",
       boxShadow: openPrices
-        ? "0 0 12px rgba(170, 90, 255, 0.25)"
-        : "0 0 0 rgba(0,0,0,0)",
+        ? "0 0 20px rgba(180, 90, 255, 0.35)"
+        : "0 0 12px rgba(180, 90, 255, 0.15)",
     }}
     onMouseEnter={(e) => {
-      e.currentTarget.style.borderColor = "rgba(200, 110, 255, 0.42)";
-      e.currentTarget.style.boxShadow = "0 0 14px rgba(170, 90, 255, 0.28)";
-      e.currentTarget.style.background = "rgba(28, 20, 45, 0.92)";
+      e.currentTarget.style.borderColor = "rgba(210, 120, 255, 0.55)";
+      e.currentTarget.style.boxShadow =
+        "0 0 22px rgba(200, 110, 255, 0.48)";
+      e.currentTarget.style.background = "rgba(30, 24, 50, 0.92)";
     }}
     onMouseLeave={(e) => {
-      e.currentTarget.style.borderColor = "rgba(180,90,255,0.28)";
+      e.currentTarget.style.borderColor = "rgba(180, 90, 255, 0.32)";
       e.currentTarget.style.boxShadow = openPrices
-        ? "0 0 12px rgba(170, 90, 255, 0.25)"
-        : "0 0 0 rgba(0,0,0,0)";
+        ? "0 0 20px rgba(180, 90, 255, 0.35)"
+        : "0 0 12px rgba(180, 90, 255, 0.15)";
       e.currentTarget.style.background = "rgba(22,22,35,0.90)";
     }}
   >
-    <span style={{ fontSize: 17, color: "#fff" }}>Žiūrėti kainas</span>
 
-    {/* iOS-styled chevron */}
+    {/* Стрелка слева */}
     <svg
       width="18"
       height="18"
@@ -285,39 +285,45 @@ export default function Calendar(){
       style={{
         transform: openPrices ? "rotate(180deg)" : "rotate(0deg)",
         transition: "0.25s ease",
-        fill: "#d8a6ff",
+        fill: "#e3b8ff",
+        filter: "drop-shadow(0 0 4px rgba(200,120,255,0.55))",
       }}
     >
       <path d="M7 10l5 5 5-5z" />
     </svg>
+
+    {/* Текст */}
+    <span style={{ fontSize: 17, color: "#fff" }}>Žiūrėti kainas</span>
   </div>
 
-  {/* Контент */}
+  {/* Раскрывающийся блок */}
   <div
     style={{
       maxHeight: openPrices ? 2000 : 0,
       overflow: "hidden",
-      transition: "max-height .45s cubic-bezier(.25,.8,.25,1)",
-      marginTop: openPrices ? 18 : 0,
+      transition: "max-height .55s cubic-bezier(.25,.8,.25,1)",
+      marginTop: openPrices ? 20 : 0,
       opacity: openPrices ? 1 : 0,
     }}
   >
+
+    {/* Контейнер цен */}
     <div
       style={{
         border: "1px solid rgba(170, 90, 255, 0.22)",
-        background: "rgba(15,15,28,0.85)",
-        borderRadius: 16,
-        padding: "20px 18px",
+        background: "rgba(15,15,28,0.90)",
+        borderRadius: 18,
+        padding: "22px 20px",
         backdropFilter: "blur(16px)",
-        boxShadow: "0 0 18px rgba(150, 70, 255, 0.18)",
-        animation: openPrices ? "fadeIn .5s ease" : "none",
+        boxShadow: "0 0 20px rgba(150, 70, 255, 0.18)",
+        animation: openPrices ? "fadeIn .45s ease" : "none",
       }}
     >
-      {/* Карточки цен */}
+
       <style>
         {`
           @keyframes fadeIn {
-            0% { opacity: 0; transform: translateY(4px); }
+            0% { opacity: 0; transform: translateY(6px); }
             100% { opacity: 1; transform: translateY(0); }
           }
         `}
@@ -353,19 +359,22 @@ export default function Calendar(){
         <div
           key={i}
           style={{
-            border: "1px solid rgba(150, 80, 255, 0.25)",
-            borderRadius: 14,
-            padding: "14px 16px",
-            marginBottom: 14,
-            background: "rgba(22, 18, 38, 0.85)",
+            border: "1px solid rgba(150, 80, 255, 0.28)",
+            borderRadius: 16,
+            padding: "16px 18px",
+            marginBottom: 16,
+            background: "rgba(22, 18, 38, 0.92)",
+            boxShadow: "0 0 12px rgba(150, 70, 255, 0.18)",
           }}
         >
-          <p style={{ margin: 0, fontSize: 17, color: "#fff" }}>
+          <p style={{ margin: 0, fontSize: 18, color: "#fff" }}>
             <b>{item.price}</b>
           </p>
-          <p style={{ margin: "4px 0 0 0", color: "#dad0ff" }}>{item.title}</p>
+          <p style={{ margin: "4px 0 0 0", color: "#d6caff" }}>
+            {item.title}
+          </p>
           {item.text && (
-            <p style={{ margin: "2px 0 0 0", color: "#9f96bf" }}>
+            <p style={{ margin: "3px 0 0 0", color: "#a898ce" }}>
               {item.text}
             </p>
           )}
@@ -374,7 +383,6 @@ export default function Calendar(){
     </div>
   </div>
 </div>
-
 
       {/* ------------------------- */}
       {/*   NAVIGATION + MONTH     */}
