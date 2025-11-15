@@ -138,58 +138,74 @@ export default function Calendar(){
     })
   }
 
-  const confirmBooking = () => {
-    if (!pendingTime) return
-    if (!selectedServices || selectedServices.length === 0) {
-      alert('Pasirinkite bent vieną paslaugą.')
-      return
-    }
-
-    const user = getCurrentUser()
-    if (!user) {
-      alert(t('login_or_register'))
-      return
-    }
-
-    const tSel = pendingTime
-
-    if (toDateOnly(tSel) < today) {
-      alert(t('cannot_book_past') || 'Нельзя записываться на прошедшие даты')
-      return
-    }
-    if (isTaken(tSel)) {
-      alert(t('already_booked'))
-      return
-    }
-
-    setBusy(true)
-    setProcessingISO(new Date(tSel))
-
-    const end = new Date(tSel)
-    end.setMinutes(end.getMinutes() + settings.slotMinutes)
-
-    const newB = {
-      id: id(),
-      userPhone: user.phone,
-      userName: user.name,
-      userInstagram: user.instagram || '',
-      start: tSel,
-      end,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      services: selectedServices,
-    }
-
-    setTimeout(() => {
-      saveBookings([...bookings, newB])
-      setBookedISO((prev) => [...prev, new Date(tSel)])
-      setBusy(false)
-      setProcessingISO(null)
-      setPendingTime(null)
-      setSelectedServices([])
-      closeModal()
-    }, 600)
+ const confirmBooking = () => {
+  if (!pendingTime) return
+  if (!selectedServices || selectedServices.length === 0) {
+    alert('Pasirinkite bent vieną paslaugą.')
+    return
   }
+
+  const user = getCurrentUser()
+  if (!user) {
+    alert(t('login_or_register'))
+    return
+  }
+
+  const tSel = pendingTime
+
+  if (toDateOnly(tSel) < today) {
+    alert(t('cannot_book_past') || 'Нельзя записываться на прошедшие даты')
+    return
+  }
+  if (isTaken(tSel)) {
+    alert(t('already_booked'))
+    return
+  }
+
+  // 🔢 считаем цену
+  const totalPrice = selectedServices.reduce(
+    (sum, s) => sum + (SERVICE_PRICES[s] || 0),
+    0
+  )
+
+  // ⏱ считаем длительность
+  let durationMinutes = selectedServices.reduce(
+    (sum, s) => sum + (SERVICE_DURATIONS[s] || 0),
+    0
+  )
+  // fallback — если что-то пошло не так
+  if (durationMinutes === 0) durationMinutes = settings.slotMinutes
+
+  setBusy(true)
+  setProcessingISO(new Date(tSel))
+
+  const end = new Date(tSel)
+  end.setMinutes(end.getMinutes() + durationMinutes)
+
+  const newB = {
+    id: id(),
+    userPhone: user.phone,
+    userName: user.name,
+    userInstagram: user.instagram || '',
+    start: tSel,
+    end,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    services: selectedServices,
+    price: totalPrice,          // 💰 цена
+    durationMinutes,            // ⏱ длительность
+  }
+
+  setTimeout(() => {
+    saveBookings([...bookings, newB])
+    setBookedISO(prev => [...prev, new Date(tSel)])
+    setBusy(false)
+    setProcessingISO(null)
+    setPendingTime(null)
+    setSelectedServices([])
+    closeModal()
+  }, 600)
+}
 
   const closeModal = () => setModal(null)
 
