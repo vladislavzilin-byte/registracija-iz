@@ -592,11 +592,18 @@ const logoutButton = {
   border: "1px solid rgba(168,85,247,0.45)",
   background: "rgba(31,0,63,0.45)",
   color: "#fff",
-  padding: "10px 24px",
+  padding: "10px 32px", // ← увеличили ширину, но без перебора
   fontWeight: 500,
+  fontSize: "0.95rem", // чуть крупнее
+  height: "42px", // как другие кнопки сайта
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  whiteSpace: "nowrap",
   cursor: "pointer",
   transition: "0.25s",
 };
+
 
 const overlayStyle = {
   position: "fixed",
