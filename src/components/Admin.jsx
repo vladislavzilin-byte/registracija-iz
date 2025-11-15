@@ -1,3 +1,4 @@
+// === Admin.jsx ===
 const ADMINS = ['irina.abramova7@gmail.com', 'vladislavzilin@gmail.com']
 
 import { useState, useMemo, useEffect } from 'react'
@@ -9,28 +10,38 @@ import {
 import { exportBookingsToCSV } from '../lib/export'
 import { useI18n } from '../lib/i18n'
 
-/* === Цвета услуг === */
-const serviceStyles = {
+// === Цветовые теги услуг ===
+const SERVICE_STYLES = {
   "Šukuosena": {
-    bg: "rgba(150, 80, 255, 0.17)",
-    border: "1px solid rgba(150, 80, 255, 0.35)"
+    bg: "rgba(150,80,255,0.25)",
+    border: "1px solid rgba(150,80,255,0.5)"
   },
-  "Tresų nuoma": {
-    bg: "rgba(80, 200, 255, 0.18)",
-    border: "1px solid rgba(80, 200, 255, 0.35)"
+  "Tressų nuoma": {
+    bg: "rgba(80,200,255,0.25)",
+    border: "1px solid rgba(80,200,255,0.5)"
   },
   "Papuošalų nuoma": {
-    bg: "rgba(255, 180, 50, 0.18)",
-    border: "1px solid rgba(255, 180, 50, 0.35)"
+    bg: "rgba(255,185,80,0.25)",
+    border: "1px solid rgba(255,185,80,0.5)"
   },
   "Atvykimas": {
-    bg: "rgba(255, 70, 70, 0.18)",
-    border: "1px solid rgba(255, 70, 70, 0.35)"
+    bg: "rgba(255,80,80,0.25)",
+    border: "1px solid rgba(255,80,80,0.5)"
   },
   "Konsultacija": {
-    bg: "rgba(90, 255, 150, 0.18)",
-    border: "1px solid rgba(90, 255, 150, 0.35)"
+    bg: "rgba(80,255,150,0.25)",
+    border: "1px solid rgba(80,255,150,0.5)"
   }
+}
+
+// === Форматирование длительности ===
+const formatDuration = (minutes) => {
+  if (!minutes) return '—'
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h && m) return `${h}h ${m}min`
+  if (h) return `${h}h`
+  return `${m}min`
 }
 
 export default function Admin() {
@@ -54,141 +65,156 @@ export default function Admin() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [toast, setToast] = useState(null)
 
+  // === Обновление настроек ===
   const update = (patch) => {
     const next = { ...settings, ...patch }
     setSettings(next)
     saveSettings(next)
   }
 
+  // === Следим за обновлением профиля ===
   useEffect(() => {
     const handler = () => setBookings(getBookings())
     window.addEventListener('profileUpdated', handler)
     return () => window.removeEventListener('profileUpdated', handler)
   }, [])
 
+  // === Статистика ===
   const stats = useMemo(() => {
     const total = bookings.length
-    const active =
-      bookings.filter(b => b.status === 'approved' || b.status === 'pending').length
-    const canceled =
-      bookings.filter(b =>
-        b.status === 'canceled_client' || b.status === 'canceled_admin'
-      ).length
+    const active = bookings.filter(b => b.status === 'approved' || b.status === 'pending').length
+    const canceled = bookings.filter(b => b.status.includes('canceled')).length
     return { total, active, canceled }
   }, [bookings])
 
+  // === Поиск и фильтр ===
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
     const arr = bookings.filter(b => {
       const matchQ =
         !q ||
         (b.userName?.toLowerCase().includes(q) ||
-          b.userPhone?.toLowerCase().includes(q) ||
-          b.userInstagram?.toLowerCase().includes(q))
+        b.userPhone?.includes(q) ||
+        b.userInstagram?.toLowerCase().includes(q))
+
       const matchStatus = statusFilter === 'all' ? true : b.status === statusFilter
       return matchQ && matchStatus
     })
+
     arr.sort((a, b) => new Date(a.start) - new Date(b.start))
     return arr
   }, [bookings, search, statusFilter])
 
+  // === Отмена администратором ===
   const cancelByAdmin = (id) => {
-    if (!confirm('Отменить эту запись?')) return
+    if (!confirm("Отменить запись?")) return
     const next = getBookings().map(b =>
-      b.id === id
-        ? { ...b, status: 'canceled_admin', canceledAt: new Date().toISOString() }
-        : b
+      b.id === id ? { ...b, status: 'canceled_admin' } : b
     )
     saveBookings(next)
     setBookings(next)
   }
 
+  // === Подтверждение ===
   const approveByAdmin = (id) => {
     const next = getBookings().map(b =>
-      b.id === id
-        ? { ...b, status: 'approved', approvedAt: new Date().toISOString() }
-        : b
+      b.id === id ? { ...b, status: 'approved' } : b
     )
     saveBookings(next)
     setBookings(next)
   }
 
+  // === Экспорт ===
   const handleExport = () => {
     const { name, count } = exportBookingsToCSV(filtered)
-    setToast(`✅ ${t('export')} ${count} → ${name}`)
-    setTimeout(() => setToast(null), 3500)
+    setToast(`✔ Экспортировано ${count} → ${name}`)
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  // === PayPal ===
+  const PAYPAL_EMAIL = "YOUR_PAYPAL_EMAIL@example.com"
+
+  const handlePay = (b) => {
+    if (!b.price) return
+
+    const url =
+      `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${encodeURIComponent(PAYPAL_EMAIL)}&currency_code=EUR&amount=${b.price.toFixed(2)}`
+    
+    return window.open(url, "_blank")
   }
 
   const statusLabel = (b) =>
-    b.status === 'approved' ? '🟢 ' + t('approved')
-      : b.status === 'pending' ? '🟡 ' + t('pending')
-      : (b.status === 'canceled_client'
-        ? '❌ ' + t('canceled_by_client')
-        : '🔴 ' + t('canceled_by_admin'))
+    b.status === "approved" ? "🟢 " + t('approved')
+      : b.status === "pending" ? "🟡 " + t('pending')
+      : b.status === "canceled_client" ? "❌ " + t('canceled_by_client')
+      : "🔴 " + t('canceled_by_admin')
 
+  // ================================
+  //          РЕНДЕР
+  // ================================
   return (
     <div className="col" style={{ gap: 16 }}>
 
-      {/* === РЕДАКТИРОВАТЬ НАСТРОЙКИ === */}
-      <div style={{ width: '100%' }}>
-        <div style={cardAurora}>
-          <button onClick={() => setShowSettings(s => !s)} style={headerToggle}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-              <Chevron open={showSettings} />
-              <span style={{ fontWeight: 700 }}>Редактировать настройки</span>
-            </span>
-          </button>
+      {/* === Настройки === */}
+      <div style={cardAurora}>
+        <button onClick={() => setShowSettings(s => !s)} style={headerToggle}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Chevron open={showSettings} />  
+            Редактировать настройки
+          </span>
+        </button>
 
-          <div style={{
-            maxHeight: showSettings ? 1000 : 0,
-            overflow: 'hidden',
-            transition: 'max-height .35s ease'
-          }}>
-            <div style={{ paddingTop: 10 }}>
-              <div className="row" style={{ gap: 12 }}>
-                <div className="col">
-                  <label style={labelStyle}>{t('master_name')}</label>
-                  <input style={inputGlass}
-                    value={settings.masterName}
-                    onChange={e => update({ masterName: e.target.value })} />
-                </div>
-                <div className="col">
-                  <label style={labelStyle}>{t('admin_phone')}</label>
-                  <input style={inputGlass}
-                    value={settings.adminPhone}
-                    onChange={e => update({ adminPhone: e.target.value })} />
-                </div>
+        <div style={{
+          maxHeight: showSettings ? 900 : 0,
+          overflow: "hidden",
+          transition: "max-height .35s ease"
+        }}>
+          <div style={{ paddingTop: 12 }}>
+            <div className="row" style={{ gap: 12 }}>
+
+              <div className="col">
+                <label style={labelStyle}>{t('master_name')}</label>
+                <input style={inputGlass}
+                  value={settings.masterName}
+                  onChange={e => update({ masterName: e.target.value })} />
               </div>
 
-              <div className="row" style={{ gap: 12, marginTop: 12 }}>
-                <div className="col">
-                  <label style={labelStyle}>{t('day_start')}</label>
-                  <select style={inputGlass}
-                    value={settings.workStart}
-                    onChange={e => update({ workStart: e.target.value })}>
-                    {generateTimes(0, 12).map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
+              <div className="col">
+                <label style={labelStyle}>{t('admin_phone')}</label>
+                <input style={inputGlass}
+                  value={settings.adminPhone}
+                  onChange={e => update({ adminPhone: e.target.value })} />
+              </div>
 
-                <div className="col">
-                  <label style={labelStyle}>{t('day_end')}</label>
-                  <select style={inputGlass}
-                    value={settings.workEnd}
-                    onChange={e => update({ workEnd: e.target.value })}>
-                    {generateTimes(12, 24).map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
+            </div>
 
-                <div className="col">
-                  <label style={labelStyle}>{t('slot_minutes')}</label>
-                  <select style={inputGlass}
-                    value={settings.slotMinutes}
-                    onChange={e => update({ slotMinutes: parseInt(e.target.value, 10) })}>
-                    {[15, 30, 45, 60].map(m =>
-                      <option key={m} value={m}>{m}</option>
-                    )}
-                  </select>
-                </div>
+            <div className="row" style={{ gap: 12, marginTop: 12 }}>
+
+              <div className="col">
+                <label style={labelStyle}>{t('day_start')}</label>
+                <select style={inputGlass}
+                  value={settings.workStart}
+                  onChange={e => update({ workStart: e.target.value })}>
+                  {generateTimes(0, 12).map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+
+              <div className="col">
+                <label style={labelStyle}>{t('day_end')}</label>
+                <select style={inputGlass}
+                  value={settings.workEnd}
+                  onChange={e => update({ workEnd: e.target.value })}>
+                  {generateTimes(12, 24).map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+
+              <div className="col">
+                <label style={labelStyle}>{t('slot_minutes')}</label>
+                <select style={inputGlass}
+                  value={settings.slotMinutes}
+                  onChange={e => update({ slotMinutes: parseInt(e.target.value, 10) })}>
+                  {[15, 30, 45, 60].map(m => <option key={m}>{m}</option>)}
+                </select>
               </div>
 
             </div>
@@ -197,167 +223,150 @@ export default function Admin() {
       </div>
 
       {/* === ВСЕ ЗАПИСИ === */}
-      <div style={{ width: '100%' }}>
-        <div style={cardAurora}>
-          <div style={topBar}>
-            <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>Все записи</div>
-          </div>
-
-          {/* Фильтры */}
-          <div style={{ display: 'flex', gap: 10, margin: '8px 0 12px 0', flexWrap: 'wrap' }}>
-            <input
-              style={{ ...inputGlass, flex: '1 1 260px' }}
-              placeholder={t('search_placeholder')}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-
-            <div style={segmented}>
-              {[
-                { v: 'all', label: t('all') },
-                { v: 'pending', label: t('pending') },
-                { v: 'approved', label: t('approved') },
-                { v: 'canceled_client', label: t('canceled_by_client') },
-                { v: 'canceled_admin', label: t('canceled_by_admin') }
-              ].map(it => (
-                <button
-                  key={it.v}
-                  onClick={() => setStatusFilter(it.v)}
-                  style={{
-                    ...segBtn,
-                    ...(statusFilter === it.v ? segActive : {})
-                  }}
-                >
-                  {it.label}
-                </button>
-              ))}
-            </div>
-
-            <button style={{ ...btnPrimary, flex: '1' }} onClick={handleExport}>
-              {t('export')}
-            </button>
-          </div>
-
-          <div className="badge" style={{ marginBottom: 10 }}>
-            {t('total')}: {stats.total} • {t('total_active')}: {stats.active} • {t('total_canceled')}: {stats.canceled}
-          </div>
-
-          {/* Таблица */}
-          <table className="table" style={{ marginTop: 6 }}>
-            <thead>
-              <tr>
-                <th>Клиент</th>
-                <th>Instagram</th>
-                <th>Дата</th>
-                <th>Время</th>
-
-                {/* Новая колонка УСЛУГИ */}
-                <th>Услуги</th>
-
-                <th>{t('status')}</th>
-                <th></th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filtered.map(b => {
-                const inFuture = new Date(b.start) > new Date()
-
-                return (
-                  <tr key={b.id} style={{ opacity: b.status === 'approved' ? 1 : .97 }}>
-
-                    {/* Клиент */}
-                    <td>
-                      <b>{b.userName}</b>
-                      <div className="muted" style={{ fontSize: 12 }}>{b.userPhone}</div>
-                    </td>
-
-                    {/* Instagram */}
-                    <td>{b.userInstagram || '-'}</td>
-
-                    {/* Дата */}
-                    <td>{fmtDate(b.start)}</td>
-
-                    {/* Время */}
-                    <td>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
-
-                    {/* === УСЛУГИ === */}
-                    <td>
-                      {Array.isArray(b.services) && b.services.length > 0 ? (
-                        <div style={{
-                          display: "flex",
-                          gap: "6px",
-                          flexWrap: "wrap"
-                        }}>
-                          {b.services.map((s, i) => {
-                            const st = serviceStyles[s] || {
-                              bg: "rgba(255,255,255,0.08)",
-                              border: "1px solid rgba(255,255,255,0.15)"
-                            }
-
-                            return (
-                              <div
-                                key={i}
-                                style={{
-                                  padding: "4px 10px",
-                                  borderRadius: 10,
-                                  background: st.bg,
-                                  border: st.border,
-                                  fontSize: 12,
-                                  whiteSpace: "nowrap",
-                                  backdropFilter: "blur(6px)",
-                                }}
-                              >
-                                {s}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      ) : "—"}
-                    </td>
-
-                    {/* Статус */}
-                    <td>{statusLabel(b)}</td>
-
-                    {/* Кнопки */}
-                    <td style={{ textAlign: 'right' }}>
-                      {b.status === 'pending' &&
-                        <button style={btnOk} onClick={() => approveByAdmin(b.id)}>
-                          {t('approve')}
-                        </button>}
-
-                      {b.status !== 'canceled_admin' &&
-                        b.status !== 'canceled_client' &&
-                        inFuture &&
-                        <button style={btnDanger} onClick={() => cancelByAdmin(b.id)}>
-                          {t('rejected')}
-                        </button>}
-                    </td>
-
-                  </tr>
-                )
-              })}
-
-              {!filtered.length && (
-                <tr><td colSpan="7">
-                  <small className="muted">{t('no_records')}</small>
-                </td></tr>
-              )}
-            </tbody>
-          </table>
-
-          {toast && (
-            <div className="toast" style={{ marginTop: 10 }}>
-              {toast}
-            </div>
-          )}
+      <div style={cardAurora}>
+        <div style={topBar}>
+          <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>Все записи</div>
         </div>
+
+        {/* Поиск, фильтры */}
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+          <input
+            style={{ ...inputGlass, flex: "1 1 260px" }}
+            placeholder="Поиск по имени / телефону / Instagram"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+
+          <div style={segmented}>
+            {[
+              { v: 'all', label: t('all') },
+              { v: 'pending', label: t('pending')},
+              { v: 'approved', label: t('approved')},
+              { v: 'canceled_client', label: t('canceled_by_client')},
+              { v: 'canceled_admin', label: t('canceled_by_admin')}
+            ].map(it => (
+              <button
+                key={it.v}
+                onClick={() => setStatusFilter(it.v)}
+                style={{ ...segBtn, ...(statusFilter === it.v ? segActive : {}) }}
+              >
+                {it.label}
+              </button>
+            ))}
+          </div>
+
+          <button style={{ ...btnPrimary, flex: "1" }} onClick={handleExport}>
+            Экспорт
+          </button>
+        </div>
+
+        {/* Статистика */}
+        <div className="badge" style={{ marginBottom: 10 }}>
+          Всего: {stats.total} • Активных: {stats.active} • Отменённых: {stats.canceled}
+        </div>
+
+        {/* Таблица */}
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Клиент</th>
+              <th>Instagram</th>
+              <th>Дата</th>
+              <th>Время</th>
+              <th>Услуги</th>
+              <th>Цена</th>
+              <th>Длит.</th>
+              <th>Статус</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan="9" style={{ opacity: 0.6 }}>Нет записей</td>
+              </tr>
+            )}
+
+            {filtered.map(b => {
+              const inFuture = new Date(b.start) > new Date()
+
+              return (
+                <tr key={b.id}>
+                  <td>
+                    <b>{b.userName}</b>
+                    <div style={{ fontSize: 12, opacity: 0.7 }}>{b.userPhone}</div>
+                  </td>
+                  <td>{b.userInstagram || '—'}</td>
+                  <td>{fmtDate(b.start)}</td>
+                  <td>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
+
+                  {/* Услуги */}
+                  <td>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: "wrap" }}>
+                      {b.services?.map(s => (
+                        <div key={s} style={{
+                          padding: "3px 8px",
+                          borderRadius: 8,
+                          fontSize: 12,
+                          background: SERVICE_STYLES[s]?.bg,
+                          border: SERVICE_STYLES[s]?.border
+                        }}>
+                          {s}
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+
+                  {/* Цена */}
+                  <td>{b.price ? `${b.price} €` : '—'}</td>
+
+                  {/* Длительность */}
+                  <td>{formatDuration(b.durationMinutes)}</td>
+
+                  {/* Статус */}
+                  <td>{statusLabel(b)}</td>
+
+                  {/* Действия */}
+                  <td style={{ textAlign: "right" }}>
+                    {b.status === "pending" && (
+                      <button style={btnOk} onClick={() => approveByAdmin(b.id)}>✔ Подтв.</button>
+                    )}
+
+                    {b.price && (
+                      <button
+                        onClick={() => handlePay(b)}
+                        style={{
+                          padding: "6px 12px",
+                          marginLeft: 6,
+                          borderRadius: 10,
+                          border: "1px solid rgba(34,197,94,0.7)",
+                          background: "rgba(22,100,40,0.45)",
+                          color: "#bbf7d0",
+                          cursor: "pointer"
+                        }}
+                      >
+                        💳 Оплатить
+                      </button>
+                    )}
+
+                    {inFuture && b.status !== "canceled_admin" && b.status !== "canceled_client" && (
+                      <button style={btnDanger} onClick={() => cancelByAdmin(b.id)}>Отменить</button>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+
+        {toast && <div className="toast">{toast}</div>}
       </div>
     </div>
   )
 }
 
-/* === Иконка стрелки === */
+/* === UI компоненты === */
 function Chevron({ open }) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#cbb6ff" strokeWidth="2">
@@ -367,57 +376,95 @@ function Chevron({ open }) {
 }
 
 function generateTimes(start, end) {
-  const result = []
+  const arr = []
   for (let h = start; h < end; h++) {
     for (let m = 0; m < 60; m += 30) {
-      const hh = String(h).padStart(2, '0')
-      const mm = String(m).padStart(2, '0')
-      result.push(`${hh}:${mm}`)
+      arr.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
     }
   }
-  return result
+  return arr
 }
 
 /* === Стили === */
 const cardAurora = {
-  background: 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))',
-  border: '1px solid rgba(168,85,247,0.18)',
+  background: "rgba(255,255,255,0.03)",
+  border: "1px solid rgba(168,85,247,0.2)",
   borderRadius: 16,
-  padding: 14,
-  boxShadow: '0 8px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.03)'
+  padding: 16
 }
 
 const headerToggle = {
-  width: '100%',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: 10,
-  borderRadius: 12,
-  padding: '14px 18px',
-  border: '1px solid rgba(168,85,247,0.25)',
-  background: 'rgba(25,10,45,0.55)',
-  color: '#fff',
-  cursor: 'pointer'
+  width: "100%",
+  display: "flex",
+  alignItems: "center",
+  padding: "12px 16px",
+  borderRadius: 14,
+  background: "rgba(25,10,45,0.55)",
+  border: "1px solid rgba(168,85,247,0.25)",
+  cursor: "pointer",
+  color: "#fff"
 }
 
-const labelStyle = { fontSize: 12, opacity: .8, marginBottom: 6, display: 'block' }
+const labelStyle = { fontSize: 12, opacity: 0.7, marginBottom: 4 }
+
 const inputGlass = {
-  width: '100%',
-  padding: '10px 12px',
+  width: "100%",
+  padding: "10px 12px",
   borderRadius: 10,
-  color: '#fff',
-  border: '1px solid rgba(168,85,247,0.35)',
-  background: 'rgba(17,0,40,0.45)',
-  outline: 'none'
+  border: "1px solid rgba(168,85,247,0.25)",
+  background: "rgba(20,0,40,0.45)",
+  color: "#fff"
 }
 
-const topBar = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 2px 10px 2px' }
-const btnBase = { borderRadius: 10, padding: '8px 14px', fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(168,85,247,0.45)', transition: '0.2s' }
-const btnPrimary = { ...btnBase, background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))', boxShadow: '0 0 14px rgba(150,85,247,0.35)', color: '#fff' }
-const btnOk = { ...btnPrimary }
-const btnDanger = { ...btnBase, border: '1px solid rgba(239,68,68,.6)', background: 'rgba(110,20,30,.35)', color: '#fff' }
+const topBar = {
+  display: "flex",
+  justifyContent: "space-between",
+  paddingBottom: 10
+}
 
-const segmented = { display: 'flex', gap: 8, background: 'rgba(17,0,40,0.45)', border: '1px solid rgba(168,85,247,0.25)', borderRadius: 12, padding: 6 }
-const segBtn = { ...btnBase, padding: '8px 12px', background: 'rgba(25,10,45,0.35)', border: '1px solid rgba(168,85,247,0.25)' }
-const segActive = { background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))', border: '1px solid rgba(180,95,255,0.7)', boxShadow: '0 0 12px rgba(150,90,255,0.30)' }
+const btnBase = {
+  padding: "6px 12px",
+  borderRadius: 10,
+  cursor: "pointer",
+  color: "#fff",
+  border: "1px solid rgba(168,85,247,0.45)"
+}
+
+const btnPrimary = {
+  ...btnBase,
+  background: "rgba(110,60,190,0.8)",
+  border: "1px solid rgba(168,85,247,0.6)"
+}
+
+const btnOk = {
+  ...btnPrimary,
+  background: "rgba(34,197,94,0.45)",
+  border: "1px solid rgba(34,197,94,0.7)"
+}
+
+const btnDanger = {
+  ...btnBase,
+  background: "rgba(255,50,50,0.35)",
+  border: "1px solid rgba(255,70,70,0.7)",
+  marginLeft: 6
+}
+
+const segmented = {
+  display: "flex",
+  gap: 6,
+  padding: 4,
+  background: "rgba(20,0,40,0.4)",
+  border: "1px solid rgba(168,85,247,0.2)",
+  borderRadius: 12
+}
+
+const segBtn = {
+  ...btnBase,
+  padding: "6px 12px",
+  background: "transparent"
+}
+
+const segActive = {
+  background: "rgba(110,60,190,0.8)",
+  border: "1px solid rgba(168,85,247,0.6)"
+}
