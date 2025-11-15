@@ -4,24 +4,29 @@ import { fmtDate, fmtTime } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
 
 // === Цветовые теги услуг ===
-const SERVICE_STYLES = {
+const serviceStyles = {
   "Šukuosena": {
+    icon: "🟣",
     bg: "rgba(150,80,255,0.25)",
-    border: "1px solid rgba(150,80,255,0.5)"
+    border: "1px solid rgba(168,85,247,0.6)"
   },
-  "Tressų nuoma": {
+  "Tresų nuoma": {
+    icon: "🟪",
+    bg: "rgba(120,70,255,0.25)",
+    border: "1px solid rgba(132,70,255,0.6)"
+  },
+  "Papuošalų nuoma": {
+    icon: "🟡",
     bg: "rgba(80,200,255,0.25)",
     border: "1px solid rgba(80,200,255,0.5)"
   },
-  "Papuošalų nuoma": {
-    bg: "rgba(255,185,80,0.25)",
-    border: "1px solid rgba(255,185,80,0.5)"
-  },
   "Atvykimas": {
-    bg: "rgba(255,80,80,0.25)",
-    border: "1px solid rgba(255,80,80,0.5)"
+    icon: "🔴",
+    bg: "rgba(255,80,150,0.25)",
+    border: "1px solid rgba(255,80,150,0.5)"
   },
   "Konsultacija": {
+    icon: "🟢",
     bg: "rgba(80,255,150,0.25)",
     border: "1px solid rgba(80,255,150,0.5)"
   }
