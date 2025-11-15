@@ -253,29 +253,31 @@ export default function Auth({ onAuth }) {
         <div style={auroraBg} />
         <div style={borderGlow} />
 
+        {/* ВЕРХНИЙ БЛОК */}
         <div
           style={{
             position: "relative",
             zIndex: 2,
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            justifyContent: "flex-start",
+            gap: "48px", // расстояние между колонкой и кнопкой
             padding: "18px 26px",
           }}
         >
-          {/* Левая часть */}
+          {/* Левая часть — аватар и текст */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "32px", // ≈2 см
-              flexShrink: 1,
+              gap: "32px", // расстояние между аватаром и текстом (~2 см)
+              flex: 1, // ← текст тянется, но НЕ давит на кнопку
               minWidth: 0,
             }}
           >
             <div style={avatarStyle}>{initials}</div>
 
-            {/* Текст аккаунта — центрирован и не ломает блок */}
+            {/* Текст аккаунта */}
             <div
               style={{
                 display: "flex",
@@ -293,20 +295,19 @@ export default function Auth({ onAuth }) {
             </div>
           </div>
 
-          {/* Правая часть (кнопка) */}
-          <div style={{ marginLeft: "64px", flexShrink: 0 }}>
-            {/* 4 см = ~64px */}
-            <button
-              onClick={logout}
-              style={{
-                ...logoutButton,
-                padding: "10px 26px",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Выйти
-            </button>
-          </div>
+          {/* Правая часть — кнопка */}
+          <button
+            onClick={logout}
+            style={{
+              ...logoutButton,
+              padding: "10px 32px",
+              minWidth: "120px", // органичный размер
+              whiteSpace: "nowrap",
+              flexShrink: 0, // ← кнопка НЕ сжимается
+            }}
+          >
+            Выйти
+          </button>
         </div>
       </div>
     </>
