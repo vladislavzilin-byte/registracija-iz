@@ -1,204 +1,282 @@
-import { useEffect, useState } from "react"
-import {
-  getBookings,
-  saveBookings,
-  getCurrentUser
-} from "../lib/storage"
-import { format } from "date-fns"
-import { lt } from "date-fns/locale"
+import { useState, useEffect, useMemo } from 'react'
+import { getBookings, saveBookings, getCurrentUser } from '../lib/storage'
+import { fmtDate, fmtTime } from '../lib/storage'
+import { useI18n } from '../lib/i18n'
 
-const TAG_COLORS = {
-  "Konsultacija": "#2A8C55",
-  "Atvykimas": "#8C2A2A",
-  "Papuošalų nuoma": "#8C6A2A",
-  "Tresų nuoma": "#2A6C8C",
-  "Šukuosena": "#552A8C"
+// === Цветовые теги услуг ===
+const SERVICE_STYLES = {
+  "Šukuosena": {
+    bg: "rgba(150,80,255,0.25)",
+    border: "1px solid rgba(150,80,255,0.5)"
+  },
+  "Tressų nuoma": {
+    bg: "rgba(80,200,255,0.25)",
+    border: "1px solid rgba(80,200,255,0.5)"
+  },
+  "Papuošalų nuoma": {
+    bg: "rgba(255,185,80,0.25)",
+    border: "1px solid rgba(255,185,80,0.5)"
+  },
+  "Atvykimas": {
+    bg: "rgba(255,80,80,0.25)",
+    border: "1px solid rgba(255,80,80,0.5)"
+  },
+  "Konsultacija": {
+    bg: "rgba(80,255,150,0.25)",
+    border: "1px solid rgba(80,255,150,0.5)"
+  }
 }
 
-export default function MyBookings() {
-  const user = getCurrentUser()
-  const [data, setData] = useState([])
-  const [filter, setFilter] = useState("all")
+// === Формат длительности ===
+const formatDuration = (minutes) => {
+  if (!minutes) return '—'
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h && m) return `${h}h ${m}min`
+  if (h) return `${h}h`
+  return `${m}min`
+}
 
+// === PayPal настройки ===
+const PAYPAL_EMAIL = "YOUR_PAYPAL_EMAIL@example.com"
+
+export default function MyBookings() {
+  const { t } = useI18n()
+  const user = getCurrentUser()
+  const [list, setList] = useState([])
+  const [filter, setFilter] = useState('all')
+
+  // === загрузка списка ===
   useEffect(() => {
     const all = getBookings()
-    const mine = all.filter(b => b.userPhone === user.phone)
-    setData(mine)
+    const mine = all.filter(b => b.user?.id === user?.id)
+    setList(mine)
   }, [user])
 
-  const markPaid = (id) => {
+  // === отмена записи ===
+  const cancel = (id) => {
+    if (!confirm("Отменить запись?")) return
     const all = getBookings()
     const updated = all.map(b =>
-      b.id === id ? { ...b, paid: true } : b
+      b.id === id ? { ...b, status: "canceled_client" } : b
     )
     saveBookings(updated)
-
-    const mine = updated.filter(b => b.userPhone === user.phone)
-    setData(mine)
+    setList(updated.filter(b => b.user?.id === user?.id))
   }
 
-  const filtered = data.filter(b => {
-    if (filter === "active") return b.status !== "canceled"
-    if (filter === "canceled") return b.status === "canceled"
-    return true
-  })
+  // === оплата ===
+  const handlePay = (b) => {
+    if (!b.price) return
+    const url =
+      `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${encodeURIComponent(PAYPAL_EMAIL)}&currency_code=EUR&amount=${b.price.toFixed(2)}`
+    window.open(url, "_blank")
+  }
+
+  // === фильтрация ===
+  const filtered = useMemo(() => {
+    let arr = [...list]
+
+    if (filter === "active") {
+      arr = arr.filter(b => b.status === "pending" || b.status === "approved")
+    }
+    if (filter === "canceled") {
+      arr = arr.filter(b => b.status.includes("canceled"))
+    }
+
+    arr.sort((a, b) => new Date(b.start) - new Date(a.start))
+    return arr
+  }, [filter, list])
+
+  const statusLabel = (b) =>
+    b.status === "approved" ? "🟢 " + t('approved')
+      : b.status === "pending" ? "🟡 " + t('pending')
+      : b.status === "canceled_client" ? "❌ " + t('canceled_by_client')
+      : "🔴 " + t('canceled_by_admin')
+
+  // ==========================
+  //         UI
+  // ==========================
 
   return (
-    <div className="card" style={{ marginTop: 20 }}>
-      <h2 style={{ marginBottom: 18 }}>Мои записи</h2>
+    <div style={wrapper}>
+      <div style={bookingsCard}>
+        <div style={bookingsHeader}>
+          <h3 style={{ margin: 0 }}>{t('my_bookings')}</h3>
 
-      {/* FILTERS */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-        {["all", "active", "canceled"].map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 10,
-              border: "1px solid rgba(168,85,247,0.35)",
-              background:
-                filter === f
-                  ? "rgba(98,0,180,0.45)"
-                  : "rgba(98,0,180,0.18)",
-              color: "#fff",
-              cursor: "pointer"
-            }}
-          >
-            {f === "all" && "Все"}
-            {f === "active" && "Активные"}
-            {f === "canceled" && "Отменённые"}
-          </button>
-        ))}
-      </div>
+          <div style={filterButtons}>
+            <button style={filterBtn(filter === 'all')} onClick={() => setFilter('all')}>
+              {t('all')}
+            </button>
+            <button style={filterBtn(filter === 'active')} onClick={() => setFilter('active')}>
+              {t('active')}
+            </button>
+            <button style={filterBtn(filter === 'canceled')} onClick={() => setFilter('canceled')}>
+              {t('canceled')}
+            </button>
+          </div>
+        </div>
 
-      {/* TABLE */}
-      <div style={{ width: "100%", overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <table style={table}>
           <thead>
-            <tr style={{ textAlign: "left", opacity: 0.8 }}>
-              <th>Дата</th>
-              <th>Время</th>
-              <th>Paslaugos</th>
-              <th>Kaina</th>
-              <th>Trukmė</th>
-              <th>Statusas</th>
-              <th>Оплата</th>
+            <tr>
+              <th style={tableCell}>Дата</th>
+              <th style={tableCell}>Время</th>
+              <th style={tableCell}>Услуги</th>
+              <th style={tableCell}>Цена</th>
+              <th style={tableCell}>Длит.</th>
+              <th style={tableCell}>Статус</th>
+              <th style={tableCell}></th>
             </tr>
           </thead>
+
           <tbody>
-            {filtered.map(b => (
-              <tr key={b.id} style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                <td style={{ padding: "12px 0" }}>
-                  {format(new Date(b.start), "yyyy-MM-dd")}
-                </td>
-
-                <td>
-                  {format(new Date(b.start), "HH:mm")}–
-                  {format(new Date(b.end), "HH:mm")}
-                </td>
-
-                <td>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {b.services?.map((s, i) => (
-                      <span
-                        key={i}
-                        style={{
-                          padding: "4px 10px",
-                          borderRadius: 12,
-                          background: TAG_COLORS[s] + "33",
-                          border: `1px solid ${TAG_COLORS[s]}`,
-                          color: "#fff",
-                          fontSize: 14
-                        }}
-                      >
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                </td>
-
-                <td>{b.price} €</td>
-
-                <td>{(b.durationMinutes / 60).toFixed(1)} val.</td>
-
-                <td>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: "50%",
-                        background: b.status === "approved" ? "#4ade80" : "#f87171",
-                        animation: b.status === "approved"
-                          ? "pulse 1.4s infinite"
-                          : "none"
-                      }}
-                    />
-                    {b.status === "approved" ? "Patvirtinta" : "Laukiama"}
-                  </div>
-                </td>
-
-                <td>
-                  {b.paid ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div
-                        style={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: "50%",
-                          background: "#22c55e",
-                          boxShadow: "0 0 8px #22c55e"
-                        }}
-                      />
-                      Apmokėta
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => markPaid(b.id)}
-                      style={{
-                        padding: "6px 14px",
-                        borderRadius: 10,
-                        background: "rgba(255,0,0,0.22)",
-                        border: "1px solid rgba(255,0,0,0.45)",
-                        color: "#fff",
-                        cursor: "pointer",
-                        transition: ".25s"
-                      }}
-                    >
-                      <div style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: "50%",
-                        background: "#ff4444",
-                        display: "inline-block",
-                        marginRight: 6,
-                        boxShadow: "0 0 8px #ff4444"
-                      }} />
-                      Neapmokėta
-                    </button>
-                  )}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan="7" style={{ ...tableCell, opacity: 0.6 }}>
+                  {t('no_records')}
                 </td>
               </tr>
-            ))}
+            )}
+
+            {filtered.map(b => {
+              const canCancel =
+                (b.status === 'pending' || b.status === 'approved') &&
+                new Date(b.end) > new Date()
+
+              return (
+                <tr key={b.id} style={tableRow}>
+
+                  <td style={tableCell}>{fmtDate(b.start)}</td>
+
+                  <td style={tableCell}>
+                    {fmtTime(b.start)}–{fmtTime(b.end)}
+                  </td>
+
+                  {/* === услуги === */}
+                  <td style={{ ...tableCell, maxWidth: 260 }}>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: "wrap" }}>
+                      {b.services?.map(s => (
+                        <div key={s} style={{
+                          padding: "4px 9px",
+                          borderRadius: 8,
+                          fontSize: 12,
+                          background: SERVICE_STYLES[s]?.bg,
+                          border: SERVICE_STYLES[s]?.border
+                        }}>
+                          {s}
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+
+                  {/* === цена === */}
+                  <td style={tableCell}>{b.price ? `${b.price} €` : '—'}</td>
+
+                  {/* === длительность === */}
+                  <td style={tableCell}>{formatDuration(b.durationMinutes)}</td>
+
+                  {/* === статус === */}
+                  <td style={tableCell}>{statusLabel(b)}</td>
+
+                  {/* === кнопки === */}
+                  <td style={tableCell}>
+                    {b.price && (
+                      <button
+                        onClick={() => handlePay(b)}
+                        style={payBtn}
+                      >
+                        💳 Оплатить
+                      </button>
+                    )}
+
+                    {canCancel && (
+                      <button
+                        style={cancelBtn}
+                        onClick={() => cancel(b.id)}
+                      >
+                        {t('cancel')}
+                      </button>
+                    )}
+                  </td>
+
+                </tr>
+              )
+            })}
           </tbody>
         </table>
-
-        {filtered.length === 0 && (
-          <div style={{ textAlign: "center", marginTop: 20, opacity: 0.75 }}>
-            Нет записей
-          </div>
-        )}
       </div>
-
-      {/* Payment dot animation */}
-      <style>{`
-        @keyframes pulse {
-          0% { transform: scale(1); opacity: .8; }
-          50% { transform: scale(1.45); opacity: 1; }
-          100% { transform: scale(1); opacity: .8; }
-        }
-      `}</style>
     </div>
   )
+}
+
+/* === Стили === */
+const wrapper = { width: "100%" }
+
+const bookingsCard = {
+  background: "rgba(255,255,255,0.03)",
+  border: "1px solid rgba(168,85,247,0.25)",
+  borderRadius: 16,
+  padding: 16,
+  width: "100%"
+}
+
+const bookingsHeader = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 12
+}
+
+const filterButtons = {
+  display: "flex",
+  gap: 8
+}
+
+const filterBtn = (active) => ({
+  padding: "8px 14px",
+  borderRadius: 10,
+  color: "#fff",
+  cursor: "pointer",
+  background: active ? "rgba(150,80,255,0.45)" : "rgba(25,10,45,0.4)",
+  border: active
+    ? "1px solid rgba(168,85,247,0.7)"
+    : "1px solid rgba(168,85,247,0.25)"
+})
+
+const table = {
+  width: "100%",
+  borderCollapse: "collapse",
+  marginTop: 10
+}
+
+const tableCell = {
+  padding: "10px 8px",
+  fontSize: 14,
+  textAlign: "left",
+  color: "#fff",
+  verticalAlign: "top"
+}
+
+const tableRow = {
+  borderBottom: "1px solid rgba(168,85,247,0.2)"
+}
+
+const cancelBtn = {
+  padding: "6px 12px",
+  marginTop: 4,
+  borderRadius: 10,
+  border: "1px solid rgba(239,68,68,.7)",
+  background: "rgba(110,20,30,.4)",
+  color: "#fff",
+  cursor: "pointer"
+}
+
+const payBtn = {
+  padding: "6px 12px",
+  marginBottom: 4,
+  borderRadius: 10,
+  border: "1px solid rgba(34,197,94,.7)",
+  background: "rgba(22,100,40,.45)",
+  color: "#bbf7d0",
+  cursor: "pointer"
 }
