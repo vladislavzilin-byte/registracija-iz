@@ -9,6 +9,30 @@ import {
 import { exportBookingsToCSV } from '../lib/export'
 import { useI18n } from '../lib/i18n'
 
+/* === Цвета услуг === */
+const serviceStyles = {
+  "Šukuosena": {
+    bg: "rgba(150, 80, 255, 0.17)",
+    border: "1px solid rgba(150, 80, 255, 0.35)"
+  },
+  "Tresų nuoma": {
+    bg: "rgba(80, 200, 255, 0.18)",
+    border: "1px solid rgba(80, 200, 255, 0.35)"
+  },
+  "Papuošalų nuoma": {
+    bg: "rgba(255, 180, 50, 0.18)",
+    border: "1px solid rgba(255, 180, 50, 0.35)"
+  },
+  "Atvykimas": {
+    bg: "rgba(255, 70, 70, 0.18)",
+    border: "1px solid rgba(255, 70, 70, 0.35)"
+  },
+  "Konsultacija": {
+    bg: "rgba(90, 255, 150, 0.18)",
+    border: "1px solid rgba(90, 255, 150, 0.35)"
+  }
+}
+
 export default function Admin() {
   const me = getCurrentUser()
   const isAdmin = me && (me.role === 'admin' || ADMINS.includes(me.email))
@@ -44,8 +68,12 @@ export default function Admin() {
 
   const stats = useMemo(() => {
     const total = bookings.length
-    const active = bookings.filter(b => b.status === 'approved' || b.status === 'pending').length
-    const canceled = bookings.filter(b => b.status === 'canceled_client' || b.status === 'canceled_admin').length
+    const active =
+      bookings.filter(b => b.status === 'approved' || b.status === 'pending').length
+    const canceled =
+      bookings.filter(b =>
+        b.status === 'canceled_client' || b.status === 'canceled_admin'
+      ).length
     return { total, active, canceled }
   }, [bookings])
 
@@ -94,10 +122,13 @@ export default function Admin() {
   const statusLabel = (b) =>
     b.status === 'approved' ? '🟢 ' + t('approved')
       : b.status === 'pending' ? '🟡 ' + t('pending')
-      : (b.status === 'canceled_client' ? '❌ ' + t('canceled_by_client') : '🔴 ' + t('canceled_by_admin'))
+      : (b.status === 'canceled_client'
+        ? '❌ ' + t('canceled_by_client')
+        : '🔴 ' + t('canceled_by_admin'))
 
   return (
     <div className="col" style={{ gap: 16 }}>
+
       {/* === РЕДАКТИРОВАТЬ НАСТРОЙКИ === */}
       <div style={{ width: '100%' }}>
         <div style={cardAurora}>
@@ -138,6 +169,7 @@ export default function Admin() {
                     {generateTimes(0, 12).map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
+
                 <div className="col">
                   <label style={labelStyle}>{t('day_end')}</label>
                   <select style={inputGlass}
@@ -146,15 +178,19 @@ export default function Admin() {
                     {generateTimes(12, 24).map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
+
                 <div className="col">
                   <label style={labelStyle}>{t('slot_minutes')}</label>
                   <select style={inputGlass}
                     value={settings.slotMinutes}
                     onChange={e => update({ slotMinutes: parseInt(e.target.value, 10) })}>
-                    {[15, 30, 45, 60].map(m => <option key={m} value={m}>{m}</option>)}
+                    {[15, 30, 45, 60].map(m =>
+                      <option key={m} value={m}>{m}</option>
+                    )}
                   </select>
                 </div>
               </div>
+
             </div>
           </div>
         </div>
@@ -167,6 +203,7 @@ export default function Admin() {
             <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>Все записи</div>
           </div>
 
+          {/* Фильтры */}
           <div style={{ display: 'flex', gap: 10, margin: '8px 0 12px 0', flexWrap: 'wrap' }}>
             <input
               style={{ ...inputGlass, flex: '1 1 260px' }}
@@ -174,6 +211,7 @@ export default function Admin() {
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
+
             <div style={segmented}>
               {[
                 { v: 'all', label: t('all') },
@@ -185,19 +223,26 @@ export default function Admin() {
                 <button
                   key={it.v}
                   onClick={() => setStatusFilter(it.v)}
-                  style={{ ...segBtn, ...(statusFilter === it.v ? segActive : {}) }}
+                  style={{
+                    ...segBtn,
+                    ...(statusFilter === it.v ? segActive : {})
+                  }}
                 >
                   {it.label}
                 </button>
               ))}
             </div>
-            <button style={{ ...btnPrimary, flex: '1' }} onClick={handleExport}>{t('export')}</button>
+
+            <button style={{ ...btnPrimary, flex: '1' }} onClick={handleExport}>
+              {t('export')}
+            </button>
           </div>
 
           <div className="badge" style={{ marginBottom: 10 }}>
             {t('total')}: {stats.total} • {t('total_active')}: {stats.active} • {t('total_canceled')}: {stats.canceled}
           </div>
 
+          {/* Таблица */}
           <table className="table" style={{ marginTop: 6 }}>
             <thead>
               <tr>
@@ -205,41 +250,114 @@ export default function Admin() {
                 <th>Instagram</th>
                 <th>Дата</th>
                 <th>Время</th>
+
+                {/* Новая колонка УСЛУГИ */}
+                <th>Услуги</th>
+
                 <th>{t('status')}</th>
                 <th></th>
               </tr>
             </thead>
+
             <tbody>
               {filtered.map(b => {
                 const inFuture = new Date(b.start) > new Date()
+
                 return (
                   <tr key={b.id} style={{ opacity: b.status === 'approved' ? 1 : .97 }}>
-                    <td><b>{b.userName}</b><div className="muted" style={{ fontSize: 12 }}>{b.userPhone}</div></td>
-                    <td>{b.userInstagram || '-'}</td>
-                    <td>{fmtDate(b.start)}</td>
-                    <td>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
-                    <td>{statusLabel(b)}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      {b.status === 'pending' && <button style={btnOk} onClick={() => approveByAdmin(b.id)}>{t('approve')}</button>}
-                      {b.status !== 'canceled_admin' && b.status !== 'canceled_client' && inFuture &&
-                        <button style={btnDanger} onClick={() => cancelByAdmin(b.id)}>{t('rejected')}</button>}
+
+                    {/* Клиент */}
+                    <td>
+                      <b>{b.userName}</b>
+                      <div className="muted" style={{ fontSize: 12 }}>{b.userPhone}</div>
                     </td>
+
+                    {/* Instagram */}
+                    <td>{b.userInstagram || '-'}</td>
+
+                    {/* Дата */}
+                    <td>{fmtDate(b.start)}</td>
+
+                    {/* Время */}
+                    <td>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
+
+                    {/* === УСЛУГИ === */}
+                    <td>
+                      {Array.isArray(b.services) && b.services.length > 0 ? (
+                        <div style={{
+                          display: "flex",
+                          gap: "6px",
+                          flexWrap: "wrap"
+                        }}>
+                          {b.services.map((s, i) => {
+                            const st = serviceStyles[s] || {
+                              bg: "rgba(255,255,255,0.08)",
+                              border: "1px solid rgba(255,255,255,0.15)"
+                            }
+
+                            return (
+                              <div
+                                key={i}
+                                style={{
+                                  padding: "4px 10px",
+                                  borderRadius: 10,
+                                  background: st.bg,
+                                  border: st.border,
+                                  fontSize: 12,
+                                  whiteSpace: "nowrap",
+                                  backdropFilter: "blur(6px)",
+                                }}
+                              >
+                                {s}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : "—"}
+                    </td>
+
+                    {/* Статус */}
+                    <td>{statusLabel(b)}</td>
+
+                    {/* Кнопки */}
+                    <td style={{ textAlign: 'right' }}>
+                      {b.status === 'pending' &&
+                        <button style={btnOk} onClick={() => approveByAdmin(b.id)}>
+                          {t('approve')}
+                        </button>}
+
+                      {b.status !== 'canceled_admin' &&
+                        b.status !== 'canceled_client' &&
+                        inFuture &&
+                        <button style={btnDanger} onClick={() => cancelByAdmin(b.id)}>
+                          {t('rejected')}
+                        </button>}
+                    </td>
+
                   </tr>
                 )
               })}
+
               {!filtered.length && (
-                <tr><td colSpan="6"><small className="muted">{t('no_records')}</small></td></tr>
+                <tr><td colSpan="7">
+                  <small className="muted">{t('no_records')}</small>
+                </td></tr>
               )}
             </tbody>
           </table>
-          {toast && <div className="toast" style={{ marginTop: 10 }}>{toast}</div>}
+
+          {toast && (
+            <div className="toast" style={{ marginTop: 10 }}>
+              {toast}
+            </div>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
-/* === Дополнительные функции === */
+/* === Иконка стрелки === */
 function Chevron({ open }) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#cbb6ff" strokeWidth="2">
