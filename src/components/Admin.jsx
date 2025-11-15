@@ -46,26 +46,6 @@ const serviceStyles = {
   },
 }
 
-/* ===== helpers для дат/времени ===== */
-const pad2 = (n) => String(n).padStart(2, '0')
-
-const toInputDate = (dateLike) => {
-  const d = new Date(dateLike)
-  if (isNaN(d)) return ''
-  const y = d.getFullYear()
-  const m = pad2(d.getMonth() + 1)
-  const day = pad2(d.getDate())
-  return `${y}-${m}-${day}`
-}
-
-const toInputTime = (dateLike) => {
-  const d = new Date(dateLike)
-  if (isNaN(d)) return ''
-  const hh = pad2(d.getHours())
-  const mm = pad2(d.getMinutes())
-  return `${hh}:${mm}`
-}
-
 export default function Admin() {
   const me = getCurrentUser()
   const isAdmin = me && (me.role === 'admin' || ADMINS.includes(me.email))
@@ -96,6 +76,9 @@ export default function Admin() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [toast, setToast] = useState(null)
+
+  // модалка редактирования записи
+  const [editModal, setEditModal] = useState(null) // { id, date, timeFrom, timeTo, price }
 
   const updateSettings = (patch) => {
     const next = { ...settings, ...patch }
@@ -145,37 +128,34 @@ export default function Admin() {
     return arr
   }, [bookings, search, statusFilter])
 
-  // === helper для обновления одной записи ===
-  const updateBooking = (id, updater) => {
-    const all = getBookings()
-    const next = all.map((b) => (b.id === id ? updater(b) : b))
+  // === ДЕЙСТВИЯ С ЗАПИСЯМИ ===
+  const cancelByAdmin = (id) => {
+    if (!confirm('Отменить эту запись?')) return
+    const next = getBookings().map((b) =>
+      b.id === id
+        ? { ...b, status: 'canceled_admin', canceledAt: new Date().toISOString() }
+        : b
+    )
     saveBookings(next)
     setBookings(next)
   }
 
-  // === ДЕЙСТВИЯ С ЗАПИСЯМИ ===
-  const cancelByAdmin = (id) => {
-    if (!confirm('Отменить эту запись?')) return
-    updateBooking(id, (b) => ({
-      ...b,
-      status: 'canceled_admin',
-      canceledAt: new Date().toISOString(),
-    }))
-  }
-
   const approveByAdmin = (id) => {
-    updateBooking(id, (b) => ({
-      ...b,
-      status: 'approved',
-      approvedAt: new Date().toISOString(),
-    }))
+    const next = getBookings().map((b) =>
+      b.id === id
+        ? { ...b, status: 'approved', approvedAt: new Date().toISOString() }
+        : b
+    )
+    saveBookings(next)
+    setBookings(next)
   }
 
   const togglePaid = (id) => {
-    updateBooking(id, (b) => ({
-      ...b,
-      paid: !b.paid,
-    }))
+    const next = getBookings().map((b) =>
+      b.id === id ? { ...b, paid: !b.paid } : b
+    )
+    saveBookings(next)
+    setBookings(next)
   }
 
   const handleExport = () => {
@@ -221,6 +201,82 @@ export default function Admin() {
     const next = services.filter((_, i) => i !== index)
     updateSettings({ serviceList: next })
   }
+
+  // === РЕДАКТИРОВАНИЕ ЗАПИСИ (дата, время, аванс) ===
+  const openEditModal = (b) => {
+    const start = new Date(b.start)
+    const end = new Date(b.end)
+
+    const toHM = (d) =>
+      String(d.getHours()).padStart(2, '0') +
+      ':' +
+      String(d.getMinutes()).padStart(2, '0')
+
+    setEditModal({
+      id: b.id,
+      date: start.toISOString().slice(0, 10), // YYYY-MM-DD
+      timeFrom: toHM(start),
+      timeTo: toHM(end),
+      price: b.price ?? 0,
+    })
+  }
+
+  const parseTimeHM = (str) => {
+    if (!str) return null
+    const [hStr, mStr] = str.split(':')
+    const h = Number(hStr)
+    const m = Number(mStr)
+    if (
+      Number.isNaN(h) ||
+      Number.isNaN(m) ||
+      h < 0 ||
+      h > 23 ||
+      m < 0 ||
+      m > 59
+    ) {
+      return null
+    }
+    return { h, m }
+  }
+
+  const saveEditModal = () => {
+    if (!editModal) return
+    const { id, date, timeFrom, timeTo, price } = editModal
+    if (!date || !timeFrom || !timeTo) {
+      alert('Укажите дату и время от/до в формате ЧЧ:ММ')
+      return
+    }
+
+    const tf = parseTimeHM(timeFrom)
+    const tt = parseTimeHM(timeTo)
+    if (!tf || !tt) {
+      alert('Неверный формат времени. Пример: 09:30 или 18:45')
+      return
+    }
+
+    const base = new Date(date + 'T00:00:00')
+    const start = new Date(base)
+    start.setHours(tf.h, tf.m, 0, 0)
+    const end = new Date(base)
+    end.setHours(tt.h, tt.m, 0, 0)
+
+    const next = getBookings().map((b) =>
+      b.id === id
+        ? {
+            ...b,
+            start: start.toISOString(),
+            end: end.toISOString(),
+            price: Number(price) || 0,
+          }
+        : b
+    )
+
+    saveBookings(next)
+    setBookings(next)
+    setEditModal(null)
+  }
+
+  const closeEditModal = () => setEditModal(null)
 
   return (
     <div className="col" style={{ gap: 16 }}>
@@ -442,13 +498,11 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* === ВСЕ ЗАПИСИ (КАРТОЧКИ) === */}
+      {/* === ВСЕ ЗАПИСИ — КАРТОЧКИ === */}
       <div style={{ width: '100%' }}>
         <div style={cardAurora}>
           <div style={topBar}>
-            <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>
-              Все записи
-            </div>
+            <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>Все записи</div>
           </div>
 
           <div
@@ -498,7 +552,6 @@ export default function Admin() {
             {t('total_canceled')}: {stats.canceled}
           </div>
 
-          {/* === КАРТОЧКИ ЗАПИСЕЙ === */}
           <div
             style={{
               display: 'flex',
@@ -511,14 +564,12 @@ export default function Admin() {
               const inFuture = new Date(b.start) > new Date()
               const servicesArr = Array.isArray(b.services) ? b.services : []
 
-              const startDate = new Date(b.start)
-              const endDate = new Date(b.end || b.start)
-
               const serviceTagStyle = (name) => {
-                const st = serviceStyles[name] || {
-                  bg: 'rgba(148,163,184,0.15)',
-                  border: '1px solid rgba(148,163,184,0.7)',
-                }
+                const st =
+                  serviceStyles[name] || {
+                    bg: 'rgba(148,163,184,0.15)',
+                    border: '1px solid rgba(148,163,184,0.7)',
+                  }
                 return {
                   padding: '4px 12px',
                   borderRadius: 999,
@@ -541,182 +592,69 @@ export default function Admin() {
                     gap: 10,
                   }}
                 >
-                  {/* HEADER: статус + ДАТА + ВРЕМЯ ОТ/ДО */}
+                  {/* HEADER: дата + время + точка статуса */}
                   <div
                     style={{
                       display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 10,
                       alignItems: 'center',
+                      gap: 10,
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
                     }}
                   >
-                    {/* статус-точка */}
-                    <span
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: '50%',
-                        background:
-                          b.status === 'approved'
-                            ? '#22c55e'
-                            : b.status === 'pending'
-                            ? '#eab308'
-                            : '#ef4444',
-                        boxShadow:
-                          b.status === 'approved'
-                            ? '0 0 8px rgba(34,197,94,0.9)'
-                            : b.status === 'pending'
-                            ? '0 0 8px rgba(234,179,8,0.9)'
-                            : '0 0 8px rgba(248,113,113,0.9)',
-                      }}
-                    />
-
-                    {/* ДАТА (редактируемая) */}
-                    <div style={{ minWidth: 150 }}>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          opacity: 0.8,
-                          marginBottom: 3,
-                        }}
-                      >
-                        Дата
-                      </div>
-                      <input
-                        type="date"
-                        value={toInputDate(startDate)}
-                        style={{
-                          ...inputGlass,
-                          padding: '6px 10px',
-                          height: '32px',
-                        }}
-                        onChange={(e) => {
-                          const val = e.target.value // YYYY-MM-DD
-                          if (!val) return
-                          const [y, m, d] = val.split('-').map(Number)
-                          updateBooking(b.id, (orig) => {
-                            const oldStart = new Date(orig.start)
-                            const oldEnd = new Date(orig.end || orig.start)
-                            const duration =
-                              oldEnd.getTime() - oldStart.getTime()
-
-                            const newStart = new Date(oldStart)
-                            newStart.setFullYear(y, (m || 1) - 1, d || 1)
-
-                            const newEnd = new Date(
-                              newStart.getTime() + Math.max(duration, 15 * 60000)
-                            )
-
-                            return {
-                              ...orig,
-                              start: newStart,
-                              end: newEnd,
-                            }
-                          })
-                        }}
-                      />
-                    </div>
-
-                    {/* ВРЕМЯ ОТ */}
-                    <div style={{ minWidth: 120 }}>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          opacity: 0.8,
-                          marginBottom: 3,
-                        }}
-                      >
-                        Время от
-                      </div>
-                      <input
-                        type="time"
-                        value={toInputTime(startDate)}
-                        style={{
-                          ...inputGlass,
-                          padding: '6px 10px',
-                          height: '32px',
-                        }}
-                        onChange={(e) => {
-                          const val = e.target.value // HH:MM
-                          if (!val) return
-                          const [hh, mm] = val.split(':').map(Number)
-                          updateBooking(b.id, (orig) => {
-                            const oldStart = new Date(orig.start)
-                            const oldEnd = new Date(orig.end || orig.start)
-
-                            const newStart = new Date(oldStart)
-                            newStart.setHours(hh || 0, mm || 0, 0, 0)
-
-                            let newEnd = new Date(oldEnd)
-                            if (newEnd <= newStart) {
-                              newEnd = new Date(
-                                newStart.getTime() + 15 * 60000
-                              )
-                            }
-
-                            return {
-                              ...orig,
-                              start: newStart,
-                              end: newEnd,
-                            }
-                          })
-                        }}
-                      />
-                    </div>
-
-                    {/* ВРЕМЯ ДО */}
-                    <div style={{ minWidth: 120 }}>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          opacity: 0.8,
-                          marginBottom: 3,
-                        }}
-                      >
-                        Время до
-                      </div>
-                      <input
-                        type="time"
-                        value={toInputTime(endDate)}
-                        style={{
-                          ...inputGlass,
-                          padding: '6px 10px',
-                          height: '32px',
-                        }}
-                        onChange={(e) => {
-                          const val = e.target.value // HH:MM
-                          if (!val) return
-                          const [hh, mm] = val.split(':').map(Number)
-                          updateBooking(b.id, (orig) => {
-                            const oldStart = new Date(orig.start)
-                            let newEnd = new Date(oldStart)
-                            newEnd.setHours(hh || 0, mm || 0, 0, 0)
-
-                            if (newEnd <= oldStart) {
-                              newEnd = new Date(
-                                oldStart.getTime() + 15 * 60000
-                              )
-                            }
-
-                            return {
-                              ...orig,
-                              end: newEnd,
-                            }
-                          })
-                        }}
-                      />
-                    </div>
-
-                    {/* Текстовый вид времени (для контроля) */}
                     <div
                       style={{
-                        marginLeft: 'auto',
-                        fontSize: 13,
-                        opacity: 0.8,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
                       }}
                     >
-                      {fmtTime(b.start)} – {fmtTime(b.end)}
+                      <span
+                        style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          background:
+                            b.status === 'approved'
+                              ? '#22c55e'
+                              : b.status === 'pending'
+                              ? '#eab308'
+                              : '#ef4444',
+                          boxShadow:
+                            b.status === 'approved'
+                              ? '0 0 8px rgba(34,197,94,0.9)'
+                              : b.status === 'pending'
+                              ? '0 0 8px rgba(234,179,8,0.9)'
+                              : '0 0 8px rgba(248,113,113,0.9)',
+                        }}
+                      />
+
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 17 }}>
+                          {fmtDate(b.start)}
+                        </div>
+                        <div style={{ opacity: 0.9 }}>
+                          {fmtTime(b.start)} — {fmtTime(b.end)}
+                        </div>
+                      </div>
                     </div>
+
+                    {/* маленькая кнопка редактирования */}
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(b)}
+                      style={{
+                        borderRadius: 999,
+                        padding: '6px 12px',
+                        border: '1px solid rgba(148,163,184,0.7)',
+                        background: 'rgba(15,23,42,0.9)',
+                        color: '#e5e7eb',
+                        fontSize: 12,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ✏️ Изменить дату/время
+                    </button>
                   </div>
 
                   {/* УСЛУГИ — цветные теги */}
@@ -728,14 +666,11 @@ export default function Admin() {
                       marginTop: 4,
                     }}
                   >
-                    {servicesArr.map((sName, i) => (
-                      <span key={i} style={serviceTagStyle(sName)}>
-                        {sName}
+                    {servicesArr.map((s, i) => (
+                      <span key={i} style={serviceTagStyle(s)}>
+                        {s}
                       </span>
                     ))}
-                    {servicesArr.length === 0 && (
-                      <span className="muted">Без услуг</span>
-                    )}
                   </div>
 
                   {/* КЛИЕНТ */}
@@ -751,7 +686,7 @@ export default function Admin() {
                     )}
                   </div>
 
-                  {/* ОПЛАТА + СУММА АВАНСА */}
+                  {/* ОПЛАТА + сумма аванса */}
                   <div
                     style={{
                       marginTop: 6,
@@ -764,13 +699,7 @@ export default function Admin() {
                       gap: 6,
                     }}
                   >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                      }}
-                    >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span
                         style={{
                           width: 10,
@@ -789,55 +718,20 @@ export default function Admin() {
                           fontWeight: 600,
                         }}
                       >
-                        {b.paid ? 'Apmokėta' : 'Neapmokėta'}
+                        {b.paid ? 'Оплачено' : 'Не оплачено'}
                       </span>
                     </div>
 
-                    {/* СУММА АВАНСА (редактируемая) */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: 8,
-                        alignItems: 'center',
-                        marginTop: 2,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 13,
-                          opacity: 0.85,
-                          minWidth: 90,
-                        }}
-                      >
-                        Avansas (€):
-                      </span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={b.price ?? ''}
-                        style={{
-                          ...inputGlass,
-                          maxWidth: 120,
-                          padding: '6px 10px',
-                          height: '32px',
-                        }}
-                        onChange={(e) => {
-                          const val = e.target.value
-                          const num = val === '' ? null : Number(val) || 0
-                          updateBooking(b.id, (orig) => ({
-                            ...orig,
-                            price: num,
-                          }))
-                        }}
-                      />
+                    <div style={{ fontSize: 13, opacity: 0.9 }}>
+                      Сумма аванса:{' '}
+                      <b>{b.price ? `${b.price} €` : '—'}</b>
                     </div>
 
-                    {b.price != null && b.price !== '' && (
+                    {b.price && (
                       <button
                         onClick={() => togglePaid(b.id)}
                         style={{
-                          marginTop: 6,
+                          marginTop: 4,
                           width: '100%',
                           padding: '8px 0',
                           borderRadius: 8,
@@ -875,7 +769,7 @@ export default function Admin() {
                           cursor: 'pointer',
                         }}
                       >
-                        {t('approve')}
+                        Подтвердить
                       </button>
                     )}
 
@@ -894,7 +788,7 @@ export default function Admin() {
                             cursor: 'pointer',
                           }}
                         >
-                          {t('rejected')}
+                          Отменить
                         </button>
                       )}
                   </div>
@@ -916,6 +810,89 @@ export default function Admin() {
           )}
         </div>
       </div>
+
+      {/* === МОДАЛКА РЕДАКТИРОВАНИЯ ДАТЫ/ВРЕМЕНИ === */}
+      {editModal && (
+        <div style={modalBackdrop} onClick={closeEditModal}>
+          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, marginBottom: 12 }}>
+              Редактировать запись
+            </h3>
+
+            <div className="col" style={{ gap: 10 }}>
+              <label style={labelStyle}>Дата</label>
+              <input
+                type="date"
+                style={inputGlass}
+                value={editModal.date}
+                onChange={(e) =>
+                  setEditModal((m) => ({ ...m, date: e.target.value }))
+                }
+              />
+
+              <label style={labelStyle}>Время от (ЧЧ:ММ)</label>
+              <input
+                type="text"
+                style={inputGlass}
+                placeholder="10:00"
+                value={editModal.timeFrom}
+                onChange={(e) =>
+                  setEditModal((m) => ({ ...m, timeFrom: e.target.value }))
+                }
+              />
+
+              <label style={labelStyle}>Время до (ЧЧ:ММ)</label>
+              <input
+                type="text"
+                style={inputGlass}
+                placeholder="13:00"
+                value={editModal.timeTo}
+                onChange={(e) =>
+                  setEditModal((m) => ({ ...m, timeTo: e.target.value }))
+                }
+              />
+
+              <label style={labelStyle}>Сумма аванса (€)</label>
+              <input
+                type="number"
+                min="0"
+                style={inputGlass}
+                value={editModal.price}
+                onChange={(e) =>
+                  setEditModal((m) => ({
+                    ...m,
+                    price: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: 8,
+                marginTop: 18,
+              }}
+            >
+              <button
+                type="button"
+                onClick={closeEditModal}
+                style={{
+                  ...btnBase,
+                  background: 'rgba(15,23,42,0.9)',
+                  border: '1px solid rgba(148,163,184,0.7)',
+                }}
+              >
+                Отмена
+              </button>
+              <button type="button" style={btnPrimary} onClick={saveEditModal}>
+                Сохранить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -931,11 +908,7 @@ function Chevron({ open }) {
       stroke="#cbb6ff"
       strokeWidth="2"
     >
-      {open ? (
-        <path d="M6 15l6-6 6 6" />
-      ) : (
-        <path d="M6 9l6 6 6-6" />
-      )}
+      {open ? <path d="M6 15l6-6 6 6" /> : <path d="M6 9l6 6 6-6" />}
     </svg>
   )
 }
@@ -1039,4 +1012,25 @@ const segActive = {
     'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
   border: '1px solid rgba(180,95,255,0.7)',
   boxShadow: '0 0 12px rgba(150,90,255,0.30)',
+}
+
+const modalBackdrop = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(0,0,0,0.65)',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 3000,
+}
+
+const modalCard = {
+  background: 'rgba(17,0,40,0.9)',
+  border: '1px solid rgba(168,85,247,0.5)',
+  borderRadius: 18,
+  padding: '18px 20px 20px',
+  color: '#fff',
+  width: '100%',
+  maxWidth: 420,
+  boxShadow: '0 18px 45px rgba(0,0,0,0.6)',
 }
