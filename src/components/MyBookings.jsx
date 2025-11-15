@@ -36,14 +36,7 @@ export default function MyBookings() {
       border: "1px solid rgba(80,255,150,0.5)"
     }
   }
-const formatDuration = (minutes) => {
-  if (!minutes) return '—'
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  if (h && m) return `${h} val. ${m} min.`
-  if (h) return `${h} val.`
-  return `${m} min.`
-}
+
   // === Форматирование ===
   const fmtDate = d => new Date(d).toLocaleDateString()
   const fmtTime = d => new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
