@@ -311,13 +311,13 @@ export default function Auth({ onAuth }) {
               alignItems: "center",
             }}
           >
-            <button
+           <button
   onClick={logout}
   style={{
     ...logoutButton,
-    padding: "12px 34px",
-    borderRadius: "14px",
-    fontSize: "0.95rem",
+    padding: "14px 42px",
+    fontSize: "1.05rem",
+    borderRadius: "16px",
     whiteSpace: "nowrap",
   }}
 >
