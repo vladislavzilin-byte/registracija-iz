@@ -9,38 +9,37 @@ import {
 } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
 
-const SERVICE_PRICES = {
-  "Šukuosena": 50,
-  "Tresų nuoma": 25,
-  "Papuošalų nuoma": 10,
-  "Atvykimas": 50,
-  "Konsultacija": 10,
-}
-
-const SERVICE_DURATIONS = {
-  "Šukuosena": 60,      // 1 час
-  "Tresų nuoma": 15,    // 15 мин
-  "Papuošalų nuoma": 15,// 15 мин
-  "Atvykimas": 120,     // 2 часа
-  "Konsultacija": 30,   // 30 мин
-}
-
 function dayISO(d){ return new Date(d).toISOString().slice(0,10) }
 function toDateOnly(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()) }
+
+// дефолтные услуги на случай, если в settings ещё нет serviceList
+const DEFAULT_SERVICES = [
+  { name: 'Šukuosena', duration: 60, deposit: 50 },
+  { name: 'Tresų nuoma', duration: 15, deposit: 25 },
+  { name: 'Papuošalų nuoma', duration: 15, deposit: 10 },
+  { name: 'Atvykimas', duration: 180, deposit: 50 },
+  { name: 'Konsultacija', duration: 30, deposit: 10 }
+]
 
 export default function Calendar(){
   const { t } = useI18n()
   const settings = getSettings()
+
+  // список услуг из настроек
+  const serviceList =
+    Array.isArray(settings.serviceList) && settings.serviceList.length
+      ? settings.serviceList
+      : DEFAULT_SERVICES
 
   // -------------------------
   // KAINAS — accordion state
   // -------------------------
   const [openPrices, setOpenPrices] = useState(false)
 
-  // Автоматическое открытие/закрытие Kainas из App.jsx
+  // Автоматическое открытие Kainas из App.jsx
   useEffect(() => {
     const handler = () => {
-      setOpenPrices(prev => !prev)
+      setOpenPrices(prev => !prev)   // ← переключение!
     }
     window.addEventListener("togglePrices", handler)
     return () => window.removeEventListener("togglePrices", handler)
@@ -52,12 +51,14 @@ export default function Calendar(){
   const [processingISO, setProcessingISO] = useState(null)
   const [bookedISO, setBookedISO] = useState([])
   const [modal, setModal] = useState(null)
-  const [pendingTime, setPendingTime] = useState(null)
-  const [selectedServices, setSelectedServices] = useState([])
 
   const [hoverIdx, setHoverIdx] = useState(-1)
   const [animDir, setAnimDir] = useState(0)
   const touchStartX = useRef(null)
+
+  // услуги, выбранные в модалке
+  const [pendingTime, setPendingTime] = useState(null)
+  const [selectedServices, setSelectedServices] = useState([])
 
   const today = toDateOnly(new Date())
   const minDate = today
@@ -74,7 +75,6 @@ export default function Calendar(){
     return arr
   }, [currentMonth])
 
-  // ⚠️ тут один раз читаем бронирования
   const bookings = getBookings()
 
   const slotsForDay = (d) => {
@@ -99,50 +99,72 @@ export default function Calendar(){
     return slots
   }
 
-  // 🔒 АВТОМАТИЧЕСКОЕ ЗАКРЫТИЕ СЛОТОВ ПО ДЛИТЕЛЬНОСТИ
-  // слот считается занятым, если он попадает внутрь интервала [start, end) любой записи
+  // проверка: занято ли ВРЕМЯ t существующими бронями (учитываем всю длительность)
   const isTaken = (t) => {
-    const storedTaken = bookings.some(b => {
-      if (!(b.status === 'approved' || b.status === 'pending')) return false
+    const active = bookings.filter(
+      b => b.status === 'approved' || b.status === 'pending'
+    )
+
+    const byBookings = active.some(b => {
       const bs = new Date(b.start)
       const be = new Date(b.end)
-      return t >= bs && t < be
+      return t >= bs && t < be     // попадает в интервал брони
     })
 
     const isProc = processingISO && isSameMinute(processingISO, t)
-
-    // локально заблокированные слоты (только что забронированные)
     const isLocal = bookedISO.some(x => isSameMinute(x, t))
 
-    return storedTaken || isProc || isLocal
+    return byBookings || isProc || isLocal
   }
 
+  // проверка: свободен ли весь интервал [start, start+duration]
+  const isRangeFree = (start, durationMinutes) => {
+    const end = new Date(start.getTime() + durationMinutes * 60000)
+    const active = getBookings().filter(
+      b => b.status === 'approved' || b.status === 'pending'
+    )
+    return !active.some(b => {
+      const bs = new Date(b.start)
+      const be = new Date(b.end)
+      // пересечение интервалов
+      return bs < end && be > start
+    })
+  }
+
+  // helper: считаем общую длительность и залог по выбранным услугам
+  const calcTotals = (servicesNames) => {
+    let duration = 0
+    let price = 0
+    servicesNames.forEach(name => {
+      const s = serviceList.find(x => x.name === name)
+      if (!s) return
+      duration += Number(s.duration) || 0
+      price += Number(s.deposit) || 0
+    })
+    return { duration, price }
+  }
+
+  // открываем модалку при клике по времени
   const openTimeModal = (tSel) => {
-    if (toDateOnly(tSel) < today) {
+    if(toDateOnly(tSel) < today){
       alert(t('cannot_book_past') || 'Нельзя записываться на прошедшие даты')
       return
     }
     const user = getCurrentUser()
-    if (!user) {
-      alert(t('login_or_register'))
-      return
-    }
-    if (isTaken(tSel)) {
-      alert(t('already_booked'))
-      return
-    }
+    if(!user) { alert(t('login_or_register')); return }
+    if(isTaken(tSel)) { alert(t('already_booked')); return }
 
-    const end = new Date(tSel)
-    end.setMinutes(end.getMinutes() + settings.slotMinutes)
+    const endPreview = new Date(tSel)
+    endPreview.setMinutes(endPreview.getMinutes() + settings.slotMinutes)
 
     setPendingTime(tSel)
     setSelectedServices([])
 
     setModal({
-      title: t('booked_success'),
-      dateStr: format(tSel, 'dd.MM.yyyy'),
-      timeStr: format(tSel, 'HH:mm') + ' – ' + format(end, 'HH:mm'),
-      caption: t('wait_confirmation') + ' ' + t('details_in_my'),
+      title: 'Kokias paslaugas norėtumėte pasirinkti?',
+      dateStr: format(tSel,'dd.MM.yyyy'),
+      timeStr: format(tSel,'HH:mm') + ' – ' + format(endPreview,'HH:mm'),
+      caption: 'Trukmė ir suma priklauso nuo pasirinktų paslaugų.'
     })
   }
 
@@ -152,84 +174,77 @@ export default function Calendar(){
       alert('Pasirinkite bent vieną paslaugą.')
       return
     }
-
     const user = getCurrentUser()
     if (!user) {
       alert(t('login_or_register'))
       return
     }
 
-    const tSel = pendingTime
-
-    if (toDateOnly(tSel) < today) {
+    const start = pendingTime
+    if (toDateOnly(start) < today) {
       alert(t('cannot_book_past') || 'Нельзя записываться на прошедшие даты')
       return
     }
-    if (isTaken(tSel)) {
+    if (isTaken(start)) {
       alert(t('already_booked'))
       return
     }
 
-    // 🔢 считаем цену
-    const totalPrice = selectedServices.reduce(
-      (sum, s) => sum + (SERVICE_PRICES[s] || 0),
-      0
-    )
+    const { duration, price } = calcTotals(selectedServices)
+    const durationMinutes = duration || settings.slotMinutes
 
-    // ⏱ считаем длительность по услугам
-    let durationMinutes = selectedServices.reduce(
-      (sum, s) => sum + (SERVICE_DURATIONS[s] || 0),
-      0
-    )
-    // fallback — если что-то пошло не так
-    if (durationMinutes === 0) durationMinutes = settings.slotMinutes
+    // проверяем, свободен ли весь интервал
+    if (!isRangeFree(start, durationMinutes)) {
+      alert(t('already_booked') || 'Šiuo metu jau yra rezervacija.')
+      return
+    }
 
     setBusy(true)
-    setProcessingISO(new Date(tSel))
+    setProcessingISO(new Date(start))
 
-    const end = new Date(tSel)
-    end.setMinutes(end.getMinutes() + durationMinutes)
+    const end = new Date(start.getTime() + durationMinutes * 60000)
 
     const newB = {
       id: id(),
       userPhone: user.phone,
       userName: user.name,
       userInstagram: user.instagram || '',
-      start: tSel,
+      start,
       end,
       status: 'pending',
       createdAt: new Date().toISOString(),
       services: selectedServices,
-      price: totalPrice,          // 💰 цена
-      durationMinutes,            // ⏱ длительность
+      durationMinutes,
+      price,
+      paid: false
     }
 
-    setTimeout(() => {
-      saveBookings([...bookings, newB])
+    // локально отмечаем все слоты в интервале как занятые
+    const newLocalSlots = []
+    let cur = new Date(start)
+    while (cur < end) {
+      newLocalSlots.push(new Date(cur))
+      cur = new Date(cur.getTime() + settings.slotMinutes * 60000)
+    }
 
-      // 🟣 ЛОКАЛЬНО БЛОКИРУЕМ ВСЕ СЛОТЫ ПО ДЛИТЕЛЬНОСТИ
-      setBookedISO(prev => {
-        const arr = [...prev]
-        const step = settings.slotMinutes * 60000
-        const totalMs = durationMinutes * 60000
-        const slotsCount = Math.max(1, Math.round(totalMs / step))
-
-        for (let i = 0; i < slotsCount; i++) {
-          const slotTime = new Date(tSel.getTime() + i * step)
-          arr.push(slotTime)
-        }
-        return arr
-      })
-
+    setTimeout(()=>{
+      const current = getBookings()
+      saveBookings([ ...current, newB ])
+      setBookedISO(prev => [...prev, ...newLocalSlots])
       setBusy(false)
       setProcessingISO(null)
       setPendingTime(null)
       setSelectedServices([])
-      closeModal()
+      setModal(null)
     }, 600)
   }
 
-  const closeModal = () => setModal(null)
+  const closeModal = () => {
+    if (busy) return
+    setModal(null)
+    setPendingTime(null)
+    setSelectedServices([])
+  }
 
   const goPrev = () => { setAnimDir(-1); setCurrentMonth(m => addMonths(m,-1)) }
   const goNext = () => { setAnimDir(+1); setCurrentMonth(m => addMonths(m, 1)) }
@@ -265,8 +280,6 @@ export default function Calendar(){
     color: '#fff', fontWeight: 600
   }
 
-  const isToday = (d) => isSameDay(toDateOnly(d), today)
-
   const dateCellStyle = (d, idx, active, isPast) => {
     const base = {
       borderRadius: 12,
@@ -290,6 +303,10 @@ export default function Calendar(){
       base.boxShadow = '0 0 24px rgba(168,85,247,0.55)'
       base.background = 'rgba(98,0,180,0.22)'
       base.fontWeight = 700
+    }
+
+    if(isPast){
+      base.position = "relative"
     }
 
     return base
@@ -317,23 +334,17 @@ export default function Calendar(){
         }
 
         @keyframes spin { to{ transform: rotate(360deg); } }
-        @keyframes fadeSlideLeft {
-          from { opacity:0; transform: translateY(6px); }
-          to { opacity:1; transform: translateY(0); }
-        }
-
         .modal-backdrop {
           position: fixed; inset: 0; background: rgba(0,0,0,0.55);
           display:flex; align-items:center; justify-content:center; z-index: 9999;
           backdrop-filter: blur(2px);
         }
         .modal {
-          background: rgba(17, 0, 40, 0.65);
+          background: rgba(17, 0, 40, 0.85);
           border: 1px solid rgba(168,85,247,0.35);
           border-radius: 16px; padding: 20px; color: #fff;
           box-shadow: 0 8px 32px rgba(120,0,255,0.35);
           min-width: 280px;
-          animation: fadeSlideLeft .25s ease both;
         }
         .loader {
           width: 18px; height: 18px; border-radius: 50%;
@@ -342,14 +353,6 @@ export default function Calendar(){
           animation: spin .8s linear infinite;
           display:inline-block; vertical-align:middle;
         }
-
-        .datebtn.past::after {
-          content: '';
-          display:block;
-          width:6px; height:6px; border-radius:50%;
-          background: rgba(150,150,170,0.4);
-          margin:6px auto 0;
-        }
       `}</style>
 
       {/* ------------------------- */}
@@ -357,7 +360,6 @@ export default function Calendar(){
       {/* ------------------------- */}
 
       <div
-        id="kainas-section"
         style={{
           width: "100%",
           border: "1px solid rgba(170, 90, 255, 0.22)",
@@ -371,7 +373,6 @@ export default function Calendar(){
           boxShadow: "0 0 28px rgba(170, 90, 255, 0.18)",
         }}
       >
-        {/* Заголовок */}
         <h2
           style={{
             margin: "0 0 18px 0",
@@ -384,7 +385,6 @@ export default function Calendar(){
           Kainas
         </h2>
 
-        {/* Кнопка-аккордеон */}
         <div
           onClick={() => setOpenPrices(!openPrices)}
           style={{
@@ -402,20 +402,19 @@ export default function Calendar(){
               : "0 0 12px rgba(180, 90, 255, 0.15)",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(210, 120, 255, 0.55)"
+            e.currentTarget.style.borderColor = "rgba(210, 120, 255, 0.55)";
             e.currentTarget.style.boxShadow =
-              "0 0 22px rgba(200, 110, 255, 0.48)"
-            e.currentTarget.style.background = "rgba(30, 24, 50, 0.92)"
+              "0 0 22px rgba(200, 110, 255, 0.48)";
+            e.currentTarget.style.background = "rgba(30, 24, 50, 0.92)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(180, 90, 255, 0.32)"
+            e.currentTarget.style.borderColor = "rgba(180, 90, 255, 0.32)";
             e.currentTarget.style.boxShadow = openPrices
               ? "0 0 20px rgba(180, 90, 255, 0.35)"
-              : "0 0 12px rgba(180, 90, 255, 0.15)"
-            e.currentTarget.style.background = "rgba(22,22,35,0.90)"
+              : "0 0 12px rgba(180, 90, 255, 0.15)";
+            e.currentTarget.style.background = "rgba(22,22,35,0.90)";
           }}
         >
-          {/* Стрелка слева */}
           <svg
             width="18"
             height="18"
@@ -430,62 +429,65 @@ export default function Calendar(){
             <path d="M7 10l5 5 5-5z" />
           </svg>
 
-          {/* Текст */}
           <span style={{ fontSize: 17, color: "#fff" }}>Žiūrėti kainas</span>
         </div>
 
-        {/* Контент аккордеона */}
         <div
           style={{
             maxHeight: openPrices ? 2000 : 0,
             overflow: "hidden",
-            transition: "max-height .4s ease",
+            transition: "max-height .55s cubic-bezier(.25,.8,.25,1)",
             marginTop: openPrices ? 20 : 0,
-            border: openPrices ? "1px solid rgba(180, 100, 255, 0.35)" : "none",
-            borderRadius: 16,
-            padding: openPrices ? "18px 18px 4px" : "0 18px",
-            background: "radial-gradient(circle at 0 0, rgba(110,60,255,0.25), transparent 55%), rgba(10,8,20,0.96)",
+            opacity: openPrices ? 1 : 0,
           }}
         >
-          <p
+          <div
             style={{
-              margin: "0 0 14px 0",
-              fontSize: 16,
-              color: "#e7ddff",
-              lineHeight: 1.4,
+              border: "1px solid rgba(170, 90, 255, 0.22)",
+              background: "rgba(15,15,28,0.90)",
+              borderRadius: 18,
+              padding: "22px 20px",
+              backdropFilter: "blur(16px)",
+              boxShadow: "0 0 20px rgba(150, 70, 255, 0.18)",
+              animation: openPrices ? "fadeIn .45s ease" : "none",
             }}
           >
-            Kainos gali keistis priklausomai nuo darbo apimties, plaukų ilgio ir
-            papildomų paslaugų. Tikslią sumą visada patikslinsiu prieš pradedant
-            darbą.
-          </p>
+            <style>
+              {`
+                @keyframes fadeIn {
+                  0% { opacity: 0; transform: translateY(6px); }
+                  100% { opacity: 1; transform: translateY(0); }
+                }
+              `}
+            </style>
 
-          <div style={{ marginTop: 10 }}>
             {[
               {
                 price: "80–130 €",
-                title: "Šukuosenos",
-                text: "Kaina priklauso nuo plaukų ilgio, tankio ir šukuosenos sudėtingumo.",
+                title: "Šukuosenos kaina",
+                text: "Priklauso nuo darbo apimties",
               },
               {
                 price: "25 €",
                 title: "Konsultacija",
-                text: "Aptariame jūsų norus, idėjas, plaukų būklę. Trukmė 30–60 min.",
+                text: "Užtrunkame nuo 30 min. iki valandos",
               },
               {
-                price: "50 € užstatas + 100 €",
-                title: "Plaukų tresų nuoma",
-                text: "Užstatas grąžinamas, kai per 3–4 d. grąžinate tresus.",
+                price: "50 € užstatas / 100 €",
+                title: "Plaukų Tresų nuoma",
+                text:
+                  "Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžinu užstatą",
               },
               {
                 price: "Iki 20 €",
                 title: "Papuošalų nuoma",
-                text: "Smeigtukai, segtukai, aksesuarai šukuosenai.",
+                text: "",
               },
               {
                 price: "130 €",
                 title: "Atvykimas Klaipėdoje",
-                text: "Atvykstu su savo priemonėmis. Važiavimo laikas įtraukiamas į paslaugos trukmę.",
+                text:
+                  "Daiktų kraustymai, važiavimai — per tą laiką galiu priimti kitą klientę.",
               },
             ].map((item, i) => (
               <div
@@ -516,32 +518,31 @@ export default function Calendar(){
         </div>
       </div>
 
-      {/* ------------------------- */}
-      {/*   NAVIGATION + MONTH     */}
-      {/* ------------------------- */}
-
-      <div style={{display:'flex',gap:16,alignItems:'center',justifyContent:'center',marginBottom:12}}>
+      {/* NAVIGATION + MONTH */}
+      <div
+        style={{
+          display:'flex',
+          gap:12,
+          alignItems:'center',
+          justifyContent:'center',
+          marginBottom:12,
+          flexWrap:'wrap'
+        }}
+      >
         <button
           style={navBtnStyle}
           onClick={goPrev}
-          onMouseDown={e=>e.currentTarget.style.background='rgba(31,0,63,0.7)'}
-          onMouseUp={e=>e.currentTarget.style.background='rgba(31,0,63,0.55)'}
         >
           ←
         </button>
 
-        <div
-          style={centerPillStyle}
-          className={animDir<0 ? 'month-enter-right' : animDir>0 ? 'month-enter-left' : ''}
-        >
+        <div style={centerPillStyle}>
           {monthLabel}
         </div>
 
         <button
           style={navBtnStyle}
           onClick={goNext}
-          onMouseDown={e=>e.currentTarget.style.background='rgba(31,0,63,0.7)'}
-          onMouseUp={e=>e.currentTarget.style.background='rgba(31,0,63,0.55)'}
         >
           →
         </button>
@@ -549,49 +550,50 @@ export default function Calendar(){
 
       <div className="hr" />
 
-      {/* GRID */}
-      <div className={animDir<0 ? 'month-enter-right' : animDir>0 ? 'month-enter-left' : ''}>
-        <div className="grid">
-          {['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map((w,i)=>(
-            <div key={i} className="muted" style={{textAlign:'center',fontWeight:600}}>{w}</div>
-          ))}
+      {/* CALENDAR GRID */}
+      <div className="grid">
+        {['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map((w,i)=>(
+          <div
+            key={i}
+            className="muted"
+            style={{textAlign:'center',fontWeight:600}}
+          >
+            {w}
+          </div>
+        ))}
 
-          {days.map((d,idx)=>{
-            const inMonth = isSameMonth(d,monthStart)
-            const active  = isSameDay(d,selectedDate)
-            const isPast = toDateOnly(d) < today
-            const disabled = isPast || toDateOnly(d) > toDateOnly(maxDate)
+        {days.map((d,idx)=>{
+          const inMonth = isSameMonth(d,monthStart)
+          const active  = isSameDay(d,selectedDate)
+          const isPast = toDateOnly(d) < today
+          const disabled = isPast || toDateOnly(d) > maxDate
 
-            return (
-              <div
-                key={idx}
-                className={
-                  'datebtn' +
-                  (active ? ' active' : '') +
-                  (isPast ? ' past-day-dot' : '')
-                }
-                onMouseEnter={()=>setHoverIdx(idx)}
-                onMouseLeave={()=>setHoverIdx(-1)}
-                onClick={()=>!disabled && setSelectedDate(d)}
-                style={{
-                  ...dateCellStyle(d, idx, active, isPast),
-                  opacity: inMonth ? 1 : 0.4,
-                  cursor: disabled ? 'default' : 'pointer'
-                }}
-              >
-                {format(d,'d')}
-              </div>
-            )
-          })}
-        </div>
+          return (
+            <div
+              key={idx}
+              className={
+                'datebtn' +
+                (active ? ' active' : '') +
+                (isPast ? ' past-day-dot' : '')
+              }
+              onMouseEnter={()=>setHoverIdx(idx)}
+              onMouseLeave={()=>setHoverIdx(-1)}
+              onClick={()=>!disabled && setSelectedDate(d)}
+              style={{
+                ...dateCellStyle(d, idx, active, isPast),
+                opacity: inMonth ? 1 : 0.4,
+                cursor: disabled ? 'default' : 'pointer'
+              }}
+            >
+              {format(d,'d')}
+            </div>
+          )
+        })}
       </div>
 
       <div className="hr" />
 
-      {/* ------------------------- */}
-      {/*          SLOTS            */}
-      {/* ------------------------- */}
-
+      {/* SLOTS */}
       <div>
         <div className="badge">
           {t('slots_for')} {format(selectedDate,'dd.MM.yyyy')}
@@ -645,54 +647,53 @@ export default function Calendar(){
         </div>
       </div>
 
-      {/* ------------------------- */}
-      {/*          MODAL            */}
-      {/* ------------------------- */}
-
+      {/* MODAL */}
       {modal && (
         <div className="modal-backdrop" onClick={closeModal}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
-            <h3 style={{marginTop:0}}>{modal.title}</h3>
+            <h3 style={{marginTop:0, marginBottom: 10}}>
+              {modal.title}
+            </h3>
 
             {pendingTime && (
-              <div style={{ marginTop: 12, marginBottom: 18, textAlign: 'center' }}>
-                <div style={{ fontSize: 18, marginBottom: 12, fontWeight: 500 }}>
-                  Какие услуги вы хотите выбрать?
+              <div style={{ marginTop: 8, marginBottom: 16 }}>
+                <div style={{ fontSize: 14, opacity: 0.8, marginBottom: 8 }}>
+                  Pasirinkite vieną ar kelias paslaugas:
                 </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {[
-                    "Šukuosena",
-                    "Tresų nuoma",
-                    "Papuošalų nuoma",
-                    "Atvykimas",
-                    "Konsultacija"
-                  ].map(service => (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {serviceList.map(s => (
                     <button
-                      key={service}
+                      key={s.name}
                       onClick={() => {
-                        setSelectedServices(prev => (
-                          prev.includes(service)
-                            ? prev.filter(s => s !== service)
-                            : [...prev, service]
-                        ))
+                        setSelectedServices(prev =>
+                          prev.includes(s.name)
+                            ? prev.filter(x => x !== s.name)
+                            : [...prev, s.name]
+                        )
                       }}
                       style={{
-                        padding: '10px 14px',
+                        padding: '8px 12px',
                         borderRadius: 10,
-                        fontSize: 16,
+                        fontSize: 15,
                         cursor: 'pointer',
-                        background: selectedServices.includes(service)
+                        textAlign: 'left',
+                        background: selectedServices.includes(s.name)
                           ? 'rgba(150,80,255,0.35)'
                           : 'rgba(255,255,255,0.06)',
-                        border: selectedServices.includes(service)
+                        border: selectedServices.includes(s.name)
                           ? '1.5px solid rgba(150,80,255,0.65)'
                           : '1px solid rgba(255,255,255,0.12)',
                         color: '#fff',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
                         transition: '.25s'
                       }}
                     >
-                      {service}
+                      <span>{s.name}</span>
+                      <span style={{ fontSize: 13, opacity: 0.8 }}>
+                        {s.duration || 0} min · {s.deposit || 0} €
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -717,20 +718,33 @@ export default function Calendar(){
               </p>
             )}
 
-            <div style={{marginTop:14, textAlign:'right'}}>
+            <div style={{marginTop:14, textAlign:'right', display:'flex', justifyContent:'flex-end', gap:8}}>
+              <button
+                onClick={closeModal}
+                style={{
+                  borderRadius:10,
+                  padding:'8px 14px',
+                  border:'1px solid rgba(148,163,184,0.6)',
+                  background:'rgba(15,23,42,0.9)',
+                  color:'#e5e7eb',
+                  cursor:'pointer'
+                }}
+              >
+                Atšaukti
+              </button>
               <button
                 onClick={confirmBooking}
                 style={{
                   borderRadius:10,
                   padding:'8px 14px',
                   border:'1px solid rgba(168,85,247,0.45)',
-                  background:'rgba(98,0,180,0.18)',
+                  background:'rgba(98,0,180,0.55)',
                   color:'#fff',
                   backdropFilter:'blur(6px)',
                   cursor:'pointer'
                 }}
               >
-                OK
+                Patvirtinti
               </button>
             </div>
           </div>
