@@ -219,15 +219,16 @@ export default function Calendar(){
       {/* ------------------------- */}
 
       <div
-        style={{
-          border: "1px solid rgba(150, 80, 255, 0.25)",
-          background: "rgba(10, 0, 25, 0.6)",
-          borderRadius: 14,
-          padding: 20,
-          marginBottom: 25,
-          backdropFilter: "blur(12px)",
-        }}
-      >
+  style={{
+    border: "1px solid rgba(150, 80, 255, 0.25)",
+    background: "rgba(10, 0, 25, 0.6)",
+    borderRadius: 14,
+    padding: "14px 20px 18px",
+    marginBottom: 15,  // ← уменьшил расстояние
+    marginTop: 0,      // ← убирает верхний “пустой воздух”
+    backdropFilter: "blur(12px)",
+  }}
+>
         <h2 style={{ marginBottom: 12, fontSize: 26 }}>Kainas</h2>
 
         <div
