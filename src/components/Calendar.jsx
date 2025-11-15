@@ -233,18 +233,19 @@ export default function Calendar(){
         <h2 style={{ marginBottom: 12, fontSize: 26 }}>Kainas</h2>
 
         <div
-          onClick={() => setOpenPrices(!openPrices)}
-          style={{
-            border: "1px solid rgba(150, 80, 255, 0.3)",
-            padding: "12px 16px",
-            borderRadius: 10,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            transition: "0.3s",
-          }}
-        >
+  onClick={() => setOpenPrices(!openPrices)}
+  style={{
+    border: "1px solid rgba(130, 70, 255, 0.25)",
+    background: "rgba(20, 20, 35, 0.7)",
+    borderRadius: 10,
+    padding: "10px 14px",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    cursor: "pointer",
+    transition: ".25s",
+  }}
+>
           <svg
             width="14"
             height="14"
