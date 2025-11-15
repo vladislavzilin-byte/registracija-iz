@@ -253,66 +253,83 @@ export default function Auth({ onAuth }) {
         <div style={auroraBg} />
         <div style={borderGlow} />
 
-        {/* ВЕРХНИЙ БЛОК */}
         <div
           style={{
             position: "relative",
             zIndex: 2,
             display: "flex",
             alignItems: "center",
-            justifyContent: "flex-start",
-            gap: "48px", // расстояние между колонкой и кнопкой
-            padding: "18px 26px",
+            justifyContent: "space-between",
+            padding: "22px 32px",
           }}
         >
-          {/* Левая часть — аватар и текст */}
+
+          {/* ЛЕВАЯ ЧАСТЬ */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "32px", // расстояние между аватаром и текстом (~2 см)
-              flex: 1, // ← текст тянется, но НЕ давит на кнопку
+              gap: "32px", // ← 2 см
+              flexShrink: 1,
+              width: "100%",
               minWidth: 0,
             }}
           >
             <div style={avatarStyle}>{initials}</div>
 
-            {/* Текст аккаунта */}
+            {/* ТЕКСТ АККАУНТА — НЕ ЛОМАЕТСЯ */}
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "center",
                 minWidth: 0,
+                whiteSpace: "nowrap",
               }}
             >
-              <div style={nameStyle}>{current.name}</div>
-              {current.phone && <div style={contactStyle}>{current.phone}</div>}
-              {current.email && <div style={contactStyle}>{current.email}</div>}
+              <div style={{ ...nameStyle, marginBottom: 2 }}>
+                {current.name}
+              </div>
+              {current.phone && (
+                <div style={contactStyle}>{current.phone}</div>
+              )}
+              {current.email && (
+                <div style={contactStyle}>{current.email}</div>
+              )}
               {current.instagram && (
                 <div style={contactStyle}>{current.instagram}</div>
               )}
             </div>
           </div>
 
-          {/* Правая часть — кнопка */}
-          <button
-            onClick={logout}
+          {/* ПРАВАЯ ЧАСТЬ — ВСЕГДА АККУРАТНО СПРАВА */}
+          <div
             style={{
-              ...logoutButton,
-              padding: "10px 32px",
-              minWidth: "120px", // органичный размер
-              whiteSpace: "nowrap",
-              flexShrink: 0, // ← кнопка НЕ сжимается
+              marginLeft: "64px", // ← 4 см
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
             }}
           >
-            Выйти
-          </button>
+            <button
+              onClick={logout}
+              style={{
+                ...logoutButton,
+                padding: "10px 30px",
+                minWidth: "130px", // аккуратный авторазмер
+                whiteSpace: "nowrap",
+              }}
+            >
+              Выйти
+            </button>
+          </div>
         </div>
+
       </div>
     </>
   );
 }
+
 
   // === форма входа / регистрации ===
   return (
