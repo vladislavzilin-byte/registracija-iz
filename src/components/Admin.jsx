@@ -18,13 +18,13 @@ const DEFAULT_SERVICES = [
   { name: 'Šukuosena', duration: 60, deposit: 50 },
   { name: 'Tresų nuoma', duration: 15, deposit: 25 },
   { name: 'Papuošalų nuoma', duration: 15, deposit: 10 },
-  { name: 'Atvykimas', duration: 180, deposit: 50 }, // 3 часа
+  { name: 'Atvykimas', duration: 180, deposit: 50 },
   { name: 'Konsultacija', duration: 30, deposit: 10 },
 ]
 
 // цвета для тегов услуг
 const serviceStyles = {
-  Šukuosena: {
+  'Šukuosena': {
     bg: 'rgba(99,102,241,0.16)',
     border: '1px solid rgba(129,140,248,0.8)',
   },
@@ -44,6 +44,26 @@ const serviceStyles = {
     bg: 'rgba(34,197,94,0.14)',
     border: '1px solid rgba(34,197,94,0.9)',
   },
+}
+
+/* ===== helpers для дат/времени ===== */
+const pad2 = (n) => String(n).padStart(2, '0')
+
+const toInputDate = (dateLike) => {
+  const d = new Date(dateLike)
+  if (isNaN(d)) return ''
+  const y = d.getFullYear()
+  const m = pad2(d.getMonth() + 1)
+  const day = pad2(d.getDate())
+  return `${y}-${m}-${day}`
+}
+
+const toInputTime = (dateLike) => {
+  const d = new Date(dateLike)
+  if (isNaN(d)) return ''
+  const hh = pad2(d.getHours())
+  const mm = pad2(d.getMinutes())
+  return `${hh}:${mm}`
 }
 
 export default function Admin() {
@@ -77,13 +97,6 @@ export default function Admin() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [toast, setToast] = useState(null)
 
-  // 🔧 состояние редактирования одной записи (дата/время/аванс)
-  const [editingId, setEditingId] = useState(null)
-  const [editDate, setEditDate] = useState('')
-  const [editStart, setEditStart] = useState('')
-  const [editEnd, setEditEnd] = useState('')
-  const [editPrice, setEditPrice] = useState('')
-
   const updateSettings = (patch) => {
     const next = { ...settings, ...patch }
     setSettings(next)
@@ -116,12 +129,14 @@ export default function Admin() {
     const arr = bookings.filter((b) => {
       const matchQ =
         !q ||
-        b.userName?.toLowerCase().includes(q) ||
-        b.userPhone?.toLowerCase().includes(q) ||
-        b.userInstagram?.toLowerCase().includes(q)
+        (b.userName?.toLowerCase().includes(q) ||
+          b.userPhone?.toLowerCase().includes(q) ||
+          b.userInstagram?.toLowerCase().includes(q))
 
       const matchStatus =
-        statusFilter === 'all' ? true : b.status === statusFilter
+        statusFilter === 'all'
+          ? true
+          : b.status === statusFilter
 
       return matchQ && matchStatus
     })
@@ -130,34 +145,37 @@ export default function Admin() {
     return arr
   }, [bookings, search, statusFilter])
 
+    // === helper для обновления одной записи ===
+  const updateBooking = (id, updater) => {
+    const all = getBookings()
+    const next = all.map((b) => (b.id === id ? updater(b) : b))
+    saveBookings(next)
+    setBookings(next)
+  }
+
   // === ДЕЙСТВИЯ С ЗАПИСЯМИ ===
   const cancelByAdmin = (id) => {
     if (!confirm('Отменить эту запись?')) return
-    const next = getBookings().map((b) =>
-      b.id === id
-        ? { ...b, status: 'canceled_admin', canceledAt: new Date().toISOString() }
-        : b
-    )
-    saveBookings(next)
-    setBookings(next)
+    updateBooking(id, (b) => ({
+      ...b,
+      status: 'canceled_admin',
+      canceledAt: new Date().toISOString(),
+    }))
   }
 
   const approveByAdmin = (id) => {
-    const next = getBookings().map((b) =>
-      b.id === id
-        ? { ...b, status: 'approved', approvedAt: new Date().toISOString() }
-        : b
-    )
-    saveBookings(next)
-    setBookings(next)
+    updateBooking(id, (b) => ({
+      ...b,
+      status: 'approved',
+      approvedAt: new Date().toISOString(),
+    }))
   }
 
   const togglePaid = (id) => {
-    const next = getBookings().map((b) =>
-      b.id === id ? { ...b, paid: !b.paid } : b
-    )
-    saveBookings(next)
-    setBookings(next)
+    updateBooking(id, (b) => ({
+      ...b,
+      paid: !b.paid,
+    }))
   }
 
   const handleExport = () => {
@@ -191,7 +209,10 @@ export default function Admin() {
   }
 
   const addService = () => {
-    const next = [...services, { name: 'Новая услуга', duration: 60, deposit: 0 }]
+    const next = [
+      ...services,
+      { name: 'Новая услуга', duration: 60, deposit: 0 },
+    ]
     updateSettings({ serviceList: next })
   }
 
@@ -199,88 +220,6 @@ export default function Admin() {
     if (services.length <= 1) return
     const next = services.filter((_, i) => i !== index)
     updateSettings({ serviceList: next })
-  }
-
-  // === РЕДАКТИРОВАНИЕ ДАТЫ / ВРЕМЕНИ / АВАНСА ===
-
-  const pad2 = (n) => String(n).padStart(2, '0')
-
-  const beginEdit = (b) => {
-    const start = new Date(b.start)
-    const end = new Date(b.end)
-
-    const dateStr = `${start.getFullYear()}-${pad2(start.getMonth() + 1)}-${pad2(
-      start.getDate()
-    )}`
-    const startStr = `${pad2(start.getHours())}:${pad2(start.getMinutes())}`
-    const endStr = `${pad2(end.getHours())}:${pad2(end.getMinutes())}`
-
-    setEditingId(b.id)
-    setEditDate(dateStr)
-    setEditStart(startStr)
-    setEditEnd(endStr)
-    setEditPrice(
-      typeof b.price === 'number' && !Number.isNaN(b.price) ? String(b.price) : ''
-    )
-  }
-
-  const cancelEdit = () => {
-    setEditingId(null)
-    setEditDate('')
-    setEditStart('')
-    setEditEnd('')
-    setEditPrice('')
-  }
-
-  const saveEdit = () => {
-    const target = bookings.find((b) => b.id === editingId)
-    if (!target) return
-
-    if (!editDate || !editStart || !editEnd) {
-      alert('Įveskite datą ir laiką')
-      return
-    }
-
-    const [y, m, d] = editDate.split('-').map(Number)
-    const [sh, sm] = editStart.split(':').map(Number)
-    const [eh, em] = editEnd.split(':').map(Number)
-
-    if (
-      Number.isNaN(y) ||
-      Number.isNaN(m) ||
-      Number.isNaN(d) ||
-      Number.isNaN(sh) ||
-      Number.isNaN(sm) ||
-      Number.isNaN(eh) ||
-      Number.isNaN(em)
-    ) {
-      alert('Neteisingas datos arba laiko formatas')
-      return
-    }
-
-    const start = new Date(target.start)
-    start.setFullYear(y, m - 1, d)
-    start.setHours(sh, sm || 0, 0, 0)
-
-    const end = new Date(target.end)
-    end.setFullYear(y, m - 1, d)
-    end.setHours(eh, em || 0, 0, 0)
-
-    let priceNum = target.price
-    if (editPrice === '') {
-      priceNum = undefined
-    } else {
-      const parsed = Number(editPrice)
-      if (!Number.isNaN(parsed)) priceNum = parsed
-    }
-
-    const next = bookings.map((b) =>
-      b.id === editingId ? { ...b, start, end, price: priceNum } : b
-    )
-
-    saveBookings(next)
-    setBookings(next)
-    cancelEdit()
   }
 
   return (
@@ -356,6 +295,7 @@ export default function Admin() {
                     ))}
                   </select>
                 </div>
+
                 <div className="col">
                   <label style={labelStyle}>{t('day_end')}</label>
                   <select
@@ -372,6 +312,7 @@ export default function Admin() {
                     ))}
                   </select>
                 </div>
+
                 <div className="col">
                   <label style={labelStyle}>{t('slot_minutes')}</label>
                   <select
@@ -392,7 +333,7 @@ export default function Admin() {
                 </div>
               </div>
 
-              {/* === УСЛУГИ: ДЛИТЕЛЬНОСТЬ + ЗАЛОГ === */}
+              {/* === УСЛУГИ === */}
               <div
                 style={{
                   marginTop: 18,
@@ -406,8 +347,6 @@ export default function Admin() {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     marginBottom: 8,
-                    gap: 10,
-                    flexWrap: 'wrap',
                   }}
                 >
                   <div>
@@ -421,11 +360,10 @@ export default function Admin() {
                         maxWidth: 480,
                       }}
                     >
-                      Здесь можно менять название, длительность и залог каждой
-                      услуги. Эти значения используются при создании записи в
-                      календаре (суммарная длительность и сумма залога).
+                      Изменяйте название, длительность и залог каждой услуги.
                     </div>
                   </div>
+
                   <button
                     type="button"
                     style={btnPrimary}
@@ -460,8 +398,8 @@ export default function Admin() {
                         onChange={(e) =>
                           updateServiceField(idx, 'name', e.target.value)
                         }
-                        placeholder="Название"
                       />
+
                       <input
                         style={inputGlass}
                         type="number"
@@ -470,8 +408,8 @@ export default function Admin() {
                         onChange={(e) =>
                           updateServiceField(idx, 'duration', e.target.value)
                         }
-                        placeholder="Минут"
                       />
+
                       <input
                         style={inputGlass}
                         type="number"
@@ -480,10 +418,9 @@ export default function Admin() {
                         onChange={(e) =>
                           updateServiceField(idx, 'deposit', e.target.value)
                         }
-                        placeholder="€"
                       />
+
                       <button
-                        type="button"
                         onClick={() => removeService(idx)}
                         style={{
                           borderRadius: 10,
@@ -505,13 +442,16 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* === ВСЕ ЗАПИСИ — КАРТОЧКИ === */}
+           {/* === ВСЕ ЗАПИСИ (КАРТОЧКИ) === */}
       <div style={{ width: '100%' }}>
         <div style={cardAurora}>
           <div style={topBar}>
-            <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>Все записи</div>
+            <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>
+              Все записи
+            </div>
           </div>
 
+          {/* ПОИСК + ФИЛЬТРЫ */}
           <div
             style={{
               display: 'flex',
@@ -526,8 +466,9 @@ export default function Admin() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+
             <div style={segmented}>
-              {[
+              {[ 
                 { v: 'all', label: t('all') },
                 { v: 'pending', label: t('pending') },
                 { v: 'approved', label: t('approved') },
@@ -546,6 +487,7 @@ export default function Admin() {
                 </button>
               ))}
             </div>
+
             <button
               style={{ ...btnPrimary, flex: '1' }}
               onClick={handleExport}
@@ -559,6 +501,7 @@ export default function Admin() {
             {t('total_canceled')}: {stats.canceled}
           </div>
 
+          {/* === КАРТОЧКИ — СПИСОК === */}
           <div
             style={{
               display: 'flex',
@@ -571,12 +514,14 @@ export default function Admin() {
               const inFuture = new Date(b.start) > new Date()
               const servicesArr = Array.isArray(b.services) ? b.services : []
 
+              const startDate = new Date(b.start)
+              const endDate = new Date(b.end || b.start)
+
               const serviceTagStyle = (name) => {
-                const st =
-                  serviceStyles[name] || {
-                    bg: 'rgba(148,163,184,0.15)',
-                    border: '1px solid rgba(148,163,184,0.7)',
-                  }
+                const st = serviceStyles[name] || {
+                  bg: 'rgba(148,163,184,0.15)',
+                  border: '1px solid rgba(148,163,184,0.7)',
+                }
                 return {
                   padding: '4px 12px',
                   borderRadius: 999,
@@ -584,8 +529,6 @@ export default function Admin() {
                   ...st,
                 }
               }
-
-              const isEditing = editingId === b.id
 
               return (
                 <div
@@ -601,15 +544,16 @@ export default function Admin() {
                     gap: 10,
                   }}
                 >
-                  {/* HEADER: дата + время + точка статуса */}
+                  {/* === HEADER: ТОЧКА + ДАТА + ВРЕМЯ ОТ/ДО === */}
                   <div
                     style={{
                       display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
                       flexWrap: 'wrap',
+                      gap: 10,
+                      alignItems: 'center',
                     }}
                   >
+                    {/* статус-точка */}
                     <span
                       style={{
                         width: 10,
@@ -630,235 +574,112 @@ export default function Admin() {
                       }}
                     />
 
-                    <div style={{ fontWeight: 700, fontSize: 17 }}>
-                      {fmtDate(b.start)}
+                    {/* Дата */}
+                    <div style={{ minWidth: 140 }}>
+                      <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 3 }}>
+                        Дата
+                      </div>
+                      <input
+                        type="date"
+                        value={toInputDate(startDate)}
+                        style={{ ...inputGlass, padding: '6px 10px', height: 32 }}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          if (!val) return
+                          const [y, m, d] = val.split('-').map(Number)
+                          updateBooking(b.id, (orig) => {
+                            const oldStart = new Date(orig.start)
+                            const oldEnd = new Date(orig.end || orig.start)
+                            const duration = oldEnd - oldStart
+
+                            const newStart = new Date(orig.start)
+                            newStart.setFullYear(y, m - 1, d)
+
+                            const newEnd = new Date(newStart.getTime() + Math.max(duration, 15 * 60000))
+
+                            return { ...orig, start: newStart, end: newEnd }
+                          })
+                        }}
+                      />
                     </div>
 
-                    <div style={{ opacity: 0.9 }}>
-                      {fmtTime(b.start)} — {fmtTime(b.end)}
+                    {/* Время от */}
+                    <div style={{ minWidth: 110 }}>
+                      <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 3 }}>
+                        Время от
+                      </div>
+                      <input
+                        type="time"
+                        value={toInputTime(startDate)}
+                        style={{ ...inputGlass, padding: '6px 10px', height: 32 }}
+                        onChange={(e) => {
+                          const [hh, mm] = e.target.value.split(':').map(Number)
+                          updateBooking(b.id, (orig) => {
+                            const start = new Date(orig.start)
+                            const end = new Date(orig.end)
+
+                            const newStart = new Date(orig.start)
+                            newStart.setHours(hh, mm, 0, 0)
+
+                            let newEnd = new Date(orig.end)
+                            if (newEnd <= newStart) {
+                              newEnd = new Date(newStart.getTime() + 15 * 60000)
+                            }
+
+                            return { ...orig, start: newStart, end: newEnd }
+                          })
+                        }}
+                      />
+                    </div>
+
+                    {/* Время до */}
+                    <div style={{ minWidth: 110 }}>
+                      <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 3 }}>
+                        Время до
+                      </div>
+                      <input
+                        type="time"
+                        value={toInputTime(endDate)}
+                        style={{ ...inputGlass, padding: '6px 10px', height: 32 }}
+                        onChange={(e) => {
+                          const [hh, mm] = e.target.value.split(':').map(Number)
+                          updateBooking(b.id, (orig) => {
+                            const start = new Date(orig.start)
+                            let newEnd = new Date(start)
+                            newEnd.setHours(hh, mm, 0, 0)
+
+                            if (newEnd <= start) {
+                              newEnd = new Date(start.getTime() + 15 * 60000)
+                            }
+
+                            return { ...orig, end: newEnd }
+                          })
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginLeft: 'auto', opacity: 0.8, fontSize: 13 }}>
+                      {fmtTime(b.start)} – {fmtTime(b.end)}
                     </div>
                   </div>
 
-                  {/* УСЛУГИ — цветные теги */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 8,
-                      marginTop: 4,
-                    }}
-                  >
+                  {/* Услуги */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     {servicesArr.map((s, i) => (
-                      <span key={i} style={serviceTagStyle(s)}>
-                        {s}
-                      </span>
+                      <span key={i} style={serviceTagStyle(s)}>{s}</span>
                     ))}
-                    {servicesArr.length === 0 && (
-                      <span className="muted" style={{ fontSize: 13 }}>
-                        —
-                      </span>
-                    )}
                   </div>
 
-                  {/* КЛИЕНТ */}
+                  {/* Клиент */}
                   <div style={{ marginTop: 6 }}>
                     <b>{b.userName}</b>
-                    <div style={{ fontSize: 13, opacity: 0.8 }}>
-                      {b.userPhone}
-                    </div>
+                    <div style={{ opacity: 0.8 }}>{b.userPhone}</div>
                     {b.userInstagram && (
-                      <div style={{ fontSize: 13, opacity: 0.8 }}>
-                        @{b.userInstagram}
-                      </div>
+                      <div style={{ opacity: 0.8 }}>@{b.userInstagram}</div>
                     )}
                   </div>
 
-                  {/* БЛОК РЕДАКТИРОВАНИЯ ДАТЫ / ВРЕМЕНИ / АВАНСА */}
-                  <div
-                    style={{
-                      marginTop: 6,
-                      padding: '10px 12px',
-                      borderRadius: 12,
-                      border: '1px solid rgba(129,140,248,0.35)',
-                      background: 'rgba(17,24,39,0.7)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 8,
-                    }}
-                  >
-                    {!isEditing && (
-                      <button
-                        type="button"
-                        onClick={() => beginEdit(b)}
-                        style={{
-                          alignSelf: 'flex-start',
-                          borderRadius: 999,
-                          padding: '6px 12px',
-                          border: '1px solid rgba(148,163,184,0.6)',
-                          background: 'rgba(15,23,42,0.9)',
-                          color: '#e5e7eb',
-                          fontSize: 12,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        ✏️ Редактировать дату / время / аванс
-                      </button>
-                    )}
-
-                    {isEditing && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 8,
-                        }}
-                      >
-                        {/* ДАТА */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <label
-                            style={{
-                              fontSize: 12,
-                              opacity: 0.85,
-                            }}
-                          >
-                            Дата
-                          </label>
-                          <input
-                            type="date"
-                            value={editDate}
-                            onChange={(e) => setEditDate(e.target.value)}
-                            style={editInput}
-                          />
-                        </div>
-
-                        {/* ВРЕМЯ ОТ / ДО */}
-                        <div
-                          style={{
-                            display: 'flex',
-                            gap: 8,
-                            flexWrap: 'wrap',
-                          }}
-                        >
-                          <div
-                            style={{
-                              flex: 1,
-                              minWidth: 120,
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 4,
-                            }}
-                          >
-                            <label
-                              style={{
-                                fontSize: 12,
-                                opacity: 0.85,
-                              }}
-                            >
-                              Время nuo
-                            </label>
-                            <input
-                              type="time"
-                              value={editStart}
-                              onChange={(e) => setEditStart(e.target.value)}
-                              style={editInput}
-                            />
-                          </div>
-
-                          <div
-                            style={{
-                              flex: 1,
-                              minWidth: 120,
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 4,
-                            }}
-                          >
-                            <label
-                              style={{
-                                fontSize: 12,
-                                opacity: 0.85,
-                              }}
-                            >
-                              Время iki
-                            </label>
-                            <input
-                              type="time"
-                              value={editEnd}
-                              onChange={(e) => setEditEnd(e.target.value)}
-                              style={editInput}
-                            />
-                          </div>
-                        </div>
-
-                        {/* АВАНС / ЦЕНА */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <label
-                            style={{
-                              fontSize: 12,
-                              opacity: 0.85,
-                            }}
-                          >
-                            Avansas (€)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={editPrice}
-                            onChange={(e) => setEditPrice(e.target.value)}
-                            style={editInput}
-                            placeholder="Pvz. 50"
-                          />
-                        </div>
-
-                        {/* КНОПКИ СОХРАНИТЬ / ОТМЕНА */}
-                        <div
-                          style={{
-                            display: 'flex',
-                            gap: 8,
-                            flexWrap: 'wrap',
-                            marginTop: 4,
-                          }}
-                        >
-                          <button
-                            type="button"
-                            onClick={saveEdit}
-                            style={{
-                              flex: 1,
-                              minWidth: 120,
-                              borderRadius: 10,
-                              padding: '9px 12px',
-                              border: '1px solid rgba(34,197,94,0.8)',
-                              background:
-                                'linear-gradient(180deg, rgba(22,163,74,0.9), rgba(21,128,61,0.9))',
-                              color: '#fff',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            Сохранить
-                          </button>
-                          <button
-                            type="button"
-                            onClick={cancelEdit}
-                            style={{
-                              flex: 1,
-                              minWidth: 120,
-                              borderRadius: 10,
-                              padding: '9px 12px',
-                              border: '1px solid rgba(148,163,184,0.7)',
-                              background: 'rgba(15,23,42,0.9)',
-                              color: '#e5e7eb',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            Отмена
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* ОПЛАТА */}
+                  {/* Оплата */}
                   <div
                     style={{
                       marginTop: 6,
@@ -866,6 +687,9 @@ export default function Admin() {
                       borderRadius: 10,
                       border: '1px solid rgba(148,163,184,0.25)',
                       background: 'rgba(30,20,40,0.55)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -880,55 +704,57 @@ export default function Admin() {
                             : '0 0 8px rgba(248,113,113,0.9)',
                         }}
                       />
+
                       <span
                         style={{
-                          fontSize: 14,
                           color: b.paid ? '#bbf7d0' : '#fecaca',
                           fontWeight: 600,
                         }}
                       >
-                        {b.paid ? 'Оплачено' : 'Не оплачено'}
+                        {b.paid ? 'Apmokėta' : 'Neapmokėta'}
                       </span>
                     </div>
 
-                    {typeof b.price === 'number' && !Number.isNaN(b.price) && (
-                      <div
-                        style={{
-                          marginTop: 6,
-                          fontSize: 14,
-                          color: '#e5e7eb',
+                    {/* Цена / аванс */}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <span style={{ minWidth: 90 }}>Avansas (€):</span>
+                      <input
+                        type="number"
+                        value={b.price ?? ''}
+                        style={{ ...inputGlass, maxWidth: 120, height: 32 }}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          updateBooking(b.id, (orig) => ({
+                            ...orig,
+                            price: val === '' ? null : Number(val),
+                          }))
                         }}
-                      >
-                        Avansas: <b>{b.price} €</b>
-                      </div>
-                    )}
+                      />
+                    </div>
 
-                    {typeof b.price === 'number' && !Number.isNaN(b.price) && (
-                      <button
-                        onClick={() => togglePaid(b.id)}
-                        style={{
-                          marginTop: 8,
-                          width: '100%',
-                          padding: '8px 0',
-                          borderRadius: 8,
-                          border: '1px solid rgba(148,163,184,0.5)',
-                          background: 'rgba(0,0,0,0.25)',
-                          color: '#fff',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {b.paid ? 'Снять оплату' : 'Пометить оплаченой'}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => togglePaid(b.id)}
+                      style={{
+                        marginTop: 6,
+                        width: '100%',
+                        padding: 8,
+                        borderRadius: 8,
+                        border: '1px solid rgba(148,163,184,0.5)',
+                        background: 'rgba(0,0,0,0.25)',
+                        color: '#fff',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {b.paid ? 'Снять оплату' : 'Пометить оплаченой'}
+                    </button>
                   </div>
 
-                  {/* СТАТУС */}
+                  {/* Статус */}
                   <div style={{ marginTop: 4 }}>
-                    <span style={{ fontWeight: 600 }}>{t('status')}: </span>
-                    {statusLabel(b)}
+                    <b>{t('status')}:</b> {statusLabel(b)}
                   </div>
 
-                  {/* КНОПКИ ПОДТВЕРДИТЬ / ОТМЕНИТЬ */}
+                  {/* Кнопки */}
                   <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
                     {b.status === 'pending' && (
                       <button
@@ -936,15 +762,13 @@ export default function Admin() {
                         style={{
                           flex: 1,
                           borderRadius: 10,
-                          padding: '10px',
-                          background:
-                            'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
+                          padding: 10,
+                          background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
                           color: '#fff',
                           border: '1px solid rgba(168,85,247,0.45)',
-                          cursor: 'pointer',
                         }}
                       >
-                        Подтвердить
+                        {t('approve')}
                       </button>
                     )}
 
@@ -956,14 +780,13 @@ export default function Admin() {
                           style={{
                             flex: 1,
                             borderRadius: 10,
-                            padding: '10px',
+                            padding: 10,
                             background: 'rgba(110,20,30,.35)',
                             border: '1px solid rgba(239,68,68,.6)',
                             color: '#fff',
-                            cursor: 'pointer',
                           }}
                         >
-                          Отменить
+                          {t('rejected')}
                         </button>
                       )}
                   </div>
@@ -989,29 +812,21 @@ export default function Admin() {
   )
 }
 
-/* === ВСПОМОГАТЕЛЬНОЕ === */
+/* ==== ИКОНКА CHEVRON ==== */
 function Chevron({ open }) {
   return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#cbb6ff"
-      strokeWidth="2"
-    >
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#cbb6ff" strokeWidth="2">
       {open ? <path d="M6 15l6-6 6 6" /> : <path d="M6 9l6 6 6-6" />}
     </svg>
   )
 }
 
+/* ==== ГЕНЕРАТОР ВРЕМЕНИ ==== */
 function generateTimes(start, end) {
   const result = []
   for (let h = start; h < end; h++) {
     for (let m = 0; m < 60; m += 30) {
-      const hh = String(h).padStart(2, '0')
-      const mm = String(m).padStart(2, '0')
-      result.push(`${hh}:${mm}`)
+      result.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
     }
   }
   return result
@@ -1019,19 +834,16 @@ function generateTimes(start, end) {
 
 /* === СТИЛИ === */
 const cardAurora = {
-  background:
-    'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))',
+  background: 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))',
   border: '1px solid rgba(168,85,247,0.18)',
   borderRadius: 16,
   padding: 14,
-  boxShadow:
-    '0 8px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.03)',
+  boxShadow: '0 8px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.03)',
 }
 
 const headerToggle = {
   width: '100%',
   display: 'flex',
-  justifyContent: 'space-between',
   alignItems: 'center',
   gap: 10,
   borderRadius: 12,
@@ -1046,7 +858,6 @@ const labelStyle = {
   fontSize: 12,
   opacity: 0.8,
   marginBottom: 6,
-  display: 'block',
 }
 
 const inputGlass = {
@@ -1072,15 +883,13 @@ const btnBase = {
   fontWeight: 600,
   cursor: 'pointer',
   border: '1px solid rgba(168,85,247,0.45)',
-  transition: '0.2s',
 }
 
 const btnPrimary = {
   ...btnBase,
-  background:
-    'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
-  boxShadow: '0 0 14px rgba(150,85,247,0.35)',
+  background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
   color: '#fff',
+  boxShadow: '0 0 14px rgba(150,85,247,0.35)',
 }
 
 const segmented = {
@@ -1100,20 +909,8 @@ const segBtn = {
 }
 
 const segActive = {
-  background:
-    'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
+  background: 'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
   border: '1px solid rgba(180,95,255,0.7)',
   boxShadow: '0 0 12px rgba(150,90,255,0.30)',
 }
-
-// поля в карточке (дата / время / аванс) — крупные, мобильные
-const editInput = {
-  width: '100%',
-  padding: '10px 12px',
-  borderRadius: 10,
-  border: '1px solid rgba(148,163,184,0.8)',
-  background: 'rgba(15,23,42,0.95)',
-  color: '#e5e7eb',
-  fontSize: 15,
-  outline: 'none',
-}
+ 
