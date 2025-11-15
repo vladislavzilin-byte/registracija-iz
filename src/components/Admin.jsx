@@ -475,194 +475,206 @@ export default function Admin() {
             {t('total_canceled')}: {stats.canceled}
           </div>
 
-          <table className="table" style={{ marginTop: 6 }}>
-            <thead>
-              <tr>
-                <th>Клиент</th>
-                <th>Instagram</th>
-                <th>Дата</th>
-                <th>Время</th>
-                <th>Услуги</th>
-                <th>Цена</th>
-                <th>Оплата</th>
-                <th>{t('status')}</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((b) => {
-                const inFuture = new Date(b.start) > new Date()
-                const servicesArr = Array.isArray(b.services)
-                  ? b.services
-                  : []
+<div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 12 }}>
 
-                return (
-                  <tr
-                    key={b.id}
-                    style={{
-                      opacity: b.status === 'approved' ? 1 : 0.97,
-                    }}
-                  >
-                    <td>
-                      <b>{b.userName}</b>
-                      <div
-                        className="muted"
-                        style={{ fontSize: 12 }}
-                      >
-                        {b.userPhone}
-                      </div>
-                    </td>
-                    <td>{b.userInstagram || '-'}</td>
-                    <td>{fmtDate(b.start)}</td>
-                    <td>
-                      {fmtTime(b.start)}–{fmtTime(b.end)}
-                    </td>
+  {filtered.map((b) => {
+    const inFuture = new Date(b.start) > new Date();
+    const servicesArr = Array.isArray(b.services) ? b.services : [];
 
-                    {/* УСЛУГИ */}
-                    <td>
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          gap: 6,
-                          maxWidth: 320,
-                        }}
-                      >
-                        {servicesArr.length === 0 && (
-                          <span className="muted">—</span>
-                        )}
-                        {servicesArr.map((s, i) => {
-                          const styleFor =
-                            serviceStyles[s] || {
-                              bg: 'rgba(148,163,184,0.15)',
-                              border:
-                                '1px solid rgba(148,163,184,0.7)',
-                            }
-                          return (
-                            <span
-                              key={i}
-                              style={{
-                                padding: '3px 10px',
-                                borderRadius: 999,
-                                fontSize: 12,
-                                ...styleFor,
-                              }}
-                            >
-                              {s}
-                            </span>
-                          )
-                        })}
-                      </div>
-                    </td>
+    const serviceTagStyle = (name) => {
+      const st = serviceStyles[name] || {
+        bg: 'rgba(148,163,184,0.15)',
+        border: '1px solid rgba(148,163,184,0.7)',
+      };
+      return {
+        padding: '4px 12px',
+        borderRadius: 999,
+        fontSize: 13,
+        ...st,
+      };
+    };
 
-                    {/* ЦЕНА */}
-                    <td>
-                      {b.price ? `${b.price} €` : '—'}
-                    </td>
+    return (
+      <div
+        key={b.id}
+        style={{
+          borderRadius: 16,
+          border: '1px solid rgba(168,85,247,0.25)',
+          background: 'rgba(15,10,25,0.85)',
+          padding: '16px 20px',
+          boxShadow: '0 0 18px rgba(168,85,247,0.20)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+        }}
+      >
 
-                    {/* ОПЛАТА */}
-                    <td>
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'flex-start',
-                          gap: 4,
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: 10,
-                              height: 10,
-                              borderRadius: '999px',
-                              marginRight: 0,
-                              backgroundColor: b.paid
-                                ? '#22c55e'
-                                : '#ef4444',
-                              boxShadow: b.paid
-                                ? '0 0 8px rgba(34,197,94,0.9)'
-                                : '0 0 8px rgba(248,113,113,0.9)',
-                            }}
-                          />
-                          <span
-                            style={{
-                              fontSize: 13,
-                              color: b.paid
-                                ? '#bbf7d0'
-                                : '#fecaca',
-                            }}
-                          >
-                            {b.paid ? 'Apmokėta' : 'Neapmokėta'}
-                          </span>
-                        </div>
-                        {b.price && (
-                          <button
-                            type="button"
-                            onClick={() => togglePaid(b.id)}
-                            style={{
-                              borderRadius: 999,
-                              padding: '4px 10px',
-                              border:
-                                '1px solid rgba(148,163,184,0.7)',
-                              background: 'rgba(15,23,42,0.9)',
-                              color: '#e5e7eb',
-                              fontSize: 11,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            {b.paid
-                              ? 'Снять оплату'
-                              : 'Пометить оплаченой'}
-                          </button>
-                        )}
-                      </div>
-                    </td>
+        {/* HEADER: дата + время + точка статуса */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background:
+                b.status === 'approved'
+                  ? '#22c55e'
+                  : b.status === 'pending'
+                  ? '#eab308'
+                  : '#ef4444',
+              boxShadow:
+                b.status === 'approved'
+                  ? '0 0 8px rgba(34,197,94,0.9)'
+                  : b.status === 'pending'
+                  ? '0 0 8px rgba(234,179,8,0.9)'
+                  : '0 0 8px rgba(248,113,113,0.9)',
+            }}
+          />
 
-                    {/* СТАТУС */}
-                    <td>{statusLabel(b)}</td>
+          <div style={{ fontWeight: 700, fontSize: 17 }}>
+            {fmtDate(b.start)}
+          </div>
 
-                    {/* КНОПКИ */}
-                    <td style={{ textAlign: 'right' }}>
-                      {b.status === 'pending' && (
-                        <button
-                          style={btnOk}
-                          onClick={() => approveByAdmin(b.id)}
-                        >
-                          {t('approve')}
-                        </button>
-                      )}
-                      {b.status !== 'canceled_admin' &&
-                        b.status !== 'canceled_client' &&
-                        inFuture && (
-                          <button
-                            style={btnDanger}
-                            onClick={() => cancelByAdmin(b.id)}
-                          >
-                            {t('rejected')}
-                          </button>
-                        )}
-                    </td>
-                  </tr>
-                )
-              })}
-              {!filtered.length && (
-                <tr>
-                  <td colSpan="9">
-                    <small className="muted">
-                      {t('no_records')}
-                    </small>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <div style={{ opacity: 0.9 }}>
+            {fmtTime(b.start)} — {fmtTime(b.end)}
+          </div>
+        </div>
+
+        {/* УСЛУГИ — цветные теги */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 8,
+            marginTop: 4,
+          }}
+        >
+          {servicesArr.map((s, i) => (
+            <span key={i} style={serviceTagStyle(s)}>
+              {s}
+            </span>
+          ))}
+        </div>
+
+        {/* КЛИЕНТ */}
+        <div style={{ marginTop: 6 }}>
+          <b>{b.userName}</b>
+          <div style={{ fontSize: 13, opacity: 0.8 }}>{b.userPhone}</div>
+          {b.userInstagram && (
+            <div style={{ fontSize: 13, opacity: 0.8 }}>
+              @{b.userInstagram}
+            </div>
+          )}
+        </div>
+
+        {/* ОПЛАТА */}
+        <div
+          style={{
+            marginTop: 6,
+            padding: '10px 12px',
+            borderRadius: 10,
+            border: '1px solid rgba(148,163,184,0.25)',
+            background: 'rgba(30,20,40,0.55)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                background: b.paid ? '#22c55e' : '#ef4444',
+                boxShadow: b.paid
+                  ? '0 0 8px rgba(34,197,94,0.9)'
+                  : '0 0 8px rgba(248,113,113,0.9)',
+              }}
+            />
+            <span
+              style={{
+                fontSize: 14,
+                color: b.paid ? '#bbf7d0' : '#fecaca',
+                fontWeight: 600,
+              }}
+            >
+              {b.paid ? 'Оплачено' : 'Не оплачено'}
+            </span>
+          </div>
+
+          {b.price && (
+            <button
+              onClick={() => togglePaid(b.id)}
+              style={{
+                marginTop: 8,
+                width: '100%',
+                padding: '8px 0',
+                borderRadius: 8,
+                border: '1px solid rgba(148,163,184,0.5)',
+                background: 'rgba(0,0,0,0.25)',
+                color: '#fff',
+                cursor: 'pointer',
+              }}
+            >
+              {b.paid ? 'Снять оплату' : 'Пометить оплаченой'}
+            </button>
+          )}
+        </div>
+
+        {/* СТАТУС */}
+        <div style={{ marginTop: 4 }}>
+          <span style={{ fontWeight: 600 }}>{t('status')}: </span>
+          {statusLabel(b)}
+        </div>
+
+        {/* КНОПКИ */}
+        <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+          {b.status === 'pending' && (
+            <button
+              onClick={() => approveByAdmin(b.id)}
+              style={{
+                flex: 1,
+                borderRadius: 10,
+                padding: '10px',
+                background:
+                  'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
+                color: '#fff',
+                border: '1px solid rgba(168,85,247,0.45)',
+                cursor: 'pointer',
+              }}
+            >
+              Подтвердить
+            </button>
+          )}
+
+          {b.status !== 'canceled_admin' &&
+            b.status !== 'canceled_client' &&
+            inFuture && (
+              <button
+                onClick={() => cancelByAdmin(b.id)}
+                style={{
+                  flex: 1,
+                  borderRadius: 10,
+                  padding: '10px',
+                  background: 'rgba(110,20,30,.35)',
+                  border: '1px solid rgba(239,68,68,.6)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                }}
+              >
+                Отменить
+              </button>
+            )}
+        </div>
+      </div>
+    );
+  })}
+
+  {!filtered.length && (
+    <small className="muted" style={{ marginTop: 20 }}>
+      {t('no_records')}
+    </small>
+  )}
+</div>
+
 
           {toast && (
             <div className="toast" style={{ marginTop: 10 }}>
