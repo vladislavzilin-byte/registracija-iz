@@ -11,7 +11,10 @@ export default function App() {
   const [tab, setTab] = useState('calendar')
   const [user, setUser] = useState(getCurrentUser())
 
-  // 🟣 Проверка, является ли пользователь администратором
+  // состояние для эффекта нажатия кнопки Kainas
+  const [kPress, setKPress] = useState(false)
+
+  // Проверка на админа
   const isAdmin =
     user?.role === 'admin' ||
     user?.isAdmin === true ||
@@ -21,90 +24,87 @@ export default function App() {
   return (
     <div className="container" style={containerStyle}>
       
-{/* === Верхняя панель === */}
-<div style={navBar}>
-  <div style={leftSide}>
+      {/* === Верхняя панель === */}
+      <div style={navBar}>
+        <div style={leftSide}>
 
-    {/* КАЛЕНДАРЬ */}
-    <button
-      onClick={() => setTab('calendar')}
-      style={navButton(tab === 'calendar')}
-    >
-      {t('nav_calendar')}
-    </button>
+          {/* КАЛЕНДАРЬ */}
+          <button
+            onClick={() => setTab('calendar')}
+            style={navButton(tab === 'calendar')}
+          >
+            {t('nav_calendar')}
+          </button>
 
-    {/* МОИ ЗАПИСИ */}
-    <button
-      onClick={() => setTab('my')}
-      style={navButton(tab === 'my')}
-    >
-      {t('nav_my')}
-    </button>
+          {/* МОИ ЗАПИСИ */}
+          <button
+            onClick={() => setTab('my')}
+            style={navButton(tab === 'my')}
+          >
+            {t('nav_my')}
+          </button>
 
-    {/* KAINAS */}
-    <button
-      style={{
-        ...navButton(false),
-        transform: kPress ? "translateY(6px)" : "translateY(0)",
-        transition: "transform .25s ease",
-      }}
-      onClick={() => {
-        setKPress(true)
-        setTimeout(() => setKPress(false), 250)
+          {/* KAINAS */}
+          <button
+            style={{
+              ...navButton(false),
+              transform: kPress ? 'translateY(6px)' : 'translateY(0)',
+              transition: 'transform .25s ease',
+            }}
+            onClick={() => {
+              // эффект нажатия кнопки
+              setKPress(true)
+              setTimeout(() => setKPress(false), 260)
 
-        // показываем календарь
-        setTab("calendar")
+              // переключаем на календарь
+              setTab('calendar')
 
-        // автоскролл к секции Kainas в календаре
-        setTimeout(() => {
-          const section = document.getElementById("kainas-section")
-          section?.scrollIntoView({ behavior: "smooth", block: "start" })
-        }, 150)
+              // после рендера → автоскролл к Kainas
+              setTimeout(() => {
+                const section = document.getElementById('kainas-section')
+                section?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }, 150)
 
-        // открыть аккордеон
-        window.dispatchEvent(new Event("openPrices"))
-      }}
-    >
-      Kainas
-    </button>
+              // авто-открытие аккордеона
+              window.dispatchEvent(new Event('openPrices'))
+            }}
+          >
+            Kainas
+          </button>
 
-    {/* AДМИН */}
-    {isAdmin && (
-      <button
-        onClick={() => setTab('admin')}
-        style={{
-          ...navButton(tab === 'admin'),
-          animation: 'fadeInUp 0.4s ease-out',
-        }}
-      >
-        {t('nav_admin')}
-      </button>
-    )}
-  </div>
+          {/* АДМИН */}
+          {isAdmin && (
+            <button
+              onClick={() => setTab('admin')}
+              style={{
+                ...navButton(tab === 'admin'),
+                animation: 'fadeInUp 0.4s ease-out',
+              }}
+            >
+              {t('nav_admin')}
+            </button>
+          )}
+        </div>
 
-  {/* Языки */}
-  <div style={langBlock}>
-    <button onClick={() => setLang('lt')} style={langButton(lang === 'lt')}>
-      LT
-    </button>
-    <button onClick={() => setLang('ru')} style={langButton(lang === 'ru')}>
-      RU
-    </button>
-    <button onClick={() => setLang('en')} style={langButton(lang === 'en')}>
-      GB
-    </button>
-  </div>
-</div>
+        {/* Языки */}
+        <div style={langBlock}>
+          <button onClick={() => setLang('lt')} style={langButton(lang === 'lt')}>
+            LT
+          </button>
+          <button onClick={() => setLang('ru')} style={langButton(lang === 'ru')}>
+            RU
+          </button>
+          <button onClick={() => setLang('en')} style={langButton(lang === 'en')}>
+            GB
+          </button>
+        </div>
+      </div>
 
       {/* === Контент === */}
       <Auth onAuth={setUser} />
-
       {tab === 'calendar' && <Calendar />}
       {tab === 'my' && <MyBookings />}
       {tab === 'admin' && isAdmin && <Admin />}
-
-      {/* === Новый раздел KAINAS === */}
-      {tab === 'prices' && <Calendar showPrices={true} />}
 
       {/* === Футер === */}
       <footer style={footerStyle}>© IZ HAIR TREND</footer>
