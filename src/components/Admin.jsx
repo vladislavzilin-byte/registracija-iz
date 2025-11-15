@@ -1,3 +1,5 @@
+const ADMINS = ['irina.abramova7@gmail.com', 'vladislavzilin@gmail.com']
+
 import { useState, useMemo, useEffect } from 'react'
 import {
   getSettings,
@@ -5,15 +7,13 @@ import {
   getBookings,
   saveBookings,
   fmtDate,
-  fmtTime,
+  fmtTime,       // можно оставить, вдруг где-то ещё используется
   getCurrentUser,
 } from '../lib/storage'
 import { exportBookingsToCSV } from '../lib/export'
 import { useI18n } from '../lib/i18n'
 
-const ADMINS = ['irina.abramova7@gmail.com', 'vladislavzilin@gmail.com']
-
-/* ==== ДЕФОЛТНЫЕ УСЛУГИ ==== */
+// === дефолтные услуги, если в настройках ещё нет serviceList ===
 const DEFAULT_SERVICES = [
   { name: 'Šukuosena', duration: 60, deposit: 50 },
   { name: 'Tresų nuoma', duration: 15, deposit: 25 },
@@ -22,7 +22,7 @@ const DEFAULT_SERVICES = [
   { name: 'Konsultacija', duration: 30, deposit: 10 },
 ]
 
-/* ==== Цвета тегов ==== */
+// цвета для тегов услуг
 const serviceStyles = {
   'Šukuosena': {
     bg: 'rgba(99,102,241,0.16)',
@@ -46,20 +46,34 @@ const serviceStyles = {
   },
 }
 
-/* ==== HELPERS ==== */
+/* ===== helpers для дат/времени ===== */
 const pad2 = (n) => String(n).padStart(2, '0')
 
-function generateTimeList(stepMinutes = 5) {
-  const arr = []
-  for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += stepMinutes) {
-      arr.push(`${pad2(h)}:${pad2(m)}`)
-    }
-  }
-  return arr
+const toInputDate = (dateLike) => {
+  const d = new Date(dateLike)
+  if (isNaN(d)) return ''
+  const y = d.getFullYear()
+  const m = pad2(d.getMonth() + 1)
+  const day = pad2(d.getDate())
+  return `${y}-${m}-${day}`
 }
 
-function Admin() {
+const toInputTime = (dateLike) => {
+  const d = new Date(dateLike)
+  if (isNaN(d)) return ''
+  const hh = pad2(d.getHours())
+  const mm = pad2(d.getMinutes())
+  return `${hh}:${mm}`
+}
+
+// ⚙️ ЖЁСТКИЙ 24-часовой формат "HH:MM"
+const formatTime24 = (dateLike) => {
+  const d = new Date(dateLike)
+  if (isNaN(d)) return ''
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
+export default function Admin() {
   const me = getCurrentUser()
   const isAdmin = me && (me.role === 'admin' || ADMINS.includes(me.email))
 
@@ -74,7 +88,7 @@ function Admin() {
 
   const { t } = useI18n()
 
-  /* ==== STATE ==== */
+  // === НАСТРОЙКИ ===
   const [settings, setSettings] = useState(() => {
     const s = getSettings()
     if (!Array.isArray(s.serviceList) || !s.serviceList.length) {
@@ -96,14 +110,14 @@ function Admin() {
     saveSettings(next)
   }
 
-  /* ==== LISTEN PROFILE SYNC ==== */
+  // синк записей при обновлении профиля
   useEffect(() => {
     const handler = () => setBookings(getBookings())
     window.addEventListener('profileUpdated', handler)
     return () => window.removeEventListener('profileUpdated', handler)
   }, [])
 
-  /* ==== СТАТИСТИКА ==== */
+  // === СТАТИСТИКА ===
   const stats = useMemo(() => {
     const total = bookings.length
     const active = bookings.filter(
@@ -115,16 +129,16 @@ function Admin() {
     return { total, active, canceled }
   }, [bookings])
 
-  /* ==== ФИЛЬТР ==== */
+  // === ФИЛЬТР СПИСКА ===
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
 
     const arr = bookings.filter((b) => {
       const matchQ =
         !q ||
-        b.userName?.toLowerCase().includes(q) ||
-        b.userPhone?.toLowerCase().includes(q) ||
-        b.userInstagram?.toLowerCase().includes(q)
+        (b.userName?.toLowerCase().includes(q) ||
+          b.userPhone?.toLowerCase().includes(q) ||
+          b.userInstagram?.toLowerCase().includes(q))
 
       const matchStatus =
         statusFilter === 'all'
@@ -138,7 +152,7 @@ function Admin() {
     return arr
   }, [bookings, search, statusFilter])
 
-  /* ==== UPDATE BOOKING ==== */
+  // === helper для обновления одной записи ===
   const updateBooking = (id, updater) => {
     const all = getBookings()
     const next = all.map((b) => (b.id === id ? updater(b) : b))
@@ -146,6 +160,7 @@ function Admin() {
     setBookings(next)
   }
 
+  // === ДЕЙСТВИЯ С ЗАПИСЯМИ ===
   const cancelByAdmin = (id) => {
     if (!confirm('Отменить эту запись?')) return
     updateBooking(id, (b) => ({
@@ -155,15 +170,20 @@ function Admin() {
     }))
   }
 
-  const approveByAdmin = (id) =>
+  const approveByAdmin = (id) => {
     updateBooking(id, (b) => ({
       ...b,
       status: 'approved',
       approvedAt: new Date().toISOString(),
     }))
+  }
 
-  const togglePaid = (id) =>
-    updateBooking(id, (b) => ({ ...b, paid: !b.paid }))
+  const togglePaid = (id) => {
+    updateBooking(id, (b) => ({
+      ...b,
+      paid: !b.paid,
+    }))
+  }
 
   const handleExport = () => {
     const { name, count } = exportBookingsToCSV(filtered)
@@ -171,13 +191,22 @@ function Admin() {
     setTimeout(() => setToast(null), 3500)
   }
 
-  /* ==== УСЛУГИ ==== */
+  const statusLabel = (b) =>
+    b.status === 'approved'
+      ? '🟢 ' + t('approved')
+      : b.status === 'pending'
+      ? '🟡 ' + t('pending')
+      : b.status === 'canceled_client'
+      ? '❌ ' + t('canceled_by_client')
+      : '🔴 ' + t('canceled_by_admin')
+
+  // === РАБОТА С УСЛУГАМИ В НАСТРОЙКАХ ===
   const services = settings.serviceList || []
 
-  const updateServiceField = (idx, field, value) => {
+  const updateServiceField = (index, field, value) => {
     const next = [...services]
-    next[idx] = {
-      ...next[idx],
+    next[index] = {
+      ...next[index],
       [field]:
         field === 'duration' || field === 'deposit'
           ? Number(value) || 0
@@ -187,28 +216,35 @@ function Admin() {
   }
 
   const addService = () => {
-    const next = [...services, { name: 'Новая услуга', duration: 60, deposit: 0 }]
+    const next = [
+      ...services,
+      { name: 'Новая услуга', duration: 60, deposit: 0 },
+    ]
     updateSettings({ serviceList: next })
   }
 
-  const removeService = (idx) => {
+  const removeService = (index) => {
     if (services.length <= 1) return
-    const next = services.filter((_, i) => i !== idx)
+    const next = services.filter((_, i) => i !== index)
     updateSettings({ serviceList: next })
   }
-
-  const timeList = generateTimeList(5) // каждые 5 минут
 
   return (
     <div className="col" style={{ gap: 16 }}>
-      {/* === РЕДАКТИРОВАТЬ НАСТРОЙКИ === */}
+      {/* === РЕДАКТИРОВАТЬ НАСТРОЙКИ + УСЛУГИ === */}
       <div style={{ width: '100%' }}>
         <div style={cardAurora}>
           <button
             onClick={() => setShowSettings((s) => !s)}
             style={headerToggle}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 10,
+              }}
+            >
               <Chevron open={showSettings} />
               <span style={{ fontWeight: 700 }}>Редактировать настройки</span>
             </span>
@@ -216,16 +252,16 @@ function Admin() {
 
           <div
             style={{
-              maxHeight: showSettings ? 1500 : 0,
+              maxHeight: showSettings ? 1200 : 0,
               overflow: 'hidden',
               transition: 'max-height .35s ease',
             }}
           >
-            <div style={{ paddingTop: 14 }}>
-              {/* ==== БАЗОВЫЕ НАСТРОЙКИ ==== */}
+            <div style={{ paddingTop: 10 }}>
+              {/* БАЗОВЫЕ НАСТРОЙКИ */}
               <div className="row" style={{ gap: 12 }}>
                 <div className="col">
-                  <label style={labelStyle}>Имя мастера</label>
+                  <label style={labelStyle}>{t('master_name')}</label>
                   <input
                     style={inputGlass}
                     value={settings.masterName}
@@ -234,9 +270,8 @@ function Admin() {
                     }
                   />
                 </div>
-
                 <div className="col">
-                  <label style={labelStyle}>Телефон администратора</label>
+                  <label style={labelStyle}>{t('admin_phone')}</label>
                   <input
                     style={inputGlass}
                     value={settings.adminPhone}
@@ -247,13 +282,12 @@ function Admin() {
                 </div>
               </div>
 
-              {/* ==== ВРЕМЯ РАБОТЫ ==== */}
               <div
                 className="row"
                 style={{ gap: 12, marginTop: 12, marginBottom: 8 }}
               >
                 <div className="col">
-                  <label style={labelStyle}>Начало дня</label>
+                  <label style={labelStyle}>{t('day_start')}</label>
                   <select
                     style={inputGlass}
                     value={settings.workStart}
@@ -261,16 +295,15 @@ function Admin() {
                       updateSettings({ workStart: e.target.value })
                     }
                   >
-                    {timeList.map((t) => (
+                    {generateTimes(0, 12).map((t) => (
                       <option key={t} value={t}>
                         {t}
                       </option>
                     ))}
                   </select>
                 </div>
-
                 <div className="col">
-                  <label style={labelStyle}>Конец дня</label>
+                  <label style={labelStyle}>{t('day_end')}</label>
                   <select
                     style={inputGlass}
                     value={settings.workEnd}
@@ -278,24 +311,25 @@ function Admin() {
                       updateSettings({ workEnd: e.target.value })
                     }
                   >
-                    {timeList.map((t) => (
+                    {generateTimes(12, 24).map((t) => (
                       <option key={t} value={t}>
                         {t}
                       </option>
                     ))}
                   </select>
                 </div>
-
                 <div className="col">
-                  <label style={labelStyle}>Длительность слота (мин)</label>
+                  <label style={labelStyle}>{t('slot_minutes')}</label>
                   <select
                     style={inputGlass}
                     value={settings.slotMinutes}
                     onChange={(e) =>
-                      updateSettings({ slotMinutes: Number(e.target.value) })
+                      updateSettings({
+                        slotMinutes: parseInt(e.target.value, 10),
+                      })
                     }
                   >
-                    {[5, 10, 15, 20, 30, 60].map((m) => (
+                    {[15, 30, 45, 60].map((m) => (
                       <option key={m} value={m}>
                         {m}
                       </option>
@@ -304,7 +338,7 @@ function Admin() {
                 </div>
               </div>
 
-              {/* ==== УСЛУГИ ==== */}
+              {/* === УСЛУГИ: ДЛИТЕЛЬНОСТЬ + ЗАЛОГ === */}
               <div
                 style={{
                   marginTop: 18,
@@ -321,25 +355,30 @@ function Admin() {
                   }}
                 >
                   <div>
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Услуги</div>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                      Услуги
+                    </div>
                     <div
                       style={{
                         fontSize: 12,
                         opacity: 0.75,
-                        maxWidth: 450,
+                        maxWidth: 480,
                       }}
                     >
-                      Вы можете менять название, длительность и сумму аванса
-                      каждой услуги.
+                      Здесь можно менять название, длительность и залог каждой
+                      услуги. Эти значения используются при создании записи в
+                      календаре (суммарная длительность и сумма залога).
                     </div>
                   </div>
-
-                  <button type="button" style={btnPrimary} onClick={addService}>
+                  <button
+                    type="button"
+                    style={btnPrimary}
+                    onClick={addService}
+                  >
                     + Добавить услугу
                   </button>
                 </div>
 
-                {/* Список услуг */}
                 <div
                   style={{
                     display: 'flex',
@@ -367,7 +406,6 @@ function Admin() {
                         }
                         placeholder="Название"
                       />
-
                       <input
                         style={inputGlass}
                         type="number"
@@ -378,7 +416,6 @@ function Admin() {
                         }
                         placeholder="Минут"
                       />
-
                       <input
                         style={inputGlass}
                         type="number"
@@ -389,8 +426,8 @@ function Admin() {
                         }
                         placeholder="€"
                       />
-
                       <button
+                        type="button"
                         onClick={() => removeService(idx)}
                         style={{
                           borderRadius: 10,
@@ -412,7 +449,7 @@ function Admin() {
         </div>
       </div>
 
-      {/* === КАРТОЧКИ ЗАПИСЕЙ === */}
+      {/* === ВСЕ ЗАПИСИ (КАРТОЧКИ) === */}
       <div style={{ width: '100%' }}>
         <div style={cardAurora}>
           <div style={topBar}>
@@ -421,7 +458,6 @@ function Admin() {
             </div>
           </div>
 
-          {/* Фильтр */}
           <div
             style={{
               display: 'flex',
@@ -432,18 +468,17 @@ function Admin() {
           >
             <input
               style={{ ...inputGlass, flex: '1 1 260px' }}
-              placeholder="Поиск…"
+              placeholder={t('search_placeholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-
             <div style={segmented}>
               {[
-                { v: 'all', label: 'Все' },
-                { v: 'pending', label: 'Ожидает' },
-                { v: 'approved', label: 'Подтверждённые' },
-                { v: 'canceled_client', label: 'Отменены клиентом' },
-                { v: 'canceled_admin', label: 'Отменены админом' },
+                { v: 'all', label: t('all') },
+                { v: 'pending', label: t('pending') },
+                { v: 'approved', label: t('approved') },
+                { v: 'canceled_client', label: t('canceled_by_client') },
+                { v: 'canceled_admin', label: t('canceled_by_admin') },
               ].map((it) => (
                 <button
                   key={it.v}
@@ -457,311 +492,558 @@ function Admin() {
                 </button>
               ))}
             </div>
-
-            <button style={{ ...btnPrimary, flex: '1' }} onClick={handleExport}>
-              Экспорт
+            <button
+              style={{ ...btnPrimary, flex: '1' }}
+              onClick={handleExport}
+            >
+              {t('export')}
             </button>
           </div>
 
           <div className="badge" style={{ marginBottom: 10 }}>
-            Всего: {stats.total} • Активных: {stats.active} • Отменено:{' '}
-            {stats.canceled}
+            {t('total')}: {stats.total} • {t('total_active')}: {stats.active} •{' '}
+            {t('total_canceled')}: {stats.canceled}
           </div>
 
-           /* ==== УСЛУГИ ==== */
-  const services = settings.serviceList || []
-
-  const updateServiceField = (idx, field, value) => {
-    const next = [...services]
-    next[idx] = {
-      ...next[idx],
-      [field]:
-        field === 'duration' || field === 'deposit'
-          ? Number(value) || 0
-          : value,
-    }
-    updateSettings({ serviceList: next })
-  }
-
-  const addService = () => {
-    const next = [...services, { name: 'Новая услуга', duration: 60, deposit: 0 }]
-    updateSettings({ serviceList: next })
-  }
-
-  const removeService = (idx) => {
-    if (services.length <= 1) return
-    const next = services.filter((_, i) => i !== idx)
-    updateSettings({ serviceList: next })
-  }
-
-  const timeList = generateTimeList(5) // каждые 5 минут
-
-  return (
-    <div className="col" style={{ gap: 16 }}>
-      {/* === РЕДАКТИРОВАТЬ НАСТРОЙКИ === */}
-      <div style={{ width: '100%' }}>
-        <div style={cardAurora}>
-          <button
-            onClick={() => setShowSettings((s) => !s)}
-            style={headerToggle}
-          >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-              <Chevron open={showSettings} />
-              <span style={{ fontWeight: 700 }}>Редактировать настройки</span>
-            </span>
-          </button>
-
+          {/* === КАРТОЧКИ ЗАПИСЕЙ === */}
           <div
             style={{
-              maxHeight: showSettings ? 1500 : 0,
-              overflow: 'hidden',
-              transition: 'max-height .35s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 18,
+              marginTop: 12,
             }}
           >
-            <div style={{ paddingTop: 14 }}>
-              {/* ==== БАЗОВЫЕ НАСТРОЙКИ ==== */}
-              <div className="row" style={{ gap: 12 }}>
-                <div className="col">
-                  <label style={labelStyle}>Имя мастера</label>
-                  <input
-                    style={inputGlass}
-                    value={settings.masterName}
-                    onChange={(e) =>
-                      updateSettings({ masterName: e.target.value })
-                    }
-                  />
-                </div>
+            {filtered.map((b) => {
+              const inFuture = new Date(b.start) > new Date()
+              const servicesArr = Array.isArray(b.services) ? b.services : []
 
-                <div className="col">
-                  <label style={labelStyle}>Телефон администратора</label>
-                  <input
-                    style={inputGlass}
-                    value={settings.adminPhone}
-                    onChange={(e) =>
-                      updateSettings({ adminPhone: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
+              const startDate = new Date(b.start)
+              const endDate = new Date(b.end || b.start)
 
-              {/* ==== ВРЕМЯ РАБОТЫ ==== */}
-              <div
-                className="row"
-                style={{ gap: 12, marginTop: 12, marginBottom: 8 }}
-              >
-                <div className="col">
-                  <label style={labelStyle}>Начало дня</label>
-                  <select
-                    style={inputGlass}
-                    value={settings.workStart}
-                    onChange={(e) =>
-                      updateSettings({ workStart: e.target.value })
-                    }
-                  >
-                    {timeList.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              const serviceTagStyle = (name) => {
+                const st = serviceStyles[name] || {
+                  bg: 'rgba(148,163,184,0.15)',
+                  border: '1px solid rgba(148,163,184,0.7)',
+                }
+                return {
+                  padding: '4px 12px',
+                  borderRadius: 999,
+                  fontSize: 13,
+                  ...st,
+                }
+              }
 
-                <div className="col">
-                  <label style={labelStyle}>Конец дня</label>
-                  <select
-                    style={inputGlass}
-                    value={settings.workEnd}
-                    onChange={(e) =>
-                      updateSettings({ workEnd: e.target.value })
-                    }
-                  >
-                    {timeList.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="col">
-                  <label style={labelStyle}>Длительность слота (мин)</label>
-                  <select
-                    style={inputGlass}
-                    value={settings.slotMinutes}
-                    onChange={(e) =>
-                      updateSettings({ slotMinutes: Number(e.target.value) })
-                    }
-                  >
-                    {[5, 10, 15, 20, 30, 60].map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* ==== УСЛУГИ ==== */}
-              <div
-                style={{
-                  marginTop: 18,
-                  paddingTop: 14,
-                  borderTop: '1px solid rgba(148,85,247,0.35)',
-                }}
-              >
+              return (
                 <div
+                  key={b.id}
                   style={{
+                    borderRadius: 16,
+                    border: '1px solid rgba(168,85,247,0.25)',
+                    background: 'rgba(15,10,25,0.85)',
+                    padding: '16px 20px',
+                    boxShadow: '0 0 18px rgba(168,85,247,0.20)',
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 8,
+                    flexDirection: 'column',
+                    gap: 10,
                   }}
                 >
-                  <div>
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Услуги</div>
+                  {/* HEADER: статус + ДАТА + ВРЕМЯ ОТ/ДО */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 10,
+                      alignItems: 'center',
+                    }}
+                  >
+                    {/* статус-точка */}
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        background:
+                          b.status === 'approved'
+                            ? '#22c55e'
+                            : b.status === 'pending'
+                            ? '#eab308'
+                            : '#ef4444',
+                        boxShadow:
+                          b.status === 'approved'
+                            ? '0 0 8px rgba(34,197,94,0.9)'
+                            : b.status === 'pending'
+                            ? '0 0 8px rgba(234,179,8,0.9)'
+                            : '0 0 8px rgba(248,113,113,0.9)',
+                      }}
+                    />
+
+                    {/* ДАТА (редактируемая) */}
+                    <div style={{ minWidth: 150 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          opacity: 0.8,
+                          marginBottom: 3,
+                        }}
+                      >
+                        Дата
+                      </div>
+                      <input
+                        type="date"
+                        value={toInputDate(startDate)}
+                        style={{
+                          ...inputGlass,
+                          padding: '6px 10px',
+                          height: '32px',
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value // YYYY-MM-DD
+                          if (!val) return
+                          const [y, m, d] = val.split('-').map(Number)
+                          updateBooking(b.id, (orig) => {
+                            const oldStart = new Date(orig.start)
+                            const oldEnd = new Date(orig.end || orig.start)
+                            const duration =
+                              oldEnd.getTime() - oldStart.getTime()
+
+                            const newStart = new Date(oldStart)
+                            newStart.setFullYear(y, (m || 1) - 1, d || 1)
+
+                            const newEnd = new Date(
+                              newStart.getTime() + Math.max(duration, 15 * 60000)
+                            )
+
+                            return {
+                              ...orig,
+                              start: newStart,
+                              end: newEnd,
+                            }
+                          })
+                        }}
+                      />
+                    </div>
+
+                    {/* ВРЕМЯ ОТ */}
+                    <div style={{ minWidth: 120 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          opacity: 0.8,
+                          marginBottom: 3,
+                        }}
+                      >
+                        Время от
+                      </div>
+                      <input
+                        type="time"
+                        value={toInputTime(startDate)}
+                        style={{
+                          ...inputGlass,
+                          padding: '6px 10px',
+                          height: '32px',
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value // HH:MM
+                          if (!val) return
+                          const [hh, mm] = val.split(':').map(Number)
+                          updateBooking(b.id, (orig) => {
+                            const oldStart = new Date(orig.start)
+                            const oldEnd = new Date(orig.end || orig.start)
+
+                            const newStart = new Date(oldStart)
+                            newStart.setHours(hh || 0, mm || 0, 0, 0)
+
+                            let newEnd = new Date(oldEnd)
+                            if (newEnd <= newStart) {
+                              newEnd = new Date(
+                                newStart.getTime() + 15 * 60000
+                              )
+                            }
+
+                            return {
+                              ...orig,
+                              start: newStart,
+                              end: newEnd,
+                            }
+                          })
+                        }}
+                      />
+                    </div>
+
+                    {/* ВРЕМЯ ДО */}
+                    <div style={{ minWidth: 120 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          opacity: 0.8,
+                          marginBottom: 3,
+                        }}
+                      >
+                        Время до
+                      </div>
+                      <input
+                        type="time"
+                        value={toInputTime(endDate)}
+                        style={{
+                          ...inputGlass,
+                          padding: '6px 10px',
+                          height: '32px',
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value // HH:MM
+                          if (!val) return
+                          const [hh, mm] = val.split(':').map(Number)
+                          updateBooking(b.id, (orig) => {
+                            const oldStart = new Date(orig.start)
+                            let newEnd = new Date(oldStart)
+                            newEnd.setHours(hh || 0, mm || 0, 0, 0)
+
+                            if (newEnd <= oldStart) {
+                              newEnd = new Date(
+                                oldStart.getTime() + 15 * 60000
+                              )
+                            }
+
+                            return {
+                              ...orig,
+                              end: newEnd,
+                            }
+                          })
+                        }}
+                      />
+                    </div>
+
+                    {/* Текстовый вид времени (для контроля) */}
                     <div
                       style={{
-                        fontSize: 12,
-                        opacity: 0.75,
-                        maxWidth: 450,
+                        marginLeft: 'auto',
+                        fontSize: 13,
+                        opacity: 0.8,
                       }}
                     >
-                      Вы можете менять название, длительность и сумму аванса
-                      каждой услуги.
+                      {formatTime24(b.start)} – {formatTime24(b.end)}
                     </div>
                   </div>
 
-                  <button type="button" style={btnPrimary} onClick={addService}>
-                    + Добавить услугу
-                  </button>
-                </div>
+                  {/* УСЛУГИ — цветные теги */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 8,
+                      marginTop: 4,
+                    }}
+                  >
+                    {servicesArr.map((sName, i) => (
+                      <span key={i} style={serviceTagStyle(sName)}>
+                        {sName}
+                      </span>
+                    ))}
+                    {servicesArr.length === 0 && (
+                      <span className="muted">Без услуг</span>
+                    )}
+                  </div>
 
-                {/* Список услуг */}
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 8,
-                    marginTop: 6,
-                  }}
-                >
-                  {services.map((s, idx) => (
+                  {/* КЛИЕНТ */}
+                  <div style={{ marginTop: 6 }}>
+                    <b>{b.userName}</b>
+                    <div style={{ fontSize: 13, opacity: 0.8 }}>
+                      {b.userPhone}
+                    </div>
+                    {b.userInstagram && (
+                      <div style={{ fontSize: 13, opacity: 0.8 }}>
+                        @{b.userInstagram}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ОПЛАТА + СУММА АВАНСА */}
+                  <div
+                    style={{
+                      marginTop: 6,
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(148,163,184,0.25)',
+                      background: 'rgba(30,20,40,0.55)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                    }}
+                  >
                     <div
-                      key={idx}
                       style={{
-                        display: 'grid',
-                        gridTemplateColumns:
-                          'minmax(140px, 1.4fr) minmax(80px, .7fr) minmax(80px, .7fr) auto',
-                        gap: 8,
+                        display: 'flex',
                         alignItems: 'center',
+                        gap: 8,
                       }}
                     >
-                      <input
-                        style={inputGlass}
-                        value={s.name}
-                        onChange={(e) =>
-                          updateServiceField(idx, 'name', e.target.value)
-                        }
-                        placeholder="Название"
-                      />
-
-                      <input
-                        style={inputGlass}
-                        type="number"
-                        min="0"
-                        value={s.duration}
-                        onChange={(e) =>
-                          updateServiceField(idx, 'duration', e.target.value)
-                        }
-                        placeholder="Минут"
-                      />
-
-                      <input
-                        style={inputGlass}
-                        type="number"
-                        min="0"
-                        value={s.deposit}
-                        onChange={(e) =>
-                          updateServiceField(idx, 'deposit', e.target.value)
-                        }
-                        placeholder="€"
-                      />
-
-                      <button
-                        onClick={() => removeService(idx)}
+                      <span
                         style={{
-                          borderRadius: 10,
-                          padding: '8px 10px',
-                          border: '1px solid rgba(248,113,113,0.7)',
-                          background: 'rgba(127,29,29,0.6)',
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          background: b.paid ? '#22c55e' : '#ef4444',
+                          boxShadow: b.paid
+                            ? '0 0 8px rgba(34,197,94,0.9)'
+                            : '0 0 8px rgba(248,113,113,0.9)',
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: 14,
+                          color: b.paid ? '#bbf7d0' : '#fecaca',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {b.paid ? 'Apmokėta' : 'Neapmokėta'}
+                      </span>
+                    </div>
+
+                    {/* СУММА АВАНСА (редактируемая) */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 8,
+                        alignItems: 'center',
+                        marginTop: 2,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 13,
+                          opacity: 0.85,
+                          minWidth: 90,
+                        }}
+                      >
+                        Avansas (€):
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={b.price ?? ''}
+                        style={{
+                          ...inputGlass,
+                          maxWidth: 120,
+                          padding: '6px 10px',
+                          height: '32px',
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          const num = val === '' ? null : Number(val) || 0
+                          updateBooking(b.id, (orig) => ({
+                            ...orig,
+                            price: num,
+                          }))
+                        }}
+                      />
+                    </div>
+
+                    {b.price != null && b.price !== '' && (
+                      <button
+                        onClick={() => togglePaid(b.id)}
+                        style={{
+                          marginTop: 6,
+                          width: '100%',
+                          padding: '8px 0',
+                          borderRadius: 8,
+                          border: '1px solid rgba(148,163,184,0.5)',
+                          background: 'rgba(0,0,0,0.25)',
                           color: '#fff',
+                          cursor: 'pointer',
+                          fontSize: 13,
+                        }}
+                      >
+                        {b.paid ? 'Снять оплату' : 'Пометить оплаченой'}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* СТАТУС */}
+                  <div style={{ marginTop: 4 }}>
+                    <span style={{ fontWeight: 600 }}>{t('status')}: </span>
+                    {statusLabel(b)}
+                  </div>
+
+                  {/* КНОПКИ */}
+                  <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                    {b.status === 'pending' && (
+                      <button
+                        onClick={() => approveByAdmin(b.id)}
+                        style={{
+                          flex: 1,
+                          borderRadius: 10,
+                          padding: '10px',
+                          background:
+                            'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
+                          color: '#fff',
+                          border: '1px solid rgba(168,85,247,0.45)',
                           cursor: 'pointer',
                         }}
                       >
-                        ✕
+                        {t('approve')}
                       </button>
-                    </div>
-                  ))}
+                    )}
+
+                    {b.status !== 'canceled_admin' &&
+                      b.status !== 'canceled_client' &&
+                      inFuture && (
+                        <button
+                          onClick={() => cancelByAdmin(b.id)}
+                          style={{
+                            flex: 1,
+                            borderRadius: 10,
+                            padding: '10px',
+                            background: 'rgba(110,20,30,.35)',
+                            border: '1px solid rgba(239,68,68,.6)',
+                            color: '#fff',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {t('rejected')}
+                        </button>
+                      )}
+                  </div>
                 </div>
-              </div>
-            </div>
+              )
+            })}
+
+            {!filtered.length && (
+              <small className="muted" style={{ marginTop: 20 }}>
+                {t('no_records')}
+              </small>
+            )}
           </div>
+
+          {toast && (
+            <div className="toast" style={{ marginTop: 10 }}>
+              {toast}
+            </div>
+          )}
         </div>
       </div>
+    </div>
+  )
+}
 
-      {/* === КАРТОЧКИ ЗАПИСЕЙ === */}
-      <div style={{ width: '100%' }}>
-        <div style={cardAurora}>
-          <div style={topBar}>
-            <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>
-              Все записи
-            </div>
-          </div>
+/* === ВСПОМОГАТЕЛЬНОЕ === */
+function Chevron({ open }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#cbb6ff"
+      strokeWidth="2"
+    >
+      {open ? (
+        <path d="M6 15l6-6 6 6" />
+      ) : (
+        <path d="M6 9l6 6 6-6" />
+      )}
+    </svg>
+  )
+}
 
-          {/* Фильтр */}
-          <div
-            style={{
-              display: 'flex',
-              gap: 10,
-              margin: '8px 0 12px 0',
-              flexWrap: 'wrap',
-            }}
-          >
-            <input
-              style={{ ...inputGlass, flex: '1 1 260px' }}
-              placeholder="Поиск…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+function generateTimes(start, end) {
+  const result = []
+  for (let h = start; h < end; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const hh = String(h).padStart(2, '0')
+      const mm = String(m).padStart(2, '0')
+      result.push(`${hh}:${mm}`)
+    }
+  }
+  return result
+}
 
-            <div style={segmented}>
-              {[
-                { v: 'all', label: 'Все' },
-                { v: 'pending', label: 'Ожидает' },
-                { v: 'approved', label: 'Подтверждённые' },
-                { v: 'canceled_client', label: 'Отменены клиентом' },
-                { v: 'canceled_admin', label: 'Отменены админом' },
-              ].map((it) => (
-                <button
-                  key={it.v}
-                  onClick={() => setStatusFilter(it.v)}
-                  style={{
-                    ...segBtn,
-                    ...(statusFilter === it.v ? segActive : {}),
-                  }}
-                >
-                  {it.label}
-                </button>
-              ))}
-            </div>
+/* === СТИЛИ === */
+const cardAurora = {
+  background:
+    'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))',
+  border: '1px solid rgba(168,85,247,0.18)',
+  borderRadius: 16,
+  padding: 14,
+  boxShadow:
+    '0 8px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.03)',
+}
 
-            <button style={{ ...btnPrimary, flex: '1' }} onClick={handleExport}>
-              Экспорт
-            </button>
-          </div>
+const headerToggle = {
+  width: '100%',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: 10,
+  borderRadius: 12,
+  padding: '14px 18px',
+  border: '1px solid rgba(168,85,247,0.25)',
+  background: 'rgba(25,10,45,0.55)',
+  color: '#fff',
+  cursor: 'pointer',
+}
 
-          <div className="badge" style={{ marginBottom: 10 }}>
-            Всего: {stats.total} • Активных: {stats.active} • Отменено:{' '}
-            {stats.canceled}
-          </div>
- 
+const labelStyle = {
+  fontSize: 12,
+  opacity: 0.8,
+  marginBottom: 6,
+  display: 'block',
+}
+
+const inputGlass = {
+  width: '100%',
+  padding: '10px 12px',
+  borderRadius: 10,
+  color: '#fff',
+  border: '1px solid rgba(168,85,247,0.35)',
+  background: 'rgba(17,0,40,0.45)',
+  outline: 'none',
+}
+
+const topBar = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '4px 2px 10px 2px',
+}
+
+const btnBase = {
+  borderRadius: 10,
+  padding: '8px 14px',
+  fontWeight: 600,
+  cursor: 'pointer',
+  border: '1px solid rgba(168,85,247,0.45)',
+  transition: '0.2s',
+}
+
+const btnPrimary = {
+  ...btnBase,
+  background:
+    'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
+  boxShadow: '0 0 14px rgba(150,85,247,0.35)',
+  color: '#fff',
+}
+
+const segmented = {
+  display: 'flex',
+  gap: 8,
+  background: 'rgba(17,0,40,0.45)',
+  border: '1px solid rgba(168,85,247,0.25)',
+  borderRadius: 12,
+  padding: 6,
+}
+
+const segBtn = {
+  ...btnBase,
+  padding: '8px 12px',
+  background: 'rgba(25,10,45,0.35)',
+  border: '1px solid rgba(168,85,247,0.25)',
+}
+
+const segActive = {
+  background:
+    'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
+  border: '1px solid rgba(180,95,255,0.7)',
+  boxShadow: '0 0 12px rgba(150,90,255,0.30)',
+}
