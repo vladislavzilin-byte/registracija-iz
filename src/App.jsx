@@ -21,7 +21,7 @@ export default function App() {
   return (
     <div className="container" style={containerStyle}>
       
-  {/* === Верхняя панель === */}
+{/* === Верхняя панель === */}
 <div style={navBar}>
   <div style={leftSide}>
 
@@ -41,47 +41,41 @@ export default function App() {
       {t('nav_my')}
     </button>
 
-    {/* === НОВАЯ КНОПКА: KAINAS === */}
+    {/* KAINAS */}
     <button
       style={{
-        ...navButton(tab === 'prices'),
+        ...navButton(false),
         transform: kPress ? "translateY(6px)" : "translateY(0)",
         transition: "transform .25s ease",
       }}
       onClick={() => {
-        // визуальное "нажатие вниз"
         setKPress(true)
         setTimeout(() => setKPress(false), 250)
 
-        // остаёмся на календаре
         setTab("calendar")
 
-        // автоскролл к секции KAINAS
         setTimeout(() => {
           const section = document.getElementById("kainas-section")
           section?.scrollIntoView({ behavior: "smooth", block: "start" })
         }, 140)
 
-        // открыть аккордеон в Calendar.jsx
         window.dispatchEvent(new Event("openPrices"))
       }}
     >
       Kainas
     </button>
 
-          {/* === Кнопка Админ (только для админа) === */}
-          {isAdmin && (
-            <button
-              onClick={() => setTab('admin')}
-              style={{
-                ...navButton(tab === 'admin'),
-                animation: 'fadeInUp 0.4s ease-out',
-              }}
-            >
-              {t('nav_admin')}
-            </button>
-          )}
-        </div>
+    {/* AДМИН */}
+    {isAdmin && (
+      <button
+        onClick={() => setTab('admin')}
+        style={navButton(tab === 'admin')}
+      >
+        Админ
+      </button>
+    )}
+  </div>
+</div>
 
         {/* === Языки === */}
         <div style={langBlock}>
