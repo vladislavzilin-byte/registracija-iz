@@ -241,66 +241,60 @@ export default function Auth({ onAuth }) {
   );
 
   // === отображение профиля ===
-  if (current) {
-    const initials = current.name
-      ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
-      : "U";
+ if (current) {
+  const initials = current.name
+    ? current.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
+    : "U";
 
-    return (
-      <>
-        {toast && <div style={toastStyle}>{toast}</div>}
+  return (
+    <>
+      {toast && <div style={toastStyle}>{toast}</div>}
+      <div style={profileCard}>
+        <div style={auroraBg} />
+        <div style={borderGlow} />
 
-        <div style={profileCard}>
-          <div style={auroraBg} />
-          <div style={borderGlow} />
-          <div
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "12px 18px",
+            gap: "96px", // ← минимальный отступ 5 см между текстом и кнопкой
+          }}
+        >
+          {/* Левая часть */}
+          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+            <div style={avatarStyle}>{initials}</div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={nameStyle}>{current.name}</div>
+              {current.phone && <div style={contactStyle}>{current.phone}</div>}
+              {current.email && <div style={contactStyle}>{current.email}</div>}
+              {current.instagram && (
+                <div style={contactStyle}>{current.instagram}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Кнопка Выйти */}
+          <button
+            onClick={logout}
             style={{
-              position: "relative",
-              zIndex: 2,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "6px 8px",
+              ...logoutButton,
+              padding: "10px 22px", // авто-ширина по тексту
+              whiteSpace: "nowrap",
+              flexShrink: 0, // запрещает сжиматься
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={avatarStyle}>{initials}</div>
-
-              <div style={{ lineHeight: "1.2" }}>
-                <div style={nameStyle}>{current.name}</div>
-                {current.phone && (
-                  <div style={contactStyle}>{current.phone}</div>
-                )}
-                {current.email && (
-                  <div style={contactStyle}>{current.email}</div>
-                )}
-                {current.instagram && (
-                  <div style={contactStyle}>
-                    @{current.instagram.replace("@", "")}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* УКОРOЧЕННАЯ КНОПКА */}
-            <button
-              onClick={logout}
-              style={{
-                ...logoutButton,
-                padding: "8px 18px",
-                fontSize: "0.95rem",
-                whiteSpace: "nowrap",
-                minWidth: "90px",
-                textAlign: "center",
-              }}
-            >
-              Выйти
-            </button>
-          </div>
+            Выйти
+          </button>
         </div>
-      </>
-    );
-  }
+      </div>
+    </>
+  );
+}
 
   // === форма входа / регистрации ===
   return (
