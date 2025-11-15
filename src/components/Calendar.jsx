@@ -37,7 +37,7 @@ export default function Calendar(){
   // -------------------------
   const [openPrices, setOpenPrices] = useState(false)
 
-  // Автоматическое открытие Kainas из App.jsx (toggle)
+  // Автоматическое открытие/закрытие Kainas из App.jsx
   useEffect(() => {
     const handler = () => {
       setOpenPrices(prev => !prev)
@@ -74,6 +74,7 @@ export default function Calendar(){
     return arr
   }, [currentMonth])
 
+  // ⚠️ тут один раз читаем бронирования
   const bookings = getBookings()
 
   const slotsForDay = (d) => {
@@ -98,14 +99,21 @@ export default function Calendar(){
     return slots
   }
 
+  // 🔒 АВТОМАТИЧЕСКОЕ ЗАКРЫТИЕ СЛОТОВ ПО ДЛИТЕЛЬНОСТИ
+  // слот считается занятым, если он попадает внутрь интервала [start, end) любой записи
   const isTaken = (t) => {
-    const storedTaken = bookings.some(
-      b =>
-        (b.status === 'approved' || b.status === 'pending') &&
-        isSameMinute(b.start, t)
-    )
+    const storedTaken = bookings.some(b => {
+      if (!(b.status === 'approved' || b.status === 'pending')) return false
+      const bs = new Date(b.start)
+      const be = new Date(b.end)
+      return t >= bs && t < be
+    })
+
     const isProc = processingISO && isSameMinute(processingISO, t)
+
+    // локально заблокированные слоты (только что забронированные)
     const isLocal = bookedISO.some(x => isSameMinute(x, t))
+
     return storedTaken || isProc || isLocal
   }
 
@@ -138,74 +146,88 @@ export default function Calendar(){
     })
   }
 
- const confirmBooking = () => {
-  if (!pendingTime) return
-  if (!selectedServices || selectedServices.length === 0) {
-    alert('Pasirinkite bent vieną paslaugą.')
-    return
+  const confirmBooking = () => {
+    if (!pendingTime) return
+    if (!selectedServices || selectedServices.length === 0) {
+      alert('Pasirinkite bent vieną paslaugą.')
+      return
+    }
+
+    const user = getCurrentUser()
+    if (!user) {
+      alert(t('login_or_register'))
+      return
+    }
+
+    const tSel = pendingTime
+
+    if (toDateOnly(tSel) < today) {
+      alert(t('cannot_book_past') || 'Нельзя записываться на прошедшие даты')
+      return
+    }
+    if (isTaken(tSel)) {
+      alert(t('already_booked'))
+      return
+    }
+
+    // 🔢 считаем цену
+    const totalPrice = selectedServices.reduce(
+      (sum, s) => sum + (SERVICE_PRICES[s] || 0),
+      0
+    )
+
+    // ⏱ считаем длительность по услугам
+    let durationMinutes = selectedServices.reduce(
+      (sum, s) => sum + (SERVICE_DURATIONS[s] || 0),
+      0
+    )
+    // fallback — если что-то пошло не так
+    if (durationMinutes === 0) durationMinutes = settings.slotMinutes
+
+    setBusy(true)
+    setProcessingISO(new Date(tSel))
+
+    const end = new Date(tSel)
+    end.setMinutes(end.getMinutes() + durationMinutes)
+
+    const newB = {
+      id: id(),
+      userPhone: user.phone,
+      userName: user.name,
+      userInstagram: user.instagram || '',
+      start: tSel,
+      end,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      services: selectedServices,
+      price: totalPrice,          // 💰 цена
+      durationMinutes,            // ⏱ длительность
+    }
+
+    setTimeout(() => {
+      saveBookings([...bookings, newB])
+
+      // 🟣 ЛОКАЛЬНО БЛОКИРУЕМ ВСЕ СЛОТЫ ПО ДЛИТЕЛЬНОСТИ
+      setBookedISO(prev => {
+        const arr = [...prev]
+        const step = settings.slotMinutes * 60000
+        const totalMs = durationMinutes * 60000
+        const slotsCount = Math.max(1, Math.round(totalMs / step))
+
+        for (let i = 0; i < slotsCount; i++) {
+          const slotTime = new Date(tSel.getTime() + i * step)
+          arr.push(slotTime)
+        }
+        return arr
+      })
+
+      setBusy(false)
+      setProcessingISO(null)
+      setPendingTime(null)
+      setSelectedServices([])
+      closeModal()
+    }, 600)
   }
-
-  const user = getCurrentUser()
-  if (!user) {
-    alert(t('login_or_register'))
-    return
-  }
-
-  const tSel = pendingTime
-
-  if (toDateOnly(tSel) < today) {
-    alert(t('cannot_book_past') || 'Нельзя записываться на прошедшие даты')
-    return
-  }
-  if (isTaken(tSel)) {
-    alert(t('already_booked'))
-    return
-  }
-
-  // 🔢 считаем цену
-  const totalPrice = selectedServices.reduce(
-    (sum, s) => sum + (SERVICE_PRICES[s] || 0),
-    0
-  )
-
-  // ⏱ считаем длительность
-  let durationMinutes = selectedServices.reduce(
-    (sum, s) => sum + (SERVICE_DURATIONS[s] || 0),
-    0
-  )
-  // fallback — если что-то пошло не так
-  if (durationMinutes === 0) durationMinutes = settings.slotMinutes
-
-  setBusy(true)
-  setProcessingISO(new Date(tSel))
-
-  const end = new Date(tSel)
-  end.setMinutes(end.getMinutes() + durationMinutes)
-
-  const newB = {
-    id: id(),
-    userPhone: user.phone,
-    userName: user.name,
-    userInstagram: user.instagram || '',
-    start: tSel,
-    end,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-    services: selectedServices,
-    price: totalPrice,          // 💰 цена
-    durationMinutes,            // ⏱ длительность
-  }
-
-  setTimeout(() => {
-    saveBookings([...bookings, newB])
-    setBookedISO(prev => [...prev, new Date(tSel)])
-    setBusy(false)
-    setProcessingISO(null)
-    setPendingTime(null)
-    setSelectedServices([])
-    closeModal()
-  }, 600)
-}
 
   const closeModal = () => setModal(null)
 
@@ -270,11 +292,6 @@ export default function Calendar(){
       base.fontWeight = 700
     }
 
-    // DOTS for past dates — FIXED
-    if(isPast){
-      base.position = "relative"
-    }
-
     return base
   }
 
@@ -297,6 +314,41 @@ export default function Calendar(){
         @media(max-width: 500px){
           .grid { gap: 6px !important; }
           .muted { font-size: 13px !important; }
+        }
+
+        @keyframes spin { to{ transform: rotate(360deg); } }
+        @keyframes fadeSlideLeft {
+          from { opacity:0; transform: translateY(6px); }
+          to { opacity:1; transform: translateY(0); }
+        }
+
+        .modal-backdrop {
+          position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+          display:flex; align-items:center; justify-content:center; z-index: 9999;
+          backdrop-filter: blur(2px);
+        }
+        .modal {
+          background: rgba(17, 0, 40, 0.65);
+          border: 1px solid rgba(168,85,247,0.35);
+          border-radius: 16px; padding: 20px; color: #fff;
+          box-shadow: 0 8px 32px rgba(120,0,255,0.35);
+          min-width: 280px;
+          animation: fadeSlideLeft .25s ease both;
+        }
+        .loader {
+          width: 18px; height: 18px; border-radius: 50%;
+          border: 2px solid rgba(255,255,255,0.25);
+          border-top-color: rgba(168,85,247,0.9);
+          animation: spin .8s linear infinite;
+          display:inline-block; vertical-align:middle;
+        }
+
+        .datebtn.past::after {
+          content: '';
+          display:block;
+          width:6px; height:6px; border-radius:50%;
+          background: rgba(150,150,170,0.4);
+          margin:6px auto 0;
         }
       `}</style>
 
@@ -464,49 +516,10 @@ export default function Calendar(){
         </div>
       </div>
 
-            {/* ------------------------- */}
+      {/* ------------------------- */}
       {/*   NAVIGATION + MONTH     */}
       {/* ------------------------- */}
 
-      <style>{`
-        @keyframes spin { to{ transform: rotate(360deg); } }
-        @keyframes fadeSlideLeft {
-          from { opacity:0; transform: translateY(6px); }
-          to { opacity:1; transform: translateY(0); }
-        }
-
-        .modal-backdrop {
-          position: fixed; inset: 0; background: rgba(0,0,0,0.55);
-          display:flex; align-items:center; justify-content:center; z-index: 9999;
-          backdrop-filter: blur(2px);
-        }
-        .modal {
-          background: rgba(17, 0, 40, 0.65);
-          border: 1px solid rgba(168,85,247,0.35);
-          border-radius: 16px; padding: 20px; color: #fff;
-          box-shadow: 0 8px 32px rgba(120,0,255,0.35);
-          min-width: 280px;
-          animation: fadeSlideLeft .25s ease both;
-        }
-        .loader {
-          width: 18px; height: 18px; border-radius: 50%;
-          border: 2px solid rgba(255,255,255,0.25);
-          border-top-color: rgba(168,85,247,0.9);
-          animation: spin .8s linear infinite;
-          display:inline-block; vertical-align:middle;
-        }
-
-        /* past-day mark: small dot */
-        .datebtn.past::after {
-          content: '';
-          display:block;
-          width:6px; height:6px; border-radius:50%;
-          background: rgba(150,150,170,0.4);
-          margin:6px auto 0;
-        }
-      `}</style>
-
-      {/* NAVIGATION */}
       <div style={{display:'flex',gap:16,alignItems:'center',justifyContent:'center',marginBottom:12}}>
         <button
           style={navBtnStyle}
