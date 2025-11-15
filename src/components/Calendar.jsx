@@ -222,7 +222,8 @@ export default function Calendar(){
   style={{
     width: "100%",
     border: "1px solid rgba(170, 90, 255, 0.22)",
-    background: "linear-gradient(180deg, rgba(18,18,30,0.96) 0%, rgba(12,12,22,0.92) 100%)",
+    background:
+      "linear-gradient(180deg, rgba(18,18,30,0.96) 0%, rgba(12,12,22,0.92) 100%)",
     borderRadius: 20,
     padding: "22px 24px 26px",
     marginTop: 0,
@@ -231,7 +232,6 @@ export default function Calendar(){
     boxShadow: "0 0 28px rgba(170, 90, 255, 0.18)",
   }}
 >
-
   {/* Заголовок */}
   <h2
     style={{
@@ -276,7 +276,6 @@ export default function Calendar(){
       e.currentTarget.style.background = "rgba(22,22,35,0.90)";
     }}
   >
-
     {/* Стрелка слева */}
     <svg
       width="18"
@@ -306,7 +305,6 @@ export default function Calendar(){
       opacity: openPrices ? 1 : 0,
     }}
   >
-
     {/* Контейнер цен */}
     <div
       style={{
@@ -319,7 +317,6 @@ export default function Calendar(){
         animation: openPrices ? "fadeIn .45s ease" : "none",
       }}
     >
-
       <style>
         {`
           @keyframes fadeIn {
@@ -343,7 +340,8 @@ export default function Calendar(){
         {
           price: "50 € užstatas / 100 €",
           title: "Plaukų Tresų nuoma",
-          text: "Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžinu užstatą",
+          text:
+            "Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžinu užstatą",
         },
         {
           price: "Iki 20 €",
@@ -353,7 +351,8 @@ export default function Calendar(){
         {
           price: "130 €",
           title: "Atvykimas Klaipėdoje",
-          text: "Daiktų kraustymai, važiavimai — per tą laiką galiu priimti kitą klientę.",
+          text:
+            "Daiktų kraustymai, važiavimai — per tą laiką galiu priimti kitą klientę.",
         },
       ].map((item, i) => (
         <div
