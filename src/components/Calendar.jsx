@@ -16,7 +16,9 @@ export default function Calendar(){
   const { t } = useI18n()
   const settings = getSettings()
 
-  // NEW → состояние для окна KAINAS
+  // -------------------------
+  // KAINAS — accordion state
+  // -------------------------
   const [openPrices, setOpenPrices] = useState(false)
 
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()))
@@ -40,7 +42,9 @@ export default function Calendar(){
   const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
 
   const days = useMemo(()=>{
-    const arr=[]; let d=new Date(gridStart); while(d<=gridEnd){ arr.push(new Date(d)); d=addDays(d,1) } return arr
+    const arr=[]; let d=new Date(gridStart); 
+    while(d<=gridEnd){ arr.push(new Date(d)); d=addDays(d,1) } 
+    return arr
   }, [currentMonth])
 
   const bookings = getBookings()
@@ -54,18 +58,23 @@ export default function Calendar(){
     const end   = new Date(d); end.setHours(eh, em, 0, 0)
     const slots = []
     let cur = new Date(start)
+
     while(cur <= end){
       slots.push(new Date(cur))
       cur = new Date(cur.getTime() + settings.slotMinutes*60000)
     }
+
     const blocked = settings.blockedDates.includes(dayISO(d))
     if(blocked) return []
-    if(toDateOnly(d) < toDateOnly(minDate) || toDateOnly(d) > toDateOnly(maxDate)) return []
+    if(toDateOnly(d) < minDate || toDateOnly(d) > maxDate) return []
+
     return slots
   }
 
   const isTaken = (t) => {
-    const storedTaken = bookings.some(b => (b.status==='approved' || b.status==='pending') && isSameMinute(b.start, t))
+    const storedTaken = bookings.some(
+      b => (b.status==='approved' || b.status==='pending') && isSameMinute(b.start, t)
+    )
     const isProc = processingISO && isSameMinute(processingISO, t)
     const isLocal = bookedISO.some(x => isSameMinute(x, t))
     return storedTaken || isProc || isLocal
@@ -82,7 +91,9 @@ export default function Calendar(){
 
     setBusy(true)
     setProcessingISO(new Date(tSel))
-    const end = new Date(tSel); end.setMinutes(end.getMinutes() + settings.slotMinutes)
+
+    const end = new Date(tSel)
+    end.setMinutes(end.getMinutes() + settings.slotMinutes)
 
     const newB = {
       id: id(),
@@ -100,6 +111,7 @@ export default function Calendar(){
       setBookedISO(prev => [...prev, new Date(tSel)])
       setBusy(false)
       setProcessingISO(null)
+
       setModal({
         title: t('booked_success'),
         dateStr: format(tSel,'dd.MM.yyyy'),
@@ -131,10 +143,9 @@ export default function Calendar(){
     width: 130, height: 46, borderRadius: 14,
     border: '1px solid rgba(168,85,247,0.40)',
     background: 'rgba(31, 0, 63, 0.55)',
-    backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+    backdropFilter: 'blur(8px)',
     color: '#fff', fontSize: 22, cursor: 'pointer',
-    boxShadow: '0 0 18px rgba(138,43,226,0.25)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center'
+    display:'flex', alignItems:'center', justifyContent:'center'
   }
 
   const centerPillStyle = {
@@ -143,8 +154,7 @@ export default function Calendar(){
     border: '1px solid rgba(168,85,247,0.40)',
     background: 'linear-gradient(145deg, rgba(66,0,145,0.55), rgba(20,0,40,0.60))',
     backdropFilter: 'blur(8px)',
-    color: '#fff', fontSize: 15, fontWeight: 600,
-    boxShadow: '0 0 18px rgba(138,43,226,0.25)'
+    color: '#fff', fontWeight: 600
   }
 
   const isToday = (d) => isSameDay(toDateOnly(d), today)
@@ -154,48 +164,68 @@ export default function Calendar(){
       borderRadius: 12,
       padding: '10px 0',
       textAlign: 'center',
-      transition: '0.2s'
+      transition: '0.2s',
+      position: 'relative'
     }
-    if(isPast){ base.opacity = 0.38 }
+
+    if(isPast){
+      base.opacity = 0.45
+      base.filter = "grayscale(30%)"
+    }
 
     if(hoverIdx === idx && !isPast){
       base.boxShadow = '0 0 18px rgba(168,85,247,0.40)'
       base.background = 'rgba(98,0,180,0.18)'
     }
+
     if(active){
       base.boxShadow = '0 0 24px rgba(168,85,247,0.55)'
       base.background = 'rgba(98,0,180,0.22)'
       base.fontWeight = 700
     }
-    if(isToday(d) && !active){
-      base.boxShadow = '0 0 0 1px rgba(168,85,247,0.45) inset'
+
+    // DOTS for past dates — FIXED
+    if(isPast){
+      base.position = "relative"
     }
+
     return base
   }
-
-  const slotBtnStyle = (disabledLike) => ({
-    borderRadius: 10,
-    padding: '8px 12px',
-    border: '1px solid ' + (disabledLike ? 'rgba(180,180,200,0.25)' : 'rgba(168,85,247,0.45)'),
-    background: disabledLike ? 'rgba(255,255,255,0.04)' : 'rgba(98,0,180,0.18)',
-    color: '#fff',
-    cursor: disabledLike ? 'default' : 'pointer',
-    backdropFilter: 'blur(6px)',
-    transition: '0.2s'
-  })
 
   return (
     <div className="card" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
 
-      {/* -------------- KAINAS block -------------- */}
+      <style>{`
+        .past-day-dot::after {
+          content: '';
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: rgba(200,200,255,0.4);
+          position: absolute;
+          left: 50%;
+          bottom: 4px;
+          transform: translateX(-50%);
+        }
+
+        @media(max-width: 500px){
+          .grid { gap: 6px !important; }
+          .muted { font-size: 13px !important; }
+        }
+      `}</style>
+
+      {/* ------------------------- */}
+      {/*         KAINAS           */}
+      {/* ------------------------- */}
+
       <div
         style={{
-          border: '1px solid rgba(150, 80, 255, 0.25)',
-          background: 'rgba(10, 0, 25, 0.6)',
+          border: "1px solid rgba(150, 80, 255, 0.25)",
+          background: "rgba(10, 0, 25, 0.6)",
           borderRadius: 14,
           padding: 20,
           marginBottom: 25,
-          backdropFilter: 'blur(12px)',
+          backdropFilter: "blur(12px)",
         }}
       >
         <h2 style={{ marginBottom: 12, fontSize: 26 }}>Kainas</h2>
@@ -203,41 +233,47 @@ export default function Calendar(){
         <div
           onClick={() => setOpenPrices(!openPrices)}
           style={{
-            border: '1px solid rgba(150, 80, 255, 0.3)',
-            padding: '12px 16px',
+            border: "1px solid rgba(150, 80, 255, 0.3)",
+            padding: "12px 16px",
             borderRadius: 10,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            transition: "0.3s",
           }}
         >
-          <div
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
             style={{
-              transition: '0.3s',
-              transform: openPrices ? 'rotate(180deg)' : 'rotate(0deg)',
-              color: '#b980ff',
+              transform: openPrices ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "0.3s",
+              fill: "#b980ff",
             }}
           >
-            ▼
-          </div>
+            <path d="M7 10l5 5 5-5z" />
+          </svg>
+
           <div style={{ fontSize: 18 }}>Žiūrėti kainas</div>
         </div>
 
         <div
           style={{
             maxHeight: openPrices ? 2000 : 0,
-            overflow: 'hidden',
-            transition: 'max-height .4s',
+            overflow: "hidden",
+            transition: "max-height .4s ease",
             marginTop: openPrices ? 16 : 0,
-            border: openPrices ? '1px solid rgba(150, 80, 255, 0.2)' : 'none',
+            border: openPrices ? "1px solid rgba(150, 80, 255, 0.2)" : "none",
             borderRadius: 12,
-            padding: openPrices ? 20 : '0 20px',
-            background: 'rgba(15, 0, 35, 0.8)',
+            padding: openPrices ? 20 : "0 20px",
+            background: "rgba(15, 0, 35, 0.8)",
           }}
         >
-          <div style={{ opacity: openPrices ? 1 : 0, transition: '.4s' }}>
+          <div style={{ opacity: openPrices ? 1 : 0, transition: ".4s" }}>
             <p><b>80–130 €</b><br/>Šukuosenos kaina<br/>Priklauso nuo darbo apimties</p>
+
             <p><b>25 €</b><br/>Konsultacija<br/>Užtrunkame nuo 30 min. iki valandos</p>
 
             <p>
@@ -257,44 +293,101 @@ export default function Calendar(){
         </div>
       </div>
 
-      {/* -------------- NAVIGATION MONTH -------------- */}
+      {/* ------------------------- */}
+      {/*   NAVIGATION + MONTH     */}
+      {/* ------------------------- */}
+
       <style>{`
-        @keyframes fadeSlideLeft { from{opacity:.0; transform: translateX(12px)} to{opacity:1; transform: translateX(0)} }
-        @keyframes fadeSlideRight{ from{opacity:.0; transform: translateX(-12px)} to{opacity:1; transform: translateX(0)} }
         @keyframes spin { to{ transform: rotate(360deg); } }
-        .month-enter-left { animation: fadeSlideLeft .35s ease both; }
-        .month-enter-right{ animation: fadeSlideRight .35s ease both; }
+
+        .modal-backdrop {
+          position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+          display:flex; align-items:center; justify-content:center; z-index: 9999;
+          backdrop-filter: blur(2px);
+        }
+        .modal {
+          background: rgba(17, 0, 40, 0.85);
+          border: 1px solid rgba(168,85,247,0.35);
+          border-radius: 16px; padding: 20px; color: #fff;
+          box-shadow: 0 8px 32px rgba(120,0,255,0.35);
+          min-width: 280px;
+        }
+        .loader {
+          width: 18px; height: 18px; border-radius: 50%;
+          border: 2px solid rgba(255,255,255,0.25);
+          border-top-color: rgba(168,85,247,0.9);
+          animation: spin .8s linear infinite;
+          display:inline-block; vertical-align:middle;
+        }
       `}</style>
 
-      <div style={{display:'flex',gap:16,alignItems:'center',justifyContent:'center',marginBottom:12}}>
-        <button style={navBtnStyle} onClick={goPrev}>←</button>
-        <div style={centerPillStyle}>{monthLabel}</div>
-        <button style={navBtnStyle} onClick={goNext}>→</button>
+      <div
+        style={{
+          display:'flex',
+          gap:12,
+          alignItems:'center',
+          justifyContent:'center',
+          marginBottom:12,
+          flexWrap:'wrap'
+        }}
+      >
+        <button
+          style={navBtnStyle}
+          onClick={goPrev}
+        >
+          ←
+        </button>
+
+        <div style={centerPillStyle}>
+          {monthLabel}
+        </div>
+
+        <button
+          style={navBtnStyle}
+          onClick={goNext}
+        >
+          →
+        </button>
       </div>
 
-      {/* -------------- CALENDAR GRID -------------- */}
+      <div className="hr" />
+
+      {/* ------------------------- */}
+      {/*       CALENDAR GRID       */}
+      {/* ------------------------- */}
+
       <div className="grid">
         {['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map((w,i)=>(
-          <div key={i} className="muted" style={{textAlign:'center',fontWeight:600}}>{w}</div>
+          <div
+            key={i}
+            className="muted"
+            style={{textAlign:'center',fontWeight:600}}
+          >
+            {w}
+          </div>
         ))}
 
         {days.map((d,idx)=>{
           const inMonth = isSameMonth(d,monthStart)
           const active  = isSameDay(d,selectedDate)
           const isPast = toDateOnly(d) < today
-          const disabled = isPast || toDateOnly(d) > toDateOnly(maxDate)
+          const disabled = isPast || toDateOnly(d) > maxDate
 
           return (
             <div
               key={idx}
-              className={'datebtn'+(active?' active':'') + (isPast ? ' past' : '')}
+              className={
+                'datebtn' +
+                (active ? ' active' : '') +
+                (isPast ? ' past-day-dot' : '')
+              }
               onMouseEnter={()=>setHoverIdx(idx)}
               onMouseLeave={()=>setHoverIdx(-1)}
-              onClick={()=>!disabled&&setSelectedDate(d)}
+              onClick={()=>!disabled && setSelectedDate(d)}
               style={{
                 ...dateCellStyle(d, idx, active, isPast),
-                opacity: inMonth?1:.4,
-                cursor: disabled?'default':'pointer'
+                opacity: inMonth ? 1 : 0.4,
+                cursor: disabled ? 'default' : 'pointer'
               }}
             >
               {format(d,'d')}
@@ -303,8 +396,13 @@ export default function Calendar(){
         })}
       </div>
 
-      {/* -------------- TIME SLOTS -------------- */}
-      <div style={{marginTop:20}}>
+      <div className="hr" />
+
+      {/* ------------------------- */}
+      {/*          SLOTS            */}
+      {/* ------------------------- */}
+
+      <div>
         <div className="badge">
           {t('slots_for')} {format(selectedDate,'dd.MM.yyyy')}
         </div>
@@ -325,32 +423,86 @@ export default function Calendar(){
                 key={ti.toISOString()}
                 disabled={disabledLike}
                 onClick={()=>book(ti)}
-                style={slotBtnStyle(disabledLike)}
+                style={{
+                  borderRadius:10,
+                  padding:'8px 12px',
+                  border: '1px solid ' + (
+                    disabledLike
+                      ? 'rgba(180,180,200,0.25)'
+                      : 'rgba(168,85,247,0.45)'
+                  ),
+                  background: disabledLike
+                    ? 'rgba(255,255,255,0.04)'
+                    : 'rgba(98,0,180,0.18)',
+                  color:'#fff',
+                  cursor: disabledLike ? 'default' : 'pointer',
+                  backdropFilter:'blur(6px)',
+                  transition:'0.2s'
+                }}
               >
-                {busy && isProcessing ? (<span className="loader" />) : label}
+                {busy && isProcessing
+                  ? <span className="loader" />
+                  : label}
               </button>
             )
           })}
-          {slotsForDay(selectedDate).length===0 && (
-            <small className="muted">Нет доступных слотов</small>
+
+          {slotsForDay(selectedDate).length === 0 && (
+            <small className="muted">
+              {t('no_slots') || 'Нет доступных слотов'}
+            </small>
           )}
         </div>
       </div>
 
-      {/* -------------- MODAL -------------- */}
+      {/* ------------------------- */}
+      {/*          MODAL            */}
+      {/* ------------------------- */}
+
       {modal && (
         <div className="modal-backdrop" onClick={closeModal}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
             <h3 style={{marginTop:0}}>{modal.title}</h3>
-            {modal.dateStr && <p style={{opacity:.9}}>{modal.dateStr}</p>}
-            {modal.timeStr && <p style={{fontWeight:700}}>{modal.timeStr}</p>}
-            {modal.caption && <p style={{opacity:.9}}>{modal.caption}</p>}
-            <div style={{marginTop:14}}>
-              <button onClick={closeModal}>OK</button>
+
+            {modal.dateStr && (
+              <p style={{margin:'6px 0', opacity:.9}}>
+                {modal.dateStr}
+              </p>
+            )}
+
+            {modal.timeStr && (
+              <p style={{margin:'6px 0', fontWeight:700}}>
+                {modal.timeStr}
+              </p>
+            )}
+
+            {modal.caption && (
+              <p style={{margin:'6px 0', opacity:.95}}>
+                {modal.caption}
+              </p>
+            )}
+
+            <div style={{marginTop:14, textAlign:'right'}}>
+              <button
+                onClick={closeModal}
+                style={{
+                  borderRadius:10,
+                  padding:'8px 14px',
+                  border:'1px solid rgba(168,85,247,0.45)',
+                  background:'rgba(98,0,180,0.18)',
+                  color:'#fff',
+                  backdropFilter:'blur(6px)',
+                  cursor:'pointer'
+                }}
+              >
+                OK
+              </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   )
 }
+
