@@ -622,10 +622,83 @@ export default function Admin() {
                       />
                     </div>
 
-                    <div style={{ minWidth: 120 }}>
-                      <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 3 }}>
-                        Время
-                      </div>
+                   {/* ВРЕМЯ ОТ */}
+<div style={{ minWidth: 120 }}>
+  <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 3 }}>
+    Время от
+  </div>
+  <input
+    type="time"
+    value={toInputTime(startDate)}
+    style={{
+      ...inputGlass,
+      padding: '6px 10px',
+      height: '32px',
+    }}
+    onChange={(e) => {
+      const val = e.target.value // HH:MM
+      if (!val) return
+      updateBooking(b.id, (orig) => {
+        const oldStart = new Date(orig.start)
+        const oldEnd = new Date(orig.end || orig.start)
+
+        const [hh, mm] = val.split(':').map(Number)
+        const newStart = new Date(oldStart)
+        newStart.setHours(hh, mm, 0, 0)
+
+        // если время конца раньше начала — двигаем конец
+        let newEnd = new Date(oldEnd)
+        if (newEnd <= newStart) {
+          newEnd = new Date(newStart.getTime() + 15 * 60000) // минимум 15 минут
+        }
+
+        return {
+          ...orig,
+          start: newStart,
+          end: newEnd,
+        }
+      })
+    }}
+  />
+</div>
+
+{/* ВРЕМЯ ДО */}
+<div style={{ minWidth: 120 }}>
+  <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 3 }}>
+    Время до
+  </div>
+  <input
+    type="time"
+    value={toInputTime(endDate)}
+    style={{
+      ...inputGlass,
+      padding: '6px 10px',
+      height: '32px',
+    }}
+    onChange={(e) => {
+      const val = e.target.value // HH:MM
+      if (!val) return
+
+      updateBooking(b.id, (orig) => {
+        const oldStart = new Date(orig.start)
+        const [hh, mm] = val.split(':').map(Number)
+
+        const newEnd = new Date(oldStart)
+        newEnd.setHours(hh, mm, 0, 0)
+
+        // если попытались поставить конец раньше начала — ставим минимум 15 минут
+        if (newEnd <= oldStart) {
+          newEnd.setTime(oldStart.getTime() + 15 * 60000)
+        }
+
+        return {
+          ...orig,
+          end: newEnd,
+        }
+      })
+    }}
+  />
+</div>
                       <input
                         type="time"
                         value={timeValue}
