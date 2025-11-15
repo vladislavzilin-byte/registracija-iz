@@ -259,13 +259,18 @@ export default function Auth({ onAuth }) {
             zIndex: 2,
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
-            padding: "12px 18px",
-            gap: "96px", // ← минимальный отступ 5 см между текстом и кнопкой
+            padding: "14px 20px",
           }}
         >
-          {/* Левая часть */}
-          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+          {/* Аватар + текст */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "32px", // ← 2 см между VZ и текстом (≈32px)
+              flexShrink: 0,
+            }}
+          >
             <div style={avatarStyle}>{initials}</div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -278,14 +283,18 @@ export default function Auth({ onAuth }) {
             </div>
           </div>
 
-          {/* Кнопка Выйти */}
+          {/* Пустая область — 4 см */}
+          <div style={{ width: "64px", flexShrink: 0 }} /> 
+          {/* 4 см ≈ 64px */}
+
+          {/* Кнопка */}
           <button
             onClick={logout}
             style={{
               ...logoutButton,
-              padding: "10px 22px", // авто-ширина по тексту
+              padding: "10px 22px",
               whiteSpace: "nowrap",
-              flexShrink: 0, // запрещает сжиматься
+              flexShrink: 0,
             }}
           >
             Выйти
