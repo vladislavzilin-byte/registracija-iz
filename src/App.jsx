@@ -52,13 +52,16 @@ export default function App() {
         setKPress(true)
         setTimeout(() => setKPress(false), 250)
 
+        // показываем календарь
         setTab("calendar")
 
+        // автоскролл к секции Kainas в календаре
         setTimeout(() => {
           const section = document.getElementById("kainas-section")
           section?.scrollIntoView({ behavior: "smooth", block: "start" })
-        }, 140)
+        }, 150)
 
+        // открыть аккордеон
         window.dispatchEvent(new Event("openPrices"))
       }}
     >
@@ -69,27 +72,29 @@ export default function App() {
     {isAdmin && (
       <button
         onClick={() => setTab('admin')}
-        style={navButton(tab === 'admin')}
+        style={{
+          ...navButton(tab === 'admin'),
+          animation: 'fadeInUp 0.4s ease-out',
+        }}
       >
-        Админ
+        {t('nav_admin')}
       </button>
     )}
   </div>
-</div>
 
-        {/* === Языки === */}
-        <div style={langBlock}>
-          <button onClick={() => setLang('lt')} style={langButton(lang === 'lt')}>
-            LT
-          </button>
-          <button onClick={() => setLang('ru')} style={langButton(lang === 'ru')}>
-            RU
-          </button>
-          <button onClick={() => setLang('en')} style={langButton(lang === 'en')}>
-            GB
-          </button>
-        </div>
-      </div>
+  {/* Языки */}
+  <div style={langBlock}>
+    <button onClick={() => setLang('lt')} style={langButton(lang === 'lt')}>
+      LT
+    </button>
+    <button onClick={() => setLang('ru')} style={langButton(lang === 'ru')}>
+      RU
+    </button>
+    <button onClick={() => setLang('en')} style={langButton(lang === 'en')}>
+      GB
+    </button>
+  </div>
+</div>
 
       {/* === Контент === */}
       <Auth onAuth={setUser} />
