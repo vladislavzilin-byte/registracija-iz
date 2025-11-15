@@ -1,442 +1,429 @@
-import { useEffect, useMemo, useState } from "react"
+// =========================================
+// ==========  MY BOOKINGS PAGE  ===========
+// =========================================
+
+import { useEffect, useState } from "react"
 import { getBookings, saveBookings, getCurrentUser } from "../lib/storage"
 import { useI18n } from "../lib/i18n"
 
-// === Цвета для услуг ===
-const SERVICE_STYLES = {
+// ----------------------------
+// Цвета + теги услуг
+// ----------------------------
+const serviceStyles = {
   "Šukuosena": {
-    bg: "rgba(150,80,255,0.25)",
-    border: "1px solid rgba(168,85,247,0.6)",
+    bg: "rgba(150,80,255,0.20)",
+    border: "1px solid rgba(168,85,247,0.60)",
+    color: "#d9c6ff",
   },
   "Tresų nuoma": {
-    bg: "rgba(80,200,255,0.25)",
-    border: "1px solid rgba(80,200,255,0.6)",
+    bg: "rgba(80,200,255,0.20)",
+    border: "1px solid rgba(80,200,255,0.60)",
+    color: "#bdf2ff",
   },
   "Papuošalų nuoma": {
-    bg: "rgba(255,185,80,0.25)",
-    border: "1px solid rgba(255,185,80,0.6)",
+    bg: "rgba(200,160,60,0.20)",
+    border: "1px solid rgba(200,160,60,0.60)",
+    color: "#ffe8b5",
   },
   "Atvykimas": {
-    bg: "rgba(255,80,80,0.25)",
-    border: "1px solid rgba(255,80,80,0.6)",
+    bg: "rgba(200,60,60,0.20)",
+    border: "1px solid rgba(200,60,60,0.60)",
+    color: "#ffc6c6",
   },
   "Konsultacija": {
-    bg: "rgba(80,255,150,0.25)",
-    border: "1px solid rgba(80,255,150,0.6)",
-  },
+    bg: "rgba(60,200,140,0.20)",
+    border: "1px solid rgba(60,200,140,0.60)",
+    color: "#b2ffe6",
+  }
 }
 
-// === PayPal (поменяй на свой email позже) ===
-const PAYPAL_BUSINESS = "YOUR_PAYPAL_EMAIL@EXAMPLE.COM"
-
-// === формат длительности ===
-const formatDuration = (minutes) => {
-  if (!minutes) return "—"
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  if (h && m) return `${h} val. ${m} min.`
-  if (h) return `${h} val.`
-  return `${m} min.`
+// --------------------------------
+// Анимация появления тегов
+// --------------------------------
+const tagAnim = {
+  animation: "fadeTag .35s ease",
 }
+
+// ================================================
+// =============== COMPONENT =======================
+// ================================================
 
 export default function MyBookings() {
   const { t } = useI18n()
   const user = getCurrentUser()
 
-  const [all, setAll] = useState([])
   const [filter, setFilter] = useState("all")
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== "undefined" ? window.innerWidth < 768 : false
-  )
+  const [list, setList] = useState([])
+  const [editing, setEditing] = useState(false)
 
-  // === слежение за шириной окна (таблица / карточки) ===
-  useEffect(() => {
-    const onResize = () => {
-      if (typeof window === "undefined") return
-      setIsMobile(window.innerWidth < 768)
+  const [editName, setEditName] = useState(user?.name || "")
+  const [editPhone, setEditPhone] = useState(user?.phone || "")
+  const [editEmail, setEditEmail] = useState(user?.email || "")
+  const [editInstagram, setEditInstagram] = useState(user?.instagram || "")
+  const [editPassword, setEditPassword] = useState("")
+
+  // -----------------------------
+  // FORMAT FUNCTIONS
+  // -----------------------------
+  const fmtDate = d =>
+    new Date(d).toLocaleDateString("lt-LT", { day: "2-digit", month: "2-digit", year: "numeric" })
+
+  const fmtTime = d =>
+    new Date(d).toLocaleTimeString("lt-LT", { hour: "2-digit", minute: "2-digit" })
+
+  const statusLabel = b => {
+    switch (b.status) {
+      case "pending": return "🟡 Ожидает"
+      case "approved": return "🟢 Подтверждена"
+      case "canceled": return "🔴 Отменена"
     }
-    window.addEventListener("resize", onResize)
-    return () => window.removeEventListener("resize", onResize)
-  }, [])
+    return b.status
+  }
 
-  // === загрузка записей ===
+  const formatDuration = minutes => {
+    if (!minutes) return "—"
+    if (minutes < 60) return `${minutes} min`
+    return `${(minutes / 60).toFixed(1)} val.`
+  }
+
+  // ---------------------------------
+  // LOAD BOOKINGS
+  // ---------------------------------
   useEffect(() => {
-    const list = getBookings().filter((b) => b.user?.id === user?.id)
-    setAll(list)
-  }, [user])
+    const all = getBookings()
+    let mine = all.filter(b => b.userPhone === user?.phone)
 
-  // === отмена ===
-  const cancel = (id) => {
-    if (!confirm("Отменить запись?")) return
-    const allBookings = getBookings()
-    const updated = allBookings.map((b) =>
-      b.id === id ? { ...b, status: "canceled_client" } : b
+    if (filter === "active") mine = mine.filter(b => b.status !== "canceled")
+    if (filter === "canceled") mine = mine.filter(b => b.status === "canceled")
+
+    setList(mine)
+  }, [filter])
+
+  // ---------------------------------
+  // CANCEL
+  // ---------------------------------
+  const cancel = id => {
+    const all = getBookings()
+    const updated = all.map(b => b.id === id ? { ...b, status: "canceled" } : b)
+    saveBookings(updated)
+    setList(updated.filter(b => b.userPhone === user?.phone))
+  }
+
+  // ---------------------------------
+  // TOGGLE PAYMENT
+  // ---------------------------------
+  const togglePaid = id => {
+    const all = getBookings()
+    const updated = all.map(b =>
+      b.id === id ? { ...b, paid: !b.paid } : b
     )
     saveBookings(updated)
-    setAll(updated.filter((b) => b.user?.id === user?.id))
+    setList(updated.filter(b => b.userPhone === user?.phone))
   }
 
-  // === оплата ===
-  const handlePay = (booking) => {
-    if (!booking.price) return
-
-    const amount = booking.price.toFixed(2)
-    const url = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${encodeURIComponent(
-      PAYPAL_BUSINESS
-    )}&currency_code=EUR&amount=${amount}`
-
-    window.open(url, "_blank")
-
-    // помечаем как оплачено (локально)
-    if (confirm("Пометить запись как оплаченную?")) {
-      const allBookings = getBookings()
-      const updated = allBookings.map((b) =>
-        b.id === booking.id ? { ...b, paid: true, paidAt: new Date().toISOString() } : b
-      )
-      saveBookings(updated)
-      setAll(updated.filter((b) => b.user?.id === user?.id))
+  // ---------------------------------
+  // SAVE PROFILE
+  // ---------------------------------
+  const saveProfile = () => {
+    const updated = {
+      ...user,
+      name: editName,
+      phone: editPhone,
+      email: editEmail,
+      instagram: editInstagram,
+      password: editPassword.length > 0 ? editPassword : user.password,
     }
+    localStorage.setItem("currentUser", JSON.stringify(updated))
+    setEditing(false)
   }
 
-  // === формат статуса ===
-  const statusLabel = (b) =>
-    b.status === "approved"
-      ? "🟢 " + t("approved")
-      : b.status === "pending"
-      ? "🟡 " + t("pending")
-      : b.status === "canceled_client"
-      ? "❌ " + t("canceled_by_client")
-      : "🔴 " + t("canceled_by_admin")
+  // ================================================
+  // =================== RENDER =====================
+  // ================================================
+  return (
+    <div style={{ width: "100%", margin: "0 auto" }}>
 
-  // === фильтрация ===
-  const list = useMemo(() => {
-    let mine = [...all]
+      {/* ===================================== */}
+      {/* ========= PROFILE BLOCK ============== */}
+      {/* ===================================== */}
 
-    if (filter === "active") {
-      mine = mine.filter((b) => b.status === "pending" || b.status === "approved")
-    }
-    if (filter === "canceled") {
-      mine = mine.filter((b) => String(b.status).includes("canceled"))
-    }
-
-    mine.sort((a, b) => new Date(b.start) - new Date(a.start))
-    return mine
-  }, [all, filter])
-
-  // === рендер тега услуги ===
-  const renderServiceTag = (s, i) => {
-    const st = SERVICE_STYLES[s] || {
-      bg: "rgba(255,255,255,0.08)",
-      border: "1px solid rgba(255,255,255,0.15)",
-    }
-
-    return (
       <div
-        key={i}
-        className="tag-anim"
         style={{
-          padding: "4px 10px",
-          borderRadius: 999,
-          background: st.bg,
-          border: st.border,
-          fontSize: 13,
-          whiteSpace: "nowrap",
+          border: "1px solid rgba(170,80,255,0.28)",
+          background: "rgba(15,10,30,0.85)",
+          borderRadius: 20,
+          padding: 22,
+          marginBottom: 32,
         }}
       >
-        {s}
-      </div>
-    )
-  }
-
-  // === UI ===
-  return (
-    <div style={card}>
-      <div style={headerRow}>
-        <h3 style={{ margin: 0 }}>{t("my_bookings")}</h3>
-
-        <div style={filterButtons}>
-          <button style={filterBtn(filter === "all")} onClick={() => setFilter("all")}>
-            {t("all")}
-          </button>
-          <button
-            style={filterBtn(filter === "active")}
-            onClick={() => setFilter("active")}
-          >
-            {t("active")}
-          </button>
-          <button
-            style={filterBtn(filter === "canceled")}
-            onClick={() => setFilter("canceled")}
-          >
-            {t("canceled")}
-          </button>
+        {/* Заголовок */}
+        <div
+          onClick={() => setEditing(!editing)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            cursor: "pointer",
+            marginBottom: 15,
+          }}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24"
+            style={{
+              transform: editing ? "rotate(90deg)" : "rotate(0deg)",
+              transition: ".25s"
+            }}>
+            <path fill="#cfa7ff" d="M8 5v14l11-7z" />
+          </svg>
+          <span style={{ fontSize: 18, color: "#fff" }}>Редактировать профиль</span>
         </div>
+
+        {/* Контент */}
+        {editing && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+            <input value={editName} onChange={e => setEditName(e.target.value)}
+              placeholder="Имя"
+              style={inputStyle} />
+
+            <input value={editInstagram} onChange={e => setEditInstagram(e.target.value)}
+              placeholder="Instagram"
+              style={inputStyle} />
+
+            <input value={editPhone} onChange={e => setEditPhone(e.target.value)}
+              placeholder="Телефон"
+              style={inputStyle} />
+
+            <input value={editEmail} onChange={e => setEditEmail(e.target.value)}
+              placeholder="Email"
+              style={inputStyle} />
+
+            <input value={editPassword} onChange={e => setEditPassword(e.target.value)}
+              placeholder="Новый пароль"
+              type="password"
+              style={inputStyle} />
+
+            <button
+              onClick={saveProfile}
+              style={{
+                width: "100%",
+                borderRadius: 12,
+                padding: "12px 0",
+                marginTop: 12,
+                background: "linear-gradient(90deg, #9340ff, #6b15d8)",
+                border: "none",
+                color: "#fff",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              💾 save
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* === мобильный режим: карточки === */}
-      {isMobile ? (
-        <div>
-          {list.length === 0 && (
-            <div style={{ opacity: 0.6, fontSize: 14 }}>{t("no_records")}</div>
-          )}
+      {/* ===================================== */}
+      {/* ========== МОИ ЗАПИСИ =============== */}
+      {/* ===================================== */}
 
-          {list.map((b) => {
-            const canCancel =
-              (b.status === "pending" || b.status === "approved") &&
-              new Date(b.end) > new Date()
+      <div
+        style={{
+          border: "1px solid rgba(170,80,255,0.28)",
+          background: "rgba(15,10,30,0.85)",
+          borderRadius: 20,
+          padding: 22,
+        }}
+      >
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 16,
+        }}>
+          <h3 style={{ margin: 0, color: "#fff" }}>Мои записи</h3>
 
-            return (
-              <div key={b.id} style={mobileCard}>
-                <div style={mRow}>
-                  <b>
-                    {new Date(b.start).toLocaleDateString("lt-LT")} •{" "}
-                    {new Date(b.start).toLocaleTimeString("lt-LT", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                    –
-                    {new Date(b.end).toLocaleTimeString("lt-LT", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </b>
-                </div>
-
-                <div style={mRow}>
-                  <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 4 }}>
-                    Paslaugos:
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {Array.isArray(b.services) && b.services.length
-                      ? b.services.map(renderServiceTag)
-                      : "—"}
-                  </div>
-                </div>
-
-                <div style={mRow}>
-                  <span style={{ opacity: 0.8, fontSize: 13 }}>Kaina: </span>
-                  <b>{b.price ? `${b.price} €` : "—"}</b>
-                </div>
-
-                <div style={mRow}>
-                  <span style={{ opacity: 0.8, fontSize: 13 }}>Trukmė: </span>
-                  <b>{formatDuration(b.durationMinutes)}</b>
-                </div>
-
-                <div style={mRow}>
-                  <span style={{ opacity: 0.8, fontSize: 13 }}>Statusas: </span>
-                  {statusLabel(b)}
-                </div>
-
-                <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-                  {b.price && (
-                    <button style={payBtn} onClick={() => handlePay(b)}>
-                      {b.paid ? "✅ Apmokėta" : "💳 Apmokėti"}
-                    </button>
-                  )}
-
-                  {canCancel && (
-                    <button style={cancelBtn} onClick={() => cancel(b.id)}>
-                      {t("cancel")}
-                    </button>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={filterBtn(filter === "all")} onClick={() => setFilter("all")}>Все</button>
+            <button style={filterBtn(filter === "active")} onClick={() => setFilter("active")}>Активные</button>
+            <button style={filterBtn(filter === "canceled")} onClick={() => setFilter("canceled")}>Отменённые</button>
+          </div>
         </div>
-      ) : (
-        // === десктоп: таблица ===
+
         <table style={table}>
           <thead>
-            <tr style={{ borderBottom: "1px solid rgba(168,85,247,0.25)" }}>
-              <th style={th}>Data</th>
-              <th style={th}>Laikas</th>
-              <th style={th}>Paslaugos</th>
+            <tr>
+              <th style={th}>Дата</th>
+              <th style={th}>Время</th>
+              <th style={th}>Услуги</th>
               <th style={th}>Kaina</th>
               <th style={th}>Trukmė</th>
-              <th style={th}>Statusas</th>
-              <th style={th}></th>
+              <th style={th}>Статус</th>
+              <th style={th}>Оплата</th>
             </tr>
           </thead>
+
           <tbody>
+
             {list.length === 0 && (
               <tr>
-                <td colSpan="7" style={{ ...td, opacity: 0.6 }}>
-                  {t("no_records")}
-                </td>
+                <td colSpan="7" style={{ ...td, opacity: 0.6 }}>Нет записей</td>
               </tr>
             )}
 
-            {list.map((b) => {
+            {list.map(b => {
               const canCancel =
                 (b.status === "pending" || b.status === "approved") &&
                 new Date(b.end) > new Date()
 
               return (
                 <tr key={b.id} style={row}>
-                  {/* дата */}
-                  <td style={td}>
-                    {new Date(b.start).toLocaleDateString("lt-LT")}
-                  </td>
+                  <td style={td}>{fmtDate(b.start)}</td>
+                  <td style={td}>{fmtTime(b.start)} — {fmtTime(b.end)}</td>
 
-                  {/* время */}
-                  <td style={td}>
-                    {new Date(b.start).toLocaleTimeString("lt-LT", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                    –
-                    {new Date(b.end).toLocaleTimeString("lt-LT", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </td>
-
-                  {/* услуги */}
+                  {/* TAGS */}
                   <td style={{ ...td, maxWidth: 260 }}>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      {Array.isArray(b.services) && b.services.length
-                        ? b.services.map(renderServiceTag)
-                        : "—"}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {b.services?.map(s => (
+                        <div
+                          key={s}
+                          style={{
+                            padding: "4px 10px",
+                            borderRadius: 12,
+                            fontSize: 13,
+                            ...serviceStyles[s],
+                            ...tagAnim
+                          }}
+                        >
+                          {s}
+                        </div>
+                      ))}
                     </div>
                   </td>
 
-                  {/* цена */}
-                  <td style={td}>{b.price ? `${b.price} €` : "—"}</td>
+                  <td style={td}>{b.price ? b.price + " €" : "—"}</td>
 
-                  {/* длительность */}
                   <td style={td}>{formatDuration(b.durationMinutes)}</td>
 
-                  {/* статус */}
                   <td style={td}>{statusLabel(b)}</td>
 
-                  {/* действия */}
+                  {/* PAYMENT */}
                   <td style={td}>
-                    {b.price && (
-                      <button style={payBtn} onClick={() => handlePay(b)}>
-                        {b.paid ? "✅ Apmokėta" : "💳 Apmokėti"}
-                      </button>
-                    )}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      {/* ИНДИКАТОР */}
+                      <span
+                        style={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: "50%",
+                          background: b.paid ? "#10ff85" : "#ff4050",
+                          boxShadow: b.paid
+                            ? "0 0 6px #10ff85"
+                            : "0 0 6px #ff4050",
+                          animation: b.paid ? "pulseGreen 1.5s infinite" : "pulseRed 1.5s infinite"
+                        }}
+                      />
 
-                    {canCancel && (
-                      <button style={cancelBtn} onClick={() => cancel(b.id)}>
-                        {t("cancel")}
+                      {/* КНОПКА */}
+                      <button
+                        onClick={() => togglePaid(b.id)}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: 10,
+                          background: b.paid
+                            ? "rgba(20,200,120,0.2)"
+                            : "rgba(255,60,60,0.2)",
+                          border: b.paid
+                            ? "1px solid rgba(20,200,120,0.6)"
+                            : "1px solid rgba(255,60,60,0.6)",
+                          color: "#fff",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {b.paid ? "Apmokėta" : "Neapmokėta"}
                       </button>
-                    )}
+                    </div>
                   </td>
+
                 </tr>
               )
             })}
           </tbody>
         </table>
-      )}
+      </div>
+
+      {/* Анимации */}
+      <style>
+        {`
+          @keyframes fadeTag {
+            from { opacity:0; transform: translateY(6px); }
+            to { opacity:1; transform: translateY(0); }
+          }
+
+          @keyframes pulseRed {
+            0% { box-shadow:0 0 4px #ff4050; }
+            50% { box-shadow:0 0 11px #ff4050; }
+            100% { box-shadow:0 0 4px #ff4050; }
+          }
+          @keyframes pulseGreen {
+            0% { box-shadow:0 0 4px #10ff85; }
+            50% { box-shadow:0 0 11px #10ff85; }
+            100% { box-shadow:0 0 4px #10ff85; }
+          }
+        `}
+      </style>
+
     </div>
   )
 }
 
-/* === СТИЛИ === */
-
-const card = {
-  width: "100%",
-  marginTop: 40,
-  padding: 20,
-  borderRadius: 16,
-  background: "rgba(10,10,20,0.65)",
-  border: "1px solid rgba(168,85,247,0.25)",
-  backdropFilter: "blur(16px)",
-}
-
-const headerRow = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: 14,
-}
-
-const filterButtons = {
-  display: "flex",
-  gap: 8,
-}
-
-const filterBtn = (active) => ({
-  padding: "8px 14px",
-  borderRadius: 10,
-  cursor: "pointer",
-  border: active
-    ? "1px solid rgba(168,85,247,0.9)"
-    : "1px solid rgba(168,85,247,0.3)",
-  background: active
-    ? "rgba(150,80,255,0.45)"
-    : "rgba(20,10,40,0.5)",
-  color: "#fff",
-  fontSize: 14,
-})
+// ======================================
+// STYLES
+// ======================================
 
 const table = {
   width: "100%",
   borderCollapse: "collapse",
+  color: "#fff"
 }
 
 const th = {
-  padding: "10px 8px",
   textAlign: "left",
-  fontSize: 13,
-  opacity: 0.7,
+  padding: "10px 0",
+  borderBottom: "1px solid rgba(168,85,247,0.25)",
+  fontWeight: 600,
+  fontSize: 15,
 }
 
 const td = {
-  padding: "10px 8px",
-  fontSize: 14,
+  padding: "14px 0",
   verticalAlign: "top",
+  fontSize: 15,
 }
 
 const row = {
-  borderBottom: "1px solid rgba(255,255,255,0.06)",
+  borderBottom: "1px solid rgba(168,85,247,0.12)",
 }
 
-const cancelBtn = {
+const filterBtn = active => ({
   padding: "6px 12px",
   borderRadius: 10,
-  border: "1px solid rgba(239,68,68,0.7)",
-  background: "rgba(110,20,30,0.45)",
+  color: active ? "#fff" : "#aaa",
+  border: active
+    ? "1px solid rgba(168,85,247,0.6)"
+    : "1px solid rgba(168,85,247,0.25)",
+  background: active
+    ? "rgba(168,85,247,0.35)"
+    : "rgba(255,255,255,0.04)",
+  cursor: "pointer",
+})
+
+const inputStyle = {
+  width: "100%",
+  padding: "12px 16px",
+  borderRadius: 12,
+  border: "1px solid rgba(160,80,255,0.35)",
+  background: "rgba(20,10,40,0.85)",
   color: "#fff",
-  cursor: "pointer",
-  fontSize: 13,
-  marginTop: 4,
+  fontSize: 15,
 }
 
-const payBtn = {
-  padding: "6px 12px",
-  borderRadius: 10,
-  border: "1px solid rgba(34,197,94,0.7)",
-  background: "rgba(22,101,52,0.45)",
-  color: "#bbf7d0",
-  cursor: "pointer",
-  fontSize: 13,
-  marginRight: 6,
-}
-
-/* мобильные карточки */
-const mobileCard = {
-  background: "rgba(12,10,20,0.75)",
-  border: "1px solid rgba(168,85,247,0.35)",
-  borderRadius: 14,
-  padding: 12,
-  marginBottom: 10,
-}
-
-const mRow = { marginBottom: 6 }
-
-// === АНИМАЦИЯ ТЕГОВ ===
-const style = document.createElement("style")
-style.innerHTML = `
-@keyframes tagFade {
-  from { opacity: 0; transform: translateY(6px) scale(.96); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-.tag-anim {
-  animation: tagFade .25s ease both;
-}
-`
-document.head.appendChild(style)
