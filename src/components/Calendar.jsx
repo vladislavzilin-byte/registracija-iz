@@ -1,10 +1,10 @@
-import Auth from './components/Auth.jsx'
-import Calendar from './components/Calendar.jsx'
-import Admin from './components/Admin.jsx'
-import MyBookings from './components/MyBookings.jsx'
+import Auth from '../components/Auth.jsx'
+import Calendar from '../components/Calendar.jsx'
+import Admin from '../components/Admin.jsx'
+import MyBookings from '../components/MyBookings.jsx'
 import { useState } from 'react'
-import { getCurrentUser } from './lib/storage'
-import { useI18n } from './lib/i18n'
+import { getCurrentUser } from '../lib/storage'
+import { useI18n } from '../lib/i18n'
 
 export default function App() {
   const { lang, setLang, t } = useI18n()
