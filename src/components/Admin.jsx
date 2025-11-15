@@ -125,34 +125,43 @@ export default function Admin() {
     return arr
   }, [bookings, search, statusFilter])
 
+  // === ОБЩИЙ апдейтер брони с автосохранением ===
+  const updateBooking = (id, updater) => {
+    const all = getBookings()
+    const next = all.map((b) => {
+      if (b.id !== id) return b
+      const updated = typeof updater === 'function' ? updater(b) : { ...b, ...updater }
+      return updated
+    })
+    saveBookings(next)
+    setBookings(next)
+    // если решишь — можно дергать событие для календаря
+    // window.dispatchEvent(new Event('bookingUpdated'))
+  }
+
   // === ДЕЙСТВИЯ С ЗАПИСЯМИ ===
   const cancelByAdmin = (id) => {
     if (!confirm('Отменить эту запись?')) return
-    const next = getBookings().map((b) =>
-      b.id === id
-        ? { ...b, status: 'canceled_admin', canceledAt: new Date().toISOString() }
-        : b
-    )
-    saveBookings(next)
-    setBookings(next)
+    updateBooking(id, (b) => ({
+      ...b,
+      status: 'canceled_admin',
+      canceledAt: new Date().toISOString(),
+    }))
   }
 
   const approveByAdmin = (id) => {
-    const next = getBookings().map((b) =>
-      b.id === id
-        ? { ...b, status: 'approved', approvedAt: new Date().toISOString() }
-        : b
-    )
-    saveBookings(next)
-    setBookings(next)
+    updateBooking(id, (b) => ({
+      ...b,
+      status: 'approved',
+      approvedAt: new Date().toISOString(),
+    }))
   }
 
   const togglePaid = (id) => {
-    const next = getBookings().map((b) =>
-      b.id === id ? { ...b, paid: !b.paid } : b
-    )
-    saveBookings(next)
-    setBookings(next)
+    updateBooking(id, (b) => ({
+      ...b,
+      paid: !b.paid,
+    }))
   }
 
   const handleExport = () => {
@@ -197,6 +206,20 @@ export default function Admin() {
     if (services.length <= 1) return
     const next = services.filter((_, i) => i !== index)
     updateSettings({ serviceList: next })
+  }
+
+  // форматирование для input[type=date]/[type=time]
+  const toInputDate = (d) => {
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const toInputTime = (d) => {
+    const hh = String(d.getHours()).padStart(2, '0')
+    const mm = String(d.getMinutes()).padStart(2, '0')
+    return `${hh}:${mm}`
   }
 
   return (
@@ -419,7 +442,7 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* === ВСЕ ЗАПИСИ === */}
+      {/* === ВСЕ ЗАПИСИ — КАРТОЧКИ === */}
       <div style={{ width: '100%' }}>
         <div style={cardAurora}>
           <div style={topBar}>
@@ -475,206 +498,337 @@ export default function Admin() {
             {t('total_canceled')}: {stats.canceled}
           </div>
 
-<div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 12 }}>
-
-  {filtered.map((b) => {
-    const inFuture = new Date(b.start) > new Date();
-    const servicesArr = Array.isArray(b.services) ? b.services : [];
-
-    const serviceTagStyle = (name) => {
-      const st = serviceStyles[name] || {
-        bg: 'rgba(148,163,184,0.15)',
-        border: '1px solid rgba(148,163,184,0.7)',
-      };
-      return {
-        padding: '4px 12px',
-        borderRadius: 999,
-        fontSize: 13,
-        ...st,
-      };
-    };
-
-    return (
-      <div
-        key={b.id}
-        style={{
-          borderRadius: 16,
-          border: '1px solid rgba(168,85,247,0.25)',
-          background: 'rgba(15,10,25,0.85)',
-          padding: '16px 20px',
-          boxShadow: '0 0 18px rgba(168,85,247,0.20)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-        }}
-      >
-
-        {/* HEADER: дата + время + точка статуса */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span
+          {/* КАРТОЧКИ ЗАПИСЕЙ */}
+          <div
             style={{
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              background:
-                b.status === 'approved'
-                  ? '#22c55e'
-                  : b.status === 'pending'
-                  ? '#eab308'
-                  : '#ef4444',
-              boxShadow:
-                b.status === 'approved'
-                  ? '0 0 8px rgba(34,197,94,0.9)'
-                  : b.status === 'pending'
-                  ? '0 0 8px rgba(234,179,8,0.9)'
-                  : '0 0 8px rgba(248,113,113,0.9)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 18,
+              marginTop: 12,
             }}
-          />
+          >
+            {filtered.map((b) => {
+              const inFuture = new Date(b.start) > new Date()
+              const servicesArr = Array.isArray(b.services) ? b.services : []
 
-          <div style={{ fontWeight: 700, fontSize: 17 }}>
-            {fmtDate(b.start)}
-          </div>
+              const serviceTagStyle = (name) => {
+                const st = serviceStyles[name] || {
+                  bg: 'rgba(148,163,184,0.15)',
+                  border: '1px solid rgba(148,163,184,0.7)',
+                }
+                return {
+                  padding: '4px 12px',
+                  borderRadius: 999,
+                  fontSize: 13,
+                  ...st,
+                }
+              }
 
-          <div style={{ opacity: 0.9 }}>
-            {fmtTime(b.start)} — {fmtTime(b.end)}
-          </div>
-        </div>
+              const startDate = new Date(b.start)
+              const endDate = new Date(b.end || b.start)
+              const dateValue = toInputDate(startDate)
+              const timeValue = toInputTime(startDate)
 
-        {/* УСЛУГИ — цветные теги */}
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 8,
-            marginTop: 4,
-          }}
-        >
-          {servicesArr.map((s, i) => (
-            <span key={i} style={serviceTagStyle(s)}>
-              {s}
-            </span>
-          ))}
-        </div>
+              return (
+                <div
+                  key={b.id}
+                  style={{
+                    borderRadius: 16,
+                    border: '1px solid rgba(168,85,247,0.25)',
+                    background: 'rgba(15,10,25,0.85)',
+                    padding: '16px 20px',
+                    boxShadow: '0 0 18px rgba(168,85,247,0.20)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                  }}
+                >
+                  {/* HEADER: дата + время + точка статуса */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        background:
+                          b.status === 'approved'
+                            ? '#22c55e'
+                            : b.status === 'pending'
+                            ? '#eab308'
+                            : '#ef4444',
+                        boxShadow:
+                          b.status === 'approved'
+                            ? '0 0 8px rgba(34,197,94,0.9)'
+                            : b.status === 'pending'
+                            ? '0 0 8px rgba(234,179,8,0.9)'
+                            : '0 0 8px rgba(248,113,113,0.9)',
+                      }}
+                    />
 
-        {/* КЛИЕНТ */}
-        <div style={{ marginTop: 6 }}>
-          <b>{b.userName}</b>
-          <div style={{ fontSize: 13, opacity: 0.8 }}>{b.userPhone}</div>
-          {b.userInstagram && (
-            <div style={{ fontSize: 13, opacity: 0.8 }}>
-              @{b.userInstagram}
-            </div>
-          )}
-        </div>
+                    <div style={{ fontWeight: 700, fontSize: 17 }}>
+                      {fmtDate(b.start)}
+                    </div>
 
-        {/* ОПЛАТА */}
-        <div
-          style={{
-            marginTop: 6,
-            padding: '10px 12px',
-            borderRadius: 10,
-            border: '1px solid rgba(148,163,184,0.25)',
-            background: 'rgba(30,20,40,0.55)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                background: b.paid ? '#22c55e' : '#ef4444',
-                boxShadow: b.paid
-                  ? '0 0 8px rgba(34,197,94,0.9)'
-                  : '0 0 8px rgba(248,113,113,0.9)',
-              }}
-            />
-            <span
-              style={{
-                fontSize: 14,
-                color: b.paid ? '#bbf7d0' : '#fecaca',
-                fontWeight: 600,
-              }}
-            >
-              {b.paid ? 'Оплачено' : 'Не оплачено'}
-            </span>
-          </div>
+                    <div style={{ opacity: 0.9 }}>
+                      {fmtTime(b.start)} — {fmtTime(b.end)}
+                    </div>
+                  </div>
 
-          {b.price && (
-            <button
-              onClick={() => togglePaid(b.id)}
-              style={{
-                marginTop: 8,
-                width: '100%',
-                padding: '8px 0',
-                borderRadius: 8,
-                border: '1px solid rgba(148,163,184,0.5)',
-                background: 'rgba(0,0,0,0.25)',
-                color: '#fff',
-                cursor: 'pointer',
-              }}
-            >
-              {b.paid ? 'Снять оплату' : 'Пометить оплаченой'}
-            </button>
-          )}
-        </div>
+                  {/* РЕДАКТИРОВАНИЕ ДАТЫ/ВРЕМЕНИ */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 10,
+                      marginTop: 4,
+                    }}
+                  >
+                    <div style={{ minWidth: 140 }}>
+                      <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 3 }}>
+                        Дата
+                      </div>
+                      <input
+                        type="date"
+                        value={dateValue}
+                        style={{
+                          ...inputGlass,
+                          padding: '6px 10px',
+                          height: '32px',
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value // YYYY-MM-DD
+                          if (!val) return
+                          updateBooking(b.id, (orig) => {
+                            const oldStart = new Date(orig.start)
+                            const oldEnd = new Date(orig.end || orig.start)
+                            const durationMin = Math.max(
+                              5,
+                              Math.round((oldEnd - oldStart) / 60000) || 5
+                            )
 
-        {/* СТАТУС */}
-        <div style={{ marginTop: 4 }}>
-          <span style={{ fontWeight: 600 }}>{t('status')}: </span>
-          {statusLabel(b)}
-        </div>
+                            const [yy, mm, dd] = val.split('-').map(Number)
+                            const newStart = new Date(oldStart)
+                            newStart.setFullYear(yy, mm - 1, dd)
 
-        {/* КНОПКИ */}
-        <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
-          {b.status === 'pending' && (
-            <button
-              onClick={() => approveByAdmin(b.id)}
-              style={{
-                flex: 1,
-                borderRadius: 10,
-                padding: '10px',
-                background:
-                  'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
-                color: '#fff',
-                border: '1px solid rgba(168,85,247,0.45)',
-                cursor: 'pointer',
-              }}
-            >
-              Подтвердить
-            </button>
-          )}
+                            const newEnd = new Date(newStart.getTime() + durationMin * 60000)
 
-          {b.status !== 'canceled_admin' &&
-            b.status !== 'canceled_client' &&
-            inFuture && (
-              <button
-                onClick={() => cancelByAdmin(b.id)}
-                style={{
-                  flex: 1,
-                  borderRadius: 10,
-                  padding: '10px',
-                  background: 'rgba(110,20,30,.35)',
-                  border: '1px solid rgba(239,68,68,.6)',
-                  color: '#fff',
-                  cursor: 'pointer',
-                }}
-              >
-                Отменить
-              </button>
+                            return {
+                              ...orig,
+                              start: newStart,
+                              end: newEnd,
+                            }
+                          })
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ minWidth: 120 }}>
+                      <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 3 }}>
+                        Время
+                      </div>
+                      <input
+                        type="time"
+                        value={timeValue}
+                        style={{
+                          ...inputGlass,
+                          padding: '6px 10px',
+                          height: '32px',
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value // HH:MM
+                          if (!val) return
+                          updateBooking(b.id, (orig) => {
+                            const oldStart = new Date(orig.start)
+                            const oldEnd = new Date(orig.end || orig.start)
+                            const durationMin = Math.max(
+                              5,
+                              Math.round((oldEnd - oldStart) / 60000) || 5
+                            )
+
+                            const [hh, mm] = val.split(':').map(Number)
+                            const newStart = new Date(oldStart)
+                            newStart.setHours(hh, mm, 0, 0)
+
+                            const newEnd = new Date(newStart.getTime() + durationMin * 60000)
+
+                            return {
+                              ...orig,
+                              start: newStart,
+                              end: newEnd,
+                            }
+                          })
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ minWidth: 110 }}>
+                      <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 3 }}>
+                        Аванс (€)
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        value={b.price ?? ''}
+                        style={{
+                          ...inputGlass,
+                          padding: '6px 10px',
+                          height: '32px',
+                        }}
+                        onChange={(e) => {
+                          const raw = e.target.value
+                          const num = raw === '' ? null : Number(raw.replace(',', '.')) || 0
+                          updateBooking(b.id, { ...b, price: num })
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* УСЛУГИ — цветные теги (только просмотр) */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 8,
+                      marginTop: 4,
+                    }}
+                  >
+                    {servicesArr.map((s, i) => (
+                      <span key={i} style={serviceTagStyle(s)}>
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* КЛИЕНТ */}
+                  <div style={{ marginTop: 6 }}>
+                    <b>{b.userName}</b>
+                    <div style={{ fontSize: 13, opacity: 0.8 }}>{b.userPhone}</div>
+                    {b.userInstagram && (
+                      <div style={{ fontSize: 13, opacity: 0.8 }}>
+                        @{b.userInstagram}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ОПЛАТА + аванс */}
+                  <div
+                    style={{
+                      marginTop: 6,
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(148,163,184,0.25)',
+                      background: 'rgba(30,20,40,0.55)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span
+                        style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          background: b.paid ? '#22c55e' : '#ef4444',
+                          boxShadow: b.paid
+                            ? '0 0 8px rgba(34,197,94,0.9)'
+                            : '0 0 8px rgba(248,113,113,0.9)',
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: 14,
+                          color: b.paid ? '#bbf7d0' : '#fecaca',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {b.paid ? 'Оплачено' : 'Не оплачено'}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: 13, opacity: 0.9 }}>
+                      Аванс:{' '}
+                      <b>
+                        {b.price != null && b.price !== ''
+                          ? `${b.price} €`
+                          : '—'}
+                      </b>
+                    </div>
+
+                    {b.price != null && (
+                      <button
+                        onClick={() => togglePaid(b.id)}
+                        style={{
+                          marginTop: 4,
+                          width: '100%',
+                          padding: '8px 0',
+                          borderRadius: 8,
+                          border: '1px solid rgba(148,163,184,0.5)',
+                          background: 'rgba(0,0,0,0.25)',
+                          color: '#fff',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {b.paid ? 'Снять оплату' : 'Пометить оплаченой'}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* СТАТУС */}
+                  <div style={{ marginTop: 4 }}>
+                    <span style={{ fontWeight: 600 }}>{t('status')}: </span>
+                    {statusLabel(b)}
+                  </div>
+
+                  {/* КНОПКИ */}
+                  <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                    {b.status === 'pending' && (
+                      <button
+                        onClick={() => approveByAdmin(b.id)}
+                        style={{
+                          flex: 1,
+                          borderRadius: 10,
+                          padding: '10px',
+                          background:
+                            'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
+                          color: '#fff',
+                          border: '1px solid rgba(168,85,247,0.45)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Подтвердить
+                      </button>
+                    )}
+
+                    {b.status !== 'canceled_admin' &&
+                      b.status !== 'canceled_client' &&
+                      inFuture && (
+                        <button
+                          onClick={() => cancelByAdmin(b.id)}
+                          style={{
+                            flex: 1,
+                            borderRadius: 10,
+                            padding: '10px',
+                            background: 'rgba(110,20,30,.35)',
+                            border: '1px solid rgba(239,68,68,.6)',
+                            color: '#fff',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Отменить
+                        </button>
+                      )}
+                  </div>
+                </div>
+              )
+            })}
+
+            {!filtered.length && (
+              <small className="muted" style={{ marginTop: 20 }}>
+                {t('no_records')}
+              </small>
             )}
-        </div>
-      </div>
-    );
-  })}
-
-  {!filtered.length && (
-    <small className="muted" style={{ marginTop: 20 }}>
-      {t('no_records')}
-    </small>
-  )}
-</div>
-
+          </div>
 
           {toast && (
             <div className="toast" style={{ marginTop: 10 }}>
