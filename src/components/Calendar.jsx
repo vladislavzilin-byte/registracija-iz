@@ -23,7 +23,7 @@ export default function Calendar(){
   const [processingISO, setProcessingISO] = useState(null)
   const [bookedISO, setBookedISO] = useState([])
   const [modal, setModal] = useState(null)
-
+  const [showPriceList, setShowPriceList] = useState(false);
   // UI состояния
   const [hoverIdx, setHoverIdx] = useState(-1)
   const [animDir, setAnimDir] = useState(0) // -1 влево, +1 вправо
@@ -37,6 +37,106 @@ export default function Calendar(){
   const monthEnd = endOfMonth(currentMonth)
   const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 })
   const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
+{/* =====================  KAINAS SECTION  ===================== */}
+{showPrices && (
+  <div style={{ width: "100%", marginTop: "20px" }}>
+    <h2
+      style={{
+        color: "white",
+        fontSize: "22px",
+        fontWeight: "600",
+        paddingLeft: "14px",
+        marginBottom: "10px",
+      }}
+    >
+      Kainas
+    </h2>
+
+    {/* Выпадашка */}
+    <div
+      style={{
+        background: "rgb(20,15,35)",
+        border: "1px solid rgba(150, 80, 255, 0.35)",
+        padding: "16px 18px",
+        borderRadius: "10px",
+        width: "100%",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        marginBottom: "14px",
+      }}
+      onClick={() => setShowPriceList(!showPriceList)}
+    >
+      <span
+        style={{
+          color: "#b37bff",
+          fontSize: "20px",
+          transform: showPriceList ? "rotate(180deg)" : "rotate(0deg)",
+          transition: "0.25s",
+        }}
+      >
+        ▾
+      </span>
+
+      <span style={{ color: "white", fontSize: "16px" }}>
+        Žiūrėti kainas
+      </span>
+    </div>
+
+    {/* Список цен */}
+    {showPriceList && (
+      <div
+        style={{
+          background: "rgba(20,10,40,0.8)",
+          border: "1px solid rgba(160,80,255,0.3)",
+          borderRadius: "14px",
+          padding: "22px 26px",
+          lineHeight: "1.55",
+          fontSize: "17px",
+          color: "white",
+        }}
+      >
+        <div style={{ marginBottom: "16px" }}>
+          <b>80–130 €</b><br />
+          Šukuosenos kaina<br />
+          <span style={{ opacity: 0.75 }}>Priklauso nuo darbo apimties</span>
+        </div>
+
+        <div style={{ marginBottom: "16px" }}>
+          <b>25 €</b><br />
+          Konsultacija<br />
+          <span style={{ opacity: 0.75 }}>
+            Užtrunkame nuo 30 min. iki valandos
+          </span>
+        </div>
+
+        <div style={{ marginBottom: "16px" }}>
+          <b>50 € užstatas</b><br />
+          <b>100 €</b><br />
+          Plaukų Tresų nuoma<br />
+          <span style={{ opacity: 0.75 }}>
+            Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžinu užstatą
+          </span>
+        </div>
+
+        <div style={{ marginBottom: "16px" }}>
+          <b>Iki 20 €</b><br />
+          Papuošalų nuoma
+        </div>
+
+        <div>
+          <b>130 €</b><br />
+          Atvykimas Klaipėdoje<br />
+          <span style={{ opacity: 0.75 }}>
+            Daiktų kraustymai, važinėjimai – per tą laiką galiu priimti kitą klientę.
+          </span>
+        </div>
+      </div>
+    )}
+  </div>
+)}
+{/* ===================== END KAINAS SECTION ===================== */}
 
   const days = useMemo(()=>{
     const arr=[]; let d=new Date(gridStart); while(d<=gridEnd){ arr.push(new Date(d)); d=addDays(d,1) } return arr
