@@ -218,83 +218,106 @@ export default function Calendar(){
       {/*         KAINAS           */}
       {/* ------------------------- */}
 
+{/* ------------------------- */}
+{/*         KAINAS           */}
+{/* ------------------------- */}
+
+<div
+  style={{
+    border: "1px solid rgba(140, 70, 255, 0.18)",
+    background: "rgba(15, 15, 25, 0.93)",
+    borderRadius: 16,
+    padding: "16px 20px 18px",
+    marginTop: -4,
+    marginBottom: 20,
+    backdropFilter: "blur(20px)",
+  }}
+>
+  {/* Заголовок */}
+  <h2
+    style={{
+      margin: "0 0 14px 0",
+      fontSize: 24,
+      fontWeight: 700,
+      color: "#ffffff",
+      letterSpacing: "0.2px",
+    }}
+  >
+    Kainas
+  </h2>
+
+  {/* Кнопка-аккордеон */}
   <div
-  style={{
-    border: "1px solid rgba(130, 70, 255, 0.18)",    // Тонкая фиолетовая рамка
-    background: "rgba(15, 15, 25, 0.85)",           // Почти чёрный фон
-    borderRadius: 14,
-    padding: "14px 18px",
-    marginTop: -2,                                  // Прижато вверх
-    marginBottom: 18,
-    backdropFilter: "blur(12px)",
-  }}
->
+    onClick={() => setOpenPrices(!openPrices)}
+    style={{
+      border: "1px solid rgba(150, 80, 255, 0.22)",
+      background: "rgba(20, 20, 35, 0.80)",
+      borderRadius: 12,
+      padding: "12px 16px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      cursor: "pointer",
+      transition: ".25s",
+    }}
+  >
+    <span style={{ fontSize: 17, color: "#fff" }}>Žiūrėti kainas</span>
 
-        <h2 style={{ marginBottom: 12, fontSize: 26 }}>Kainas</h2>
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      style={{
+        transform: openPrices ? "rotate(180deg)" : "rotate(0deg)",
+        transition: "0.25s ease",
+        fill: "#b980ff",
+      }}
+    >
+      <path d="M7 10l5 5 5-5z" />
+    </svg>
+  </div>
 
-        <div
-  onClick={() => setOpenPrices(!openPrices)}
-  style={{
-    border: "1px solid rgba(130, 70, 255, 0.25)",
-    background: "rgba(20, 20, 35, 0.7)",
-    borderRadius: 10,
-    padding: "10px 14px",
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    cursor: "pointer",
-    transition: ".25s",
-  }}
->
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            style={{
-              transform: openPrices ? "rotate(180deg)" : "rotate(0deg)",
-              transition: "0.3s",
-              fill: "#b980ff",
-            }}
-          >
-            <path d="M7 10l5 5 5-5z" />
-          </svg>
+  {/* Контент */}
+  <div
+    style={{
+      maxHeight: openPrices ? 2000 : 0,
+      overflow: "hidden",
+      transition: "max-height .45s ease",
+      marginTop: openPrices ? 16 : 0,
+      border: openPrices ? "1px solid rgba(150, 80, 255, 0.22)" : "none",
+      borderRadius: 14,
+      padding: openPrices ? "20px 18px" : "0 18px",
+      background: "rgba(18, 18, 32, 0.92)",
+    }}
+  >
+    <div
+      style={{
+        opacity: openPrices ? 1 : 0,
+        transition: "opacity .35s ease",
+        color: "#fff",
+        lineHeight: "1.55",
+      }}
+    >
+      <p><b>80–130 €</b><br/>Šukuosenos kaina<br/>Priklauso nuo darbo apimties</p>
 
-          <div style={{ fontSize: 18 }}>Žiūrėti kainas</div>
-        </div>
+      <p><b>25 €</b><br/>Konsultacija<br/>Užtrunkame nuo 30 min. iki valandos</p>
 
-        <div
-          style={{
-            maxHeight: openPrices ? 2000 : 0,
-            overflow: "hidden",
-            transition: "max-height .4s ease",
-            marginTop: openPrices ? 16 : 0,
-            border: openPrices ? "1px solid rgba(150, 80, 255, 0.2)" : "none",
-            borderRadius: 12,
-            padding: openPrices ? 20 : "0 20px",
-            background: "rgba(15, 0, 35, 0.8)",
-          }}
-        >
-          <div style={{ opacity: openPrices ? 1 : 0, transition: ".4s" }}>
-            <p><b>80–130 €</b><br/>Šukuosenos kaina<br/>Priklauso nuo darbo apimties</p>
+      <p>
+        <b>50 € užstatas</b><br/>
+        <b>100 €</b><br/>
+        Plaukų Tresų nuoma<br/>
+        Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžinu užstatą
+      </p>
 
-            <p><b>25 €</b><br/>Konsultacija<br/>Užtrunkame nuo 30 min. iki valandos</p>
+      <p><b>Iki 20 €</b><br/>Papuošalų nuoma</p>
 
-            <p>
-              <b>50 € užstatas</b><br/>
-              <b>100 €</b><br/>
-              Plaukų Tresų nuoma<br/>
-              Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžinu užstatą
-            </p>
-
-            <p><b>Iki 20 €</b><br/>Papuošalų nuoma</p>
-
-            <p>
-              <b>130 €</b><br/>Atvykimas Klaipėdoje<br/>
-              Daiktų kraustymai, važiavimai — per tą laiką galiu priimti kitą klientę.
-            </p>
-          </div>
-        </div>
-      </div>
+      <p>
+        <b>130 €</b><br/>Atvykimas Klaipėdoje<br/>
+        Daiktų kraustymai, važiavimai — per tą laiką galiu priimti kitą klientę.
+      </p>
+    </div>
+  </div>
+</div>
 
       {/* ------------------------- */}
       {/*   NAVIGATION + MONTH     */}
