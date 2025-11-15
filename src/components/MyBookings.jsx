@@ -11,6 +11,15 @@ import {
 } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
 
+// Цвета для тегов услуг
+const tagColors = {
+  "Šukuosena": "#c084fc",
+  "Tresų nuoma": "#60a5fa",
+  "Papuošalų nuoma": "#f472b6",
+  "Atvykimas": "#facc15",
+  "Konsultacija": "#34d399"
+}
+
 export default function MyBookings() {
   const { t } = useI18n()
   const user = getCurrentUser()
@@ -36,13 +45,13 @@ export default function MyBookings() {
     .sort((a, b) => new Date(a.start) - new Date(b.start))
 
   const list = useMemo(() => {
-    if (filter === 'active') return all.filter(b => b.status === 'approved')
+    if (filter === 'active') return all.filter(b => b.status === 'approved' || b.status === 'approved_paid')
     if (filter === 'canceled')
       return all.filter(b => b.status === 'canceled_client' || b.status === 'canceled_admin')
     return all
   }, [filter, version, bookingsAll.length])
 
-  // ✅ Проверяем новые подтверждения от админа
+  // ПУШ-окно если запись только что подтверждена
   useEffect(() => {
     const prev = JSON.parse(localStorage.getItem('prevBookings') || '[]')
     const approvedNow = all.find(b => b.status === 'approved' && !prev.find(p => p.id === b.id && p.status === 'approved'))
@@ -78,7 +87,7 @@ export default function MyBookings() {
     saveUsers(users)
     setCurrentUser(updated)
 
-    // 🔄 обновляем бронирования
+    // обновляем все записи этого пользователя
     const bookings = getBookings().map(b =>
       (b.userEmail === user.email || b.userPhone === user.phone)
         ? { ...b, userName: updated.name, userPhone: updated.phone, userInstagram: updated.instagram, userEmail: updated.email }
@@ -88,7 +97,7 @@ export default function MyBookings() {
     window.dispatchEvent(new Event('profileUpdated'))
 
     setModal(true)
-    setTimeout(() => setModal(false), 2200)
+    setTimeout(() => setModal(false), 2000)
   }
 
   const cancel = (id) => setConfirmId(id)
@@ -102,59 +111,58 @@ export default function MyBookings() {
     setVersion(v => v + 1)
   }
 
+  // Оплата → меняем статус
+  const pay = (id) => {
+    const arr = getBookings().map(b =>
+      b.id === id ? { ...b, status: 'approved_paid', paidAt: new Date().toISOString() } : b
+    )
+    saveBookings(arr)
+    setVersion(v => v + 1)
+  }
+
   if (!user) return <div className="card"><b>{t('login_or_register')}</b></div>
 
-  const statusLabel = (b) => {
-    if (b.status === 'pending') return '🟡 ' + t('pending')
-    if (b.status === 'approved') return '🟢 ' + t('approved')
-    if (b.status === 'canceled_client') return '❌ ' + t('canceled_by_client')
-    if (b.status === 'canceled_admin') return '🔴 ' + t('canceled_by_admin')
-    return b.status
+  const statusDot = (b) => {
+    if (b.status === 'approved_paid')
+      return <span style={{ ...dot, background: '#4ade80', boxShadow: '0 0 8px #4ade80' }}></span>
+
+    if (b.status === 'approved')
+      return <span style={{ ...dot, background: '#ef4444', boxShadow: '0 0 8px #ef4444' }}></span>
+
+    if (b.status === 'pending')
+      return <span style={{ ...dot, background: '#facc15' }}></span>
+
+    return <span style={{ ...dot, background: '#999' }}></span>
   }
 
   return (
     <div style={container}>
-      {/* === ПРОФИЛЬ === */}
+
+      {/* === ПРОФИЛЬ (как раньше!) === */}
       <div style={outerCard}>
         <h3 style={{ margin: 0, padding: '10px 20px' }}>Профиль</h3>
-
         <div style={innerCard}>
           <div style={innerHeader} onClick={() => setShowProfile(!showProfile)}>
-            <span style={{ color: '#a855f7', transition: 'transform 0.3s', transform: showProfile ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+            <span style={{ color: '#a855f7', transform: showProfile ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.3s' }}>▾</span>
             <span style={{ fontWeight: 600 }}>Редактировать профиль</span>
           </div>
 
-          <div
-            style={{
-              ...profileBody,
-              maxHeight: showProfile ? '800px' : '0',
-              opacity: showProfile ? 1 : 0,
-              padding: showProfile ? '20px' : '0 20px'
-            }}
-          >
-            <form className="col" style={{ gap: 12, textAlign: 'center' }} onSubmit={saveProfile}>
+          <div style={{
+            ...profileBody,
+            maxHeight: showProfile ? '900px' : '0',
+            opacity: showProfile ? 1 : 0,
+            padding: showProfile ? '20px' : '0 20px'
+          }}>
+            <form className="col" style={{ gap: 12 }} onSubmit={saveProfile}>
               <div><label>Имя</label><input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
               <div><label>Instagram</label><input value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} /></div>
-              <div>
-                <label>Телефон</label>
-                <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
-                {errors.phone && <small style={{ color: '#f87171' }}>{errors.phone}</small>}
-              </div>
-              <div>
-                <label>Email</label>
-                <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-                {errors.email && <small style={{ color: '#f87171' }}>{errors.email}</small>}
-              </div>
-              <div>
-                <label>Пароль</label>
-                <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
-              </div>
+              <div><label>Телефон</label><input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
+              <div><label>Email</label><input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
+              <div><label>Пароль</label><input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></div>
 
-              {errors.contact && (
-                <div style={{ background: 'rgba(255,0,0,0.1)', padding: 8, borderRadius: 8, color: '#f87171' }}>{errors.contact}</div>
-              )}
+              {errors.contact && <div style={{ color: '#f87171' }}>{errors.contact}</div>}
 
-              <button type="submit" style={saveBtn}><span>💾</span> {t('save')}</button>
+              <button type="submit" style={saveBtn}>💾 Сохранить</button>
             </form>
           </div>
         </div>
@@ -163,66 +171,71 @@ export default function MyBookings() {
       {/* === МОИ ЗАПИСИ === */}
       <div style={bookingsCard}>
         <div style={bookingsHeader}>
-          <h3 style={{ margin: 0 }}>{t('my_bookings')}</h3>
+          <h3 style={{ margin: 0 }}>Мои записи</h3>
+
           <div style={filterButtons}>
-            <button style={filterBtn(filter === 'all')} onClick={() => setFilter('all')}>{t('all')}</button>
-            <button style={filterBtn(filter === 'active')} onClick={() => setFilter('active')}>{t('active')}</button>
-            <button style={filterBtn(filter === 'canceled')} onClick={() => setFilter('canceled')}>{t('canceled')}</button>
+            <button style={filterBtn(filter === 'all')} onClick={() => setFilter('all')}>Все</button>
+            <button style={filterBtn(filter === 'active')} onClick={() => setFilter('active')}>Активные</button>
+            <button style={filterBtn(filter === 'canceled')} onClick={() => setFilter('canceled')}>Отменённые</button>
           </div>
         </div>
 
-        <table style={table}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid rgba(168,85,247,0.25)' }}>
-              <th style={tableCell}>Дата</th>
-              <th style={tableCell}>Время</th>
-              <th style={tableCell}>Статус</th>
-              <th style={tableCell}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.map(b => {
-              const canCancel =
-                (b.status === 'pending' || b.status === 'approved') &&
-                new Date(b.end) > new Date()
-              return (
-               <tr key={b.id} style={tableRow}>
-  <td style={tableCell}>{fmtDate(b.start)}</td>
-  <td style={tableCell}>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
+        {/* 📱 Мобильные карточки */}
+        <div className="mobile-list">
+          {list.map(b => {
+            const canCancel =
+              (b.status === 'pending' || b.status === 'approved') &&
+              new Date(b.end) > new Date()
 
-  {/* === ВЫВОД УСЛУГ === */}
-  <td style={tableCell}>
-    {Array.isArray(b.services) && b.services.length > 0
-      ? b.services.join(', ')
-      : '—'}
-  </td>
+            return (
+              <div key={b.id} style={cardItem}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {statusDot(b)}
+                  <b>{fmtDate(b.start)}</b>
+                </div>
 
-  <td style={tableCell}>{statusLabel(b)}</td>
-  <td style={tableCell}>
-    {canCancel && (
-      <button style={cancelBtn} onClick={() => cancel(b.id)}>
-        {t('cancel')}
-      </button>
-    )}
-  </td>
-</tr>
-              )
-            })}
-            {!list.length && (
-              <tr>
-                <td colSpan="4" style={{ ...tableCell, opacity: 0.6 }}>{t('no_records')}</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                <div style={{ opacity: .8, marginTop: 4 }}>
+                  {fmtTime(b.start)} – {fmtTime(b.end)}
+                </div>
+
+                {/* Теги услуг */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                  {b.services?.map(s => (
+                    <span key={s} style={{
+                      padding: '4px 8px',
+                      borderRadius: 8,
+                      background: 'rgba(255,255,255,0.08)',
+                      border: `1px solid ${tagColors[s]}55`,
+                      color: tagColors[s],
+                      fontSize: 13,
+                      animation: 'fadeIn .3s ease'
+                    }}>
+                      {s}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Оплата */}
+                {b.status === 'approved' && (
+                  <button style={payBtn} onClick={() => pay(b.id)}>💳 Apmokėti</button>
+                )}
+
+                {/* Отмена */}
+                {canCancel && (
+                  <button style={cancelBtn} onClick={() => cancel(b.id)}>Отменить</button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
       </div>
 
       {/* === МОДАЛКИ === */}
       {modal && (
         <div style={modalBackdrop}>
           <div style={modalBox}>
-            <div style={loader}></div>
-            <h3 style={{ marginTop: 10 }}>{t('profile_updated')}</h3>
+            <h3 style={{ marginTop: 10 }}>Данные обновлены</h3>
           </div>
         </div>
       )}
@@ -234,77 +247,128 @@ export default function MyBookings() {
           </div>
         </div>
       )}
+
+      {/* Подтверждение отмены */}
+      {confirmId && (
+        <div style={modalBackdrop}>
+          <div style={modalBox}>
+            <h3>Отменить запись?</h3>
+            <button onClick={doCancel} style={cancelBtn}>Да</button>
+            <button onClick={() => setConfirmId(null)} style={{ ...cancelBtn, background: 'rgba(80,80,120,0.4)' }}>Нет</button>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
 
 /* === СТИЛИ === */
-const container = { animation: 'fadeIn 0.5s ease', paddingBottom: '40px' }
+
+const container = { paddingBottom: '40px' }
+
+const dot = {
+  width: 12,
+  height: 12,
+  borderRadius: '50%',
+  display: 'inline-block'
+}
 
 const outerCard = {
   background: 'rgba(15,10,25,0.9)',
   border: '1px solid rgba(168,85,247,0.3)',
   borderRadius: '14px',
-  boxShadow: '0 0 25px rgba(168,85,247,0.15)',
   color: '#fff',
-  marginBottom: '24px',
-  overflow: 'hidden'
+  marginBottom: '24px'
 }
 
 const innerCard = {
   margin: '0 20px 20px',
   border: '1px solid rgba(168,85,247,0.2)',
   borderRadius: '12px',
-  background: 'rgba(20,10,35,0.8)',
-  overflow: 'hidden'
+  background: 'rgba(20,10,35,0.8)'
 }
 
 const innerHeader = {
   display: 'flex',
   alignItems: 'center',
-  gap: '8px',
+  gap: 8,
   padding: '12px 16px',
   cursor: 'pointer',
   background: 'rgba(25,15,45,0.8)',
   borderBottom: '1px solid rgba(168,85,247,0.25)'
 }
 
-const profileBody = { overflow: 'hidden', transition: 'all 0.45s ease', color: '#fff' }
+const profileBody = { overflow: 'hidden', transition: 'all 0.45s ease' }
 
 const saveBtn = {
   marginTop: '10px',
   width: '100%',
   padding: '10px 20px',
   borderRadius: '10px',
-  border: '1px solid rgba(168,85,247,0.4)',
-  background: 'linear-gradient(180deg, rgba(130,60,255,0.8), rgba(60,20,120,0.8))',
+  background: 'linear-gradient(180deg, #9333ea, #4c1d95)',
   color: '#fff',
-  fontWeight: 500,
-  cursor: 'pointer',
-  transition: 'all 0.3s ease'
+  cursor: 'pointer'
 }
 
 const bookingsCard = { ...outerCard, padding: '18px' }
-const bookingsHeader = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }
-const filterButtons = { display: 'flex', gap: '8px' }
+const bookingsHeader = { display: 'flex', justifyContent: 'space-between', marginBottom: 10 }
+const filterButtons = { display: 'flex', gap: 8 }
 
 const filterBtn = (active) => ({
-  borderRadius: '10px',
   padding: '8px 18px',
+  borderRadius: '10px',
   background: active ? 'rgba(130,60,255,0.25)' : 'rgba(30,20,40,0.6)',
-  border: active ? '1px solid rgba(168,85,247,0.6)' : '1px solid rgba(120,80,180,0.3)',
-  color: '#fff',
-  cursor: 'pointer',
-  transition: '0.3s'
+  border: '1px solid rgba(168,85,247,0.5)',
+  color: '#fff'
 })
 
-const table = { width: '100%', borderCollapse: 'collapse', color: '#fff', textAlign: 'center' }
-const tableCell = { padding: '12px 0', borderBottom: '1px solid rgba(168,85,247,0.12)' }
-const tableRow = { transition: 'background 0.25s ease' }
-const cancelBtn = { borderRadius: '8px', border: '1px solid rgba(180,95,255,0.4)', background: 'rgba(40,20,70,0.7)', color: '#fff', padding: '6px 14px', cursor: 'pointer', transition: 'all 0.3s ease' }
+const cardItem = {
+  border: '1px solid rgba(168,85,247,0.25)',
+  background: 'rgba(20,10,30,0.55)',
+  padding: 14,
+  borderRadius: 14,
+  marginBottom: 12,
+  animation: 'fadeIn .35s ease'
+}
 
-const modalBackdrop = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, animation: 'fadeIn 0.3s ease' }
+const payBtn = {
+  marginTop: 10,
+  width: '100%',
+  padding: '8px 10px',
+  borderRadius: 10,
+  background: 'rgba(50,180,80,0.25)',
+  border: '1px solid #4ade80',
+  color: '#4ade80',
+  cursor: 'pointer'
+}
 
-const modalBox = { background: 'rgba(20,15,35,0.85)', border: '1px solid rgba(180,95,255,0.4)', borderRadius: '14px', padding: '24px 32px', textAlign: 'center', color: '#fff', boxShadow: '0 0 40px rgba(150,85,247,0.25)', animation: 'popIn 0.3s ease' }
+const cancelBtn = {
+  marginTop: 10,
+  padding: '8px 12px',
+  borderRadius: 10,
+  background: 'rgba(120,30,60,0.4)',
+  border: '1px solid rgba(200,80,120,0.6)',
+  color: '#fff',
+  cursor: 'pointer'
+}
 
-const loader = { width: '28px', height: '28px', margin: '0 auto 10px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.25)', borderTopColor: '#a855f7', animation: 'spin 1s linear infinite' }
+const modalBackdrop = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(0,0,0,0.6)',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 3000
+}
+
+const modalBox = {
+  background: 'rgba(20,15,35,0.85)',
+  borderRadius: 14,
+  padding: '24px 32px',
+  border: '1px solid rgba(168,85,247,0.3)',
+  color: '#fff',
+  textAlign: 'center'
+}
+
