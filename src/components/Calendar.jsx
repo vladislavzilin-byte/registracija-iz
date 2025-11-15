@@ -214,10 +214,6 @@ export default function Calendar(){
         }
       `}</style>
 
-      {/* ------------------------- */}
-      {/*         KAINAS           */}
-      {/* ------------------------- */}
-
 {/* ------------------------- */}
 {/*         KAINAS           */}
 {/* ------------------------- */}
@@ -247,35 +243,37 @@ export default function Calendar(){
   </h2>
 
   {/* Кнопка-аккордеон */}
-  <div
-    onClick={() => setOpenPrices(!openPrices)}
+<div
+  onClick={() => setOpenPrices(!openPrices)}
+  style={{
+    border: "1px solid rgba(150, 80, 255, 0.22)",
+    background: "rgba(18, 18, 32, 0.92)",
+    borderRadius: 14,
+    padding: "12px 14px",
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    cursor: "pointer",
+    transition: ".25s ease",
+  }}
+>
+  {/* Стрелка как в профиле */}
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
     style={{
-      border: "1px solid rgba(150, 80, 255, 0.22)",
-      background: "rgba(20, 20, 35, 0.80)",
-      borderRadius: 12,
-      padding: "12px 16px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      cursor: "pointer",
-      transition: ".25s",
+      transform: openPrices ? "rotate(180deg)" : "rotate(0deg)",
+      transition: "0.25s ease",
+      fill: "#c68bff",
+      opacity: 0.9,
     }}
   >
-    <span style={{ fontSize: 17, color: "#fff" }}>Žiūrėti kainas</span>
+    <path d="M7 10l5 5 5-5z" />
+  </svg>
 
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      style={{
-        transform: openPrices ? "rotate(180deg)" : "rotate(0deg)",
-        transition: "0.25s ease",
-        fill: "#b980ff",
-      }}
-    >
-      <path d="M7 10l5 5 5-5z" />
-    </svg>
-  </div>
+  <span style={{ fontSize: 17, color: "#fff" }}>Žiūrėti kainas</span>
+</div>
 
   {/* Контент */}
   <div
