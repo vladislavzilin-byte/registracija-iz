@@ -80,16 +80,7 @@ const formatDuration = (minutes) => {
     saveBookings(updated)
     setList(updated.filter(b => b.user?.id === user?.id))
   }
-const PAYPAL_BUSINESS = 'YOUR_PAYPAL_EMAIL@EXAMPLE.COM' // TODO: замени на свой
 
-const handlePay = (b) => {
-  if (!b.price) return
-  const amount = b.price.toFixed(2)
-  const url = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${encodeURIComponent(
-    PAYPAL_BUSINESS
-  )}&currency_code=EUR&amount=${amount}`
-  window.open(url, '_blank')
-}
   // === Стили ===
   const card = {
     background: "rgba(12, 10, 20, 0.7)",
@@ -159,16 +150,14 @@ const handlePay = (b) => {
 
       <table style={table}>
         <thead>
-  <tr style={{ borderBottom: '1px solid rgba(168,85,247,0.25)' }}>
-    <th style={tableCell}>Дата</th>
-    <th style={tableCell}>Время</th>
-    <th style={tableCell}>Услуги</th>
-    <th style={tableCell}>Kaina</th>
-    <th style={tableCell}>Trukmė</th>
-    <th style={tableCell}>Статус</th>
-    <th style={tableCell}></th>
-  </tr>
-</thead>
+          <tr>
+            <th style={th}>Дата</th>
+            <th style={th}>Время</th>
+            <th style={th}>Услуги</th>
+            <th style={th}>Статус</th>
+            <th style={th}></th>
+          </tr>
+        </thead>
 
         <tbody>
           {list.length === 0 && (
@@ -183,85 +172,57 @@ const handlePay = (b) => {
               new Date(b.end) > new Date()
 
             return (
-<tr key={b.id} style={tableRow}>
-  {/* Дата */}
-  <td style={tableCell}>{fmtDate(b.start)}</td>
+              <tr key={b.id}>
+                <td style={td}>{fmtDate(b.start)}</td>
+                <td style={td}>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
 
-  {/* Время */}
-  <td style={tableCell}>
-    {fmtTime(b.start)}–{fmtTime(b.end)}
-  </td>
+                {/* === УСЛУГИ — цветные теги === */}
+                <td style={{ ...td, maxWidth: 260 }}>
+                  <div style={{
+                    display: "flex",
+                    gap: "6px",
+                    flexWrap: "wrap"
+                  }}>
+                    {Array.isArray(b.services) && b.services.length > 0 ? (
+                      b.services.map((s, i) => {
+                        const st = serviceStyles[s] || {
+                          icon: "✨",
+                          bg: "rgba(255,255,255,0.1)",
+                          border: "1px solid rgba(255,255,255,0.15)"
+                        }
 
-  {/* Услуги — теги */}
-  <td style={{ ...tableCell, maxWidth: 220 }}>
-    {Array.isArray(b.services) && b.services.length > 0 ? (
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "6px",
-        }}
-      >
-        {b.services.map((s, i) => (
-          <div
-            key={i}
-            style={{
-              padding: "4px 10px",
-              borderRadius: 10,
-              background: "rgba(150,80,255,0.25)",
-              border: "1px solid rgba(168,85,247,0.4)",
-              fontSize: 13,
-              whiteSpace: "nowrap",
-              backdropFilter: "blur(6px)",
-            }}
-          >
-            {s}
-          </div>
-        ))}
-      </div>
-    ) : (
-      "—"
-    )}
-  </td>
+                        return (
+                          <div key={i} style={{
+                            padding: "6px 10px",
+                            borderRadius: 12,
+                            background: st.bg,
+                            border: st.border,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            whiteSpace: "nowrap",
+                            fontSize: 13,
+                            backdropFilter: "blur(6px)",
+                            animation: "fadeTag .35s ease"
+                          }}>
+                            <span>{s}</span>
+                          </div>
+                        )
+                      })
+                    ) : "—"}
+                  </div>
+                </td>
 
-  {/* Цена */}
-  <td style={tableCell}>
-    {b.price ? `${b.price} €` : '—'}
-  </td>
+                <td style={td}>{statusLabel(b)}</td>
 
-  {/* Длительность */}
-  <td style={tableCell}>
-    {b.durationMinutes ? formatDuration(b.durationMinutes) : '—'}
-  </td>
-
-  {/* Статус */}
-  <td style={tableCell}>{statusLabel(b)}</td>
-
-  {/* Оплата + отмена */}
-  <td style={tableCell}>
-    {b.price && (
-      <button
-        style={{
-          padding: "6px 12px",
-          borderRadius: 10,
-          border: "1px solid rgba(34,197,94,0.7)",
-          background: "rgba(22,101,52,0.4)",
-          color: "#bbf7d0",
-          cursor: "pointer",
-          marginRight: canCancel ? 8 : 0,
-        }}
-        onClick={() => handlePay(b)}
-      >
-        Apmokėti
-      </button>
-    )}
-    {canCancel && (
-      <button style={cancelBtn} onClick={() => cancel(b.id)}>
-        {t('cancel')}
-      </button>
-    )}
-  </td>
-</tr>
+                <td style={td}>
+                  {canCancel && (
+                    <button style={cancelBtn} onClick={() => cancel(b.id)}>
+                      Отменить
+                    </button>
+                  )}
+                </td>
+              </tr>
             )
           })}
         </tbody>
