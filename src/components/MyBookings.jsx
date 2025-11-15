@@ -186,14 +186,26 @@ export default function MyBookings() {
                 (b.status === 'pending' || b.status === 'approved') &&
                 new Date(b.end) > new Date()
               return (
-                <tr key={b.id} style={tableRow}>
-                  <td style={tableCell}>{fmtDate(b.start)}</td>
-                  <td style={tableCell}>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
-                  <td style={tableCell}>{statusLabel(b)}</td>
-                  <td style={tableCell}>
-                    {canCancel && <button style={cancelBtn} onClick={() => cancel(b.id)}>{t('cancel')}</button>}
-                  </td>
-                </tr>
+               <tr key={b.id} style={tableRow}>
+  <td style={tableCell}>{fmtDate(b.start)}</td>
+  <td style={tableCell}>{fmtTime(b.start)}–{fmtTime(b.end)}</td>
+
+  {/* === ВЫВОД УСЛУГ === */}
+  <td style={tableCell}>
+    {Array.isArray(b.services) && b.services.length > 0
+      ? b.services.join(', ')
+      : '—'}
+  </td>
+
+  <td style={tableCell}>{statusLabel(b)}</td>
+  <td style={tableCell}>
+    {canCancel && (
+      <button style={cancelBtn} onClick={() => cancel(b.id)}>
+        {t('cancel')}
+      </button>
+    )}
+  </td>
+</tr>
               )
             })}
             {!list.length && (
