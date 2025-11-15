@@ -1,195 +1,240 @@
-// FULL UPDATED Calendar.jsx WITH PRICE WINDOW
-import { useMemo, useState, useRef } from 'react'
-import {
-  startOfMonth, endOfMonth, startOfWeek, endOfWeek,
-  addDays, addMonths, isSameMonth, isSameDay, format
-} from 'date-fns'
-import {
-  getBookings, saveBookings, getSettings,
-  getCurrentUser, id, isSameMinute
-} from '../lib/storage'
-import { useI18n } from '../lib/i18n'
+import Auth from './components/Auth.jsx'
+import Calendar from './components/Calendar.jsx'
+import Admin from './components/Admin.jsx'
+import MyBookings from './components/MyBookings.jsx'
+import { useState } from 'react'
+import { getCurrentUser } from './lib/storage'
+import { useI18n } from './lib/i18n'
 
-function dayISO(d){ return new Date(d).toISOString().slice(0,10) }
-function toDateOnly(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()) }
+export default function App() {
+  const { lang, setLang, t } = useI18n()
+  const [tab, setTab] = useState('calendar')
+  const [user, setUser] = useState(getCurrentUser())
 
-export default function Calendar(){
-  const { t } = useI18n()
-  const settings = getSettings()
+  const isAdmin =
+    user?.role === 'admin' ||
+    user?.isAdmin === true ||
+    user?.email === 'vlados@admin.com' ||
+    user?.email === 'vladislavzilin@gmail.com'
 
-  const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()))
-  const [selectedDate, setSelectedDate] = useState(new Date())
-  const [busy, setBusy] = useState(false)
-  const [processingISO, setProcessingISO] = useState(null)
-  const [bookedISO, setBookedISO] = useState([])
-  const [modal, setModal] = useState(null)
-
-  const [hoverIdx, setHoverIdx] = useState(-1)
-  const [animDir, setAnimDir] = useState(0)
-  const touchStartX = useRef(null)
-
-  // === Prices ===
-  const [showPrices, setShowPrices] = useState(true)
+  // 📌 Состояние для Kainas
   const [showPriceList, setShowPriceList] = useState(false)
 
-  const today = toDateOnly(new Date())
-  const minDate = today
-  const maxDate = addMonths(new Date(), 24)
-
-  const monthStart = startOfMonth(currentMonth)
-  const monthEnd = endOfMonth(currentMonth)
-  const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 })
-  const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
-
-  const days = useMemo(()=>{
-    const arr=[]; let d=new Date(gridStart);
-    while(d<=gridEnd){ arr.push(new Date(d)); d=addDays(d,1) }
-    return arr
-  }, [currentMonth])
-
-  const bookings = getBookings()
-
-  const slotsForDay = (d) => {
-    if(toDateOnly(d) < today) return []
-
-    const [sh, sm] = settings.workStart.split(':').map(Number)
-    const [eh, em] = settings.workEnd.split(':').map(Number)
-    const start = new Date(d); start.setHours(sh, sm, 0, 0)
-    const end   = new Date(d); end.setHours(eh, em, 0, 0)
-    const slots = []
-    let cur = new Date(start)
-    while(cur <= end){
-      slots.push(new Date(cur))
-      cur = new Date(cur.getTime() + settings.slotMinutes*60000)
-    }
-    const blocked = settings.blockedDates.includes(dayISO(d))
-    if(blocked) return []
-    if(toDateOnly(d) < minDate || toDateOnly(d) > toDateOnly(maxDate)) return []
-    return slots
-  }
-
-  const isTaken = (t) => {
-    const storedTaken = bookings.some(b => (b.status==='approved' || b.status==='pending') && isSameMinute(b.start, t))
-    const isProc = processingISO && isSameMinute(processingISO, t)
-    const isLocal = bookedISO.some(x => isSameMinute(x, t))
-    return storedTaken || isProc || isLocal
-  }
-
-  const book = (tSel) => {
-    if(toDateOnly(tSel) < today){ alert(t('cannot_book_past')); return }
-
-    const user = getCurrentUser()
-    if(!user) { alert(t('login_or_register')); return }
-    if(isTaken(tSel)) { alert(t('already_booked')); return }
-
-    setBusy(true)
-    setProcessingISO(new Date(tSel))
-    const end = new Date(tSel); end.setMinutes(end.getMinutes() + settings.slotMinutes)
-
-    const newB = {
-      id: id(), userPhone: user.phone, userName: user.name,
-      userInstagram: user.instagram || '',
-      start: tSel, end, status: 'pending', createdAt: new Date().toISOString()
-    }
-
-    setTimeout(()=>{
-      saveBookings([...bookings, newB])
-      setBookedISO(prev => [...prev, new Date(tSel)])
-      setBusy(false)
-      setProcessingISO(null)
-      setModal({
-        title: t('booked_success'),
-        dateStr: format(tSel,'dd.MM.yyyy'),
-        timeStr: format(tSel,'HH:mm')+' – '+format(end,'HH:mm'),
-        caption: t('wait_confirmation')+' '+t('details_in_my')
-      })
-    }, 600)
-  }
-
-  const closeModal = () => setModal(null)
-
-  const goPrev = () => { setAnimDir(-1); setCurrentMonth(m => addMonths(m,-1)) }
-  const goNext = () => { setAnimDir(+1); setCurrentMonth(m => addMonths(m, 1)) }
-
-  const onTouchStart = (e) => { touchStartX.current = e.touches[0].clientX }
-  const onTouchEnd = (e) => {
-    if(touchStartX.current == null) return
-    const dx = e.changedTouches[0].clientX - touchStartX.current
-    if(Math.abs(dx) > 50){ dx > 0 ? goPrev() : goNext() }
-    touchStartX.current = null
-  }
-
-  const monthLabelRaw = format(currentMonth,'LLLL yyyy')
-  const monthLabel = monthLabelRaw.charAt(0).toUpperCase()+monthLabelRaw.slice(1)
-
-  const navBtnStyle = {
-    width: 130, height: 46, borderRadius: 14,
-    border:'1px solid rgba(168,85,247,0.40)', background:'rgba(31,0,63,0.55)',
-    color:'#fff', fontSize:22, cursor:'pointer'
-  }
-
-  const centerPillStyle = {
-    width:130, height:46, borderRadius:14,
-    border:'1px solid rgba(168,85,247,0.40)',
-    background:'linear-gradient(145deg, rgba(66,0,145,0.55), rgba(20,0,40,0.60))',
-    color:'#fff', fontSize:15, fontWeight:600,
-    display:'flex', justifyContent:'center', alignItems:'center'
-  }
-
-  const isToday = (d) => isSameDay(toDateOnly(d), today)
-
   return (
-    <div className="card" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div className="container" style={containerStyle}>
+      
+      {/* === NAV BAR === */}
+      <div style={navBar}>
+        <div style={leftSide}>
 
-      {/* ===================== PRICE SECTION ===================== */}
-      {showPrices && (
-        <div style={{ width:'100%', marginTop:20 }}>
-          <h2 style={{ color:'white', fontSize:22, fontWeight:600, paddingLeft:14, marginBottom:10 }}>
-            Kainas
-          </h2>
-
-          <div
-            style={{ background:'rgb(20,15,35)', border:'1px solid rgba(150,80,255,0.35)', padding:'16px 18px', borderRadius:10,
-              cursor:'pointer', display:'flex', alignItems:'center', gap:10, marginBottom:14 }}
-            onClick={() => setShowPriceList(!showPriceList)}
+          <button
+            onClick={() => setTab('calendar')}
+            style={navButton(tab === 'calendar')}
           >
-            <span style={{ color:'#b37bff', fontSize:20, transform:showPriceList?'rotate(180deg)':'rotate(0deg)', transition:'0.25s' }}>▾</span>
-            <span style={{ color:'white', fontSize:16 }}>Žiūrėti kainas</span>
-          </div>
+            {t('nav_calendar')}
+          </button>
 
-          {showPriceList && (
-            <div style={{ background:'rgba(20,10,40,0.8)', border:'1px solid rgba(160,80,255,0.3)', borderRadius:14,
-              padding:'22px 26px', color:'white', fontSize:17, lineHeight:1.55 }}>
+          <button
+            onClick={() => setTab('my')}
+            style={navButton(tab === 'my')}
+          >
+            {t('nav_my')}
+          </button>
 
-              <div style={{ marginBottom:16 }}>
-                <b>80–130 €</b><br />Šukuosenos kaina<br />
-                <span style={{ opacity:0.75 }}>Priklauso nuo darbo apimties</span>
-              </div>
-
-              <div style={{ marginBottom:16 }}>
-                <b>25 €</b><br />Konsultacija<br />
-                <span style={{ opacity:0.75 }}>30–60 min</span>
-              </div>
-
-              <div style={{ marginBottom:16 }}>
-                <b>50 € užstatas</b><br />
-                <b>100 €</b><br />Plaukų Tresų nuoma
-              </div>
-
-              <div style={{ marginBottom:16 }}>
-                <b>Iki 20 €</b><br />Papuošalų nuoma
-              </div>
-
-              <div>
-                <b>130 €</b><br />Atvykimas Klaipėdoje
-              </div>
-            </div>
+          {isAdmin && (
+            <button
+              onClick={() => setTab('admin')}
+              style={{
+                ...navButton(tab === 'admin'),
+                animation: 'fadeInUp 0.4s ease-out',
+              }}
+            >
+              {t('nav_admin')}
+            </button>
           )}
         </div>
-      )}
-      {/* ===================== END PRICE SECTION ===================== */}
 
-      <div style={{display:'flex', gap:16, alignItems:'center', justifyContent:'center', marginBottom:12}}>
-        <button style={navBtnStyle} onClick={goPrev}>←</button>
-        <div style={centerPillStyle}>{monthLabel}</div>
-        <button style={navBtnStyle} onClick={goNext}>→
+        {/* LANGUAGES */}
+        <div style={langBlock}>
+          <button onClick={() => setLang('lt')} style={langButton(lang === 'lt')}>LT</button>
+          <button onClick={() => setLang('ru')} style={langButton(lang === 'ru')}>RU</button>
+          <button onClick={() => setLang('en')} style={langButton(lang === 'en')}>GB</button>
+        </div>
+      </div>
+
+      {/* === PROFILE === */}
+      <Auth onAuth={setUser} />
+      
+
+      {/* ===========================================================
+            🔥  НОВЫЙ БЛОК KAINAS — как окно профиля
+      ============================================================ */}
+      <div
+        style={{
+          marginTop: '20px',
+          background: 'rgba(15, 10, 25, 0.6)',
+          borderRadius: '16px',
+          border: '1px solid rgba(168,85,247,0.35)',
+          boxShadow: '0 0 25px rgba(150,85,247,0.15)',
+          padding: '20px',
+        }}
+      >
+        <h2 style={{ margin: 0, marginBottom: '16px', fontSize: '26px' }}>Kainas</h2>
+
+        {/* DROPDOWN */}
+        <div
+          onClick={() => setShowPriceList(!showPriceList)}
+          style={{
+            background: 'rgba(20, 15, 35, 0.8)',
+            border: '1px solid rgba(150,80,255,0.35)',
+            padding: '16px 18px',
+            borderRadius: '10px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            userSelect: 'none'
+          }}
+        >
+          <span
+            style={{
+              color: '#b37bff',
+              fontSize: '20px',
+              transform: showPriceList ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: '0.25s'
+            }}
+          >
+            ▾
+          </span>
+
+          <span style={{ color: 'white', fontSize: '17px' }}>
+            Žiūrėti kainas
+          </span>
+        </div>
+
+        {showPriceList && (
+          <div
+            style={{
+              marginTop: '16px',
+              background: 'rgba(20,10,40,0.7)',
+              border: '1px solid rgba(160,80,255,0.3)',
+              borderRadius: '14px',
+              padding: '22px 26px',
+              lineHeight: '1.55',
+              fontSize: '17px',
+              color: 'white',
+            }}
+          >
+            <div style={{ marginBottom: '16px' }}>
+              <b>80–130 €</b><br />
+              Šukuosenos kaina<br />
+              <span style={{ opacity: 0.75 }}>Priklauso nuo darbo apimties</span>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <b>25 €</b><br />
+              Konsultacija<br />
+              <span style={{ opacity: 0.75 }}>
+                Užtrunkame nuo 30 min. iki valandos
+              </span>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <b>50 € užstatas</b><br />
+              <b>100 €</b><br />
+              Plaukų Tresų nuoma<br />
+              <span style={{ opacity: 0.75 }}>
+                Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžinu užstatą
+              </span>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <b>Iki 20 €</b><br />
+              Papuošalų nuoma
+            </div>
+
+            <div>
+              <b>130 €</b><br />
+              Atvykimas Klaipėdoje<br />
+              <span style={{ opacity: 0.75 }}>
+                Daiktų kraustymai, važinėjimai – per tą laiką galiu priimti kitą klientę.
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* === CONTENT === */}
+      {tab === 'calendar' && <Calendar />}
+      {tab === 'my' && <MyBookings />}
+      {tab === 'admin' && isAdmin && <Admin />}
+
+      <footer style={footerStyle}>© IZ HAIR TREND</footer>
+    </div>
+  )
+}
+
+
+/* === СТИЛИ === */
+
+const containerStyle = {
+  minHeight: '100vh',
+  background:
+    'radial-gradient(800px at 50% 120%, rgba(80,40,180,0.12), transparent 80%),' +
+    'radial-gradient(600px at 0% 0%, rgba(140,70,255,0.05), transparent 80%),' +
+    '#0b0a0f',
+  color: '#fff',
+  fontFamily: 'Inter, sans-serif',
+}
+
+const navBar = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '14px 28px',
+  background: 'rgba(10,10,15,0.75)',
+  backdropFilter: 'blur(18px)',
+  borderRadius: '0 0 16px 16px',
+  position: 'sticky',
+  top: 0,
+  zIndex: 1000,
+}
+
+const leftSide = { display: 'flex', gap: '12px' }
+
+const navButton = (active) => ({
+  borderRadius: '12px',
+  padding: '10px 22px',
+  background: active
+    ? 'linear-gradient(180deg, rgba(150,80,255,0.4), rgba(80,0,140,0.3))'
+    : 'rgba(25,20,40,0.4)',
+  border: active
+    ? '1.5px solid rgba(168,85,247,0.85)'
+    : '1px solid rgba(140,90,200,0.25)',
+  color: '#fff',
+  cursor: 'pointer',
+})
+
+const langBlock = { display: 'flex', gap: '8px' }
+
+const langButton = (active) => ({
+  borderRadius: '10px',
+  width: '44px',
+  height: '36px',
+  fontWeight: 600,
+  border: active
+    ? '1.5px solid rgba(168,85,247,0.9)'
+    : '1px solid rgba(120,80,180,0.25)',
+  background: active
+    ? 'linear-gradient(180deg, rgba(130,60,255,0.9), rgba(70,0,120,0.85))'
+    : 'rgba(20,15,30,0.45)',
+  color: '#fff',
+  cursor: 'pointer',
+})
+
+const footerStyle = {
+  marginTop: 40,
+  textAlign: 'center',
+  opacity: 0.4,
+  fontSize: '0.9rem',
+}
