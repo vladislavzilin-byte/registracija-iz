@@ -312,16 +312,17 @@ export default function Auth({ onAuth }) {
             }}
           >
             <button
-              onClick={logout}
-              style={{
-                ...logoutButton,
-                padding: "10px 30px",
-                minWidth: "130px", // аккуратный авторазмер
-                whiteSpace: "nowrap",
-              }}
-            >
-              Выйти
-            </button>
+  onClick={logout}
+  style={{
+    ...logoutButton,
+    padding: "12px 34px",
+    borderRadius: "14px",
+    fontSize: "0.95rem",
+    whiteSpace: "nowrap",
+  }}
+>
+  Выйти
+</button>
           </div>
         </div>
 
