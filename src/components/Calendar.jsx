@@ -19,7 +19,14 @@ export default function Calendar(){
   // -------------------------
   // KAINAS — accordion state
   // -------------------------
-  const [openPrices, setOpenPrices] = useState(false)
+const [openPrices, setOpenPrices] = useState(false)
+
+// Автоматическое открытие Kainas из App.jsx
+useEffect(() => {
+  const handler = () => setOpenPrices(true)
+  window.addEventListener("openPrices", handler)
+  return () => window.removeEventListener("openPrices", handler)
+}, [])
 
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()))
   const [selectedDate, setSelectedDate] = useState(new Date())
