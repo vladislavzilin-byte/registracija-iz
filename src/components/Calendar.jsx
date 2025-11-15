@@ -1,184 +1,212 @@
-import { useState, useEffect } from "react";
-import { getCurrentUser } from "../lib/storage";
-import { useI18n } from "../lib/i18n";
+import { useMemo, useState, useRef } from 'react'
 import {
-  format,
-  addMonths,
-  subMonths,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  isSameDay,
-  isSameMonth,
-} from "date-fns";
+  startOfMonth, endOfMonth, startOfWeek, endOfWeek,
+  addDays, addMonths, isSameMonth, isSameDay, format
+} from 'date-fns'
+import {
+  getBookings, saveBookings, getSettings,
+  getCurrentUser, id, isSameMinute
+} from '../lib/storage'
+import { useI18n } from '../lib/i18n'
 
-export default function Calendar() {
-  const user = getCurrentUser();
-  const { t } = useI18n();
+function dayISO(d){ return new Date(d).toISOString().slice(0,10) }
+function toDateOnly(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()) }
 
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [availableSlots, setAvailableSlots] = useState([]);
-  const [modalInfo, setModalInfo] = useState(null);
+export default function Calendar(){
+  const { t } = useI18n()
+  const settings = getSettings()
 
-  const [showPrices, setShowPrices] = useState(true);
-  const [showPriceList, setShowPriceList] = useState(true);
+  const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()))
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [busy, setBusy] = useState(false)
+  const [processingISO, setProcessingISO] = useState(null)
+  const [bookedISO, setBookedISO] = useState([])
+  const [modal, setModal] = useState(null)
 
-  useEffect(() => {
-    generateSlotsForDay(selectedDate);
-  }, [selectedDate]);
+  const [hoverIdx, setHoverIdx] = useState(-1)
+  const [animDir, setAnimDir] = useState(0)
+  const touchStartX = useRef(null)
 
-  const generateSlotsForDay = (date) => {
-    const slots = [];
-    for (let i = 4; i <= 22; i++) {
-      const hour = i.toString().padStart(2, "0") + ":00";
-      slots.push(hour);
-    }
-    setAvailableSlots(slots);
-  };
+  // === NEW: PRICE SECTION STATE ===
+  const [showPriceList, setShowPriceList] = useState(false)
 
-  const handleSlotClick = (slot) => {
-    setModalInfo({
-      date: format(selectedDate, "dd.MM.yyyy"),
-      time: slot,
-    });
-  };
+  const today = toDateOnly(new Date())
+  const minDate = today
+  const maxDate = addMonths(new Date(), 24)
 
-  const daysOfWeek = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+  const monthStart = startOfMonth(currentMonth)
+  const monthEnd = endOfMonth(currentMonth)
+  const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 })
+  const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
 
-  const renderCalendar = () => {
-    const monthStart = startOfMonth(selectedDate);
-    const monthEnd = endOfMonth(selectedDate);
-    const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
-    const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const days = useMemo(()=>{
+    const arr=[]; let d=new Date(gridStart);
+    while(d<=gridEnd){ arr.push(new Date(d)); d=addDays(d,1) }
+    return arr
+  }, [currentMonth])
 
-    const rows = [];
-    let days = [];
-    let day = startDate;
+  const bookings = getBookings()
 
-    while (day <= endDate) {
-      for (let i = 0; i < 7; i++) {
-        const cloneDay = day;
-        days.push(
-          <div
-            key={day}
-            onClick={() => setSelectedDate(cloneDay)}
-            style={{
-              padding: "18px 0",
-              borderRadius: "10px",
-              margin: "4px",
-              background: isSameDay(day, selectedDate)
-                ? "rgba(150, 80, 255, 0.25)"
-                : "rgba(20, 15, 35, 0.55)",
-              border: isSameDay(day, selectedDate)
-                ? "2px solid rgba(180, 90, 255, 0.9)"
-                : "1px solid rgba(120, 80, 200, 0.35)",
-              opacity: isSameMonth(day, monthStart) ? 1 : 0.35,
-              cursor: "pointer",
-              textAlign: "center",
-              color: "#fff",
-              fontSize: "15px",
-            }}
-          >
-            {format(day, "d")}
-          </div>
-        );
-        day = addDays(day, 1);
-      }
+  const slotsForDay = (d) => {
+    if(toDateOnly(d) < today) return []
+    const [sh, sm] = settings.workStart.split(':').map(Number)
+    const [eh, em] = settings.workEnd.split(':').map(Number)
+    const start = new Date(d); start.setHours(sh, sm, 0, 0)
+    const end   = new Date(d); end.setHours(eh, em, 0, 0)
 
-      rows.push(
-        <div
-          key={day}
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(7, 1fr)",
-            width: "100%",
-          }}
-        >
-          {days}
-        </div>
-      );
-      days = [];
+    const slots = []
+    let cur = new Date(start)
+    while(cur <= end){
+      slots.push(new Date(cur))
+      cur = new Date(cur.getTime() + settings.slotMinutes*60000)
     }
 
-    return <div>{rows}</div>;
-  };
+    if(settings.blockedDates.includes(dayISO(d))) return []
+    if(toDateOnly(d) < toDateOnly(minDate) || toDateOnly(d) > toDateOnly(maxDate)) return []
+
+    return slots
+  }
+
+  const isTaken = (t) => {
+    const storedTaken = bookings.some(b =>
+      (b.status==='approved' || b.status==='pending') && isSameMinute(b.start, t)
+    )
+    const isProc = processingISO && isSameMinute(processingISO, t)
+    const isLocal = bookedISO.some(x => isSameMinute(x, t))
+    return storedTaken || isProc || isLocal
+  }
+
+  const book = (tSel) => {
+    if(toDateOnly(tSel) < today){
+      alert(t('cannot_book_past'))
+      return
+    }
+
+    const user = getCurrentUser()
+    if(!user) { alert(t('login_or_register')); return }
+    if(isTaken(tSel)) { alert(t('already_booked')); return }
+
+    setBusy(true)
+    setProcessingISO(new Date(tSel))
+    const end = new Date(tSel); end.setMinutes(end.getMinutes() + settings.slotMinutes)
+
+    const newB = {
+      id: id(),
+      userPhone: user.phone,
+      userName: user.name,
+      userInstagram: user.instagram || '',
+      start: tSel,
+      end,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    }
+
+    setTimeout(()=>{
+      saveBookings([ ...bookings, newB ])
+      setBookedISO(prev => [...prev, new Date(tSel)])
+      setBusy(false)
+      setProcessingISO(null)
+      setModal({
+        title: t('booked_success'),
+        dateStr: format(tSel,'dd.MM.yyyy'),
+        timeStr: format(tSel,'HH:mm')+' – '+format(end,'HH:mm'),
+        caption: t('wait_confirmation')+' '+t('details_in_my')
+      })
+    }, 600)
+  }
+
+  const closeModal = () => setModal(null)
+
+  const goPrev = () => { setAnimDir(-1); setCurrentMonth(m => addMonths(m,-1)) }
+  const goNext = () => { setAnimDir(+1); setCurrentMonth(m => addMonths(m, 1)) }
+
+  const onTouchStart = (e) => { touchStartX.current = e.touches[0].clientX }
+  const onTouchEnd = (e) => {
+    if(touchStartX.current == null) return
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    if(Math.abs(dx) > 50){ if(dx > 0) goPrev(); else goNext() }
+    touchStartX.current = null
+  }
+
+  const monthLabelRaw = format(currentMonth,'LLLL yyyy')
+  const monthLabel = monthLabelRaw.charAt(0).toUpperCase()+monthLabelRaw.slice(1)
+
+  const navBtnStyle = {
+    width: 130, height: 46, borderRadius: 14,
+    border: '1px solid rgba(168,85,247,0.40)',
+    background: 'rgba(31, 0, 63, 0.55)',
+    backdropFilter: 'blur(8px)',
+    color: '#fff', fontSize: 22, cursor: 'pointer',
+    boxShadow: '0 0 18px rgba(138,43,226,0.25)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center'
+  }
+
+  const centerPillStyle = {
+    width: 130, height: 46, borderRadius: 14,
+    display: 'flex', justifyContent: 'center', alignItems: 'center',
+    border: '1px solid rgba(168,85,247,0.40)',
+    background: 'linear-gradient(145deg, rgba(66,0,145,0.55), rgba(20,0,40,0.60))',
+    color: '#fff', fontSize: 15, fontWeight: 600
+  }
+
+  const isToday = (d) => isSameDay(toDateOnly(d), today)
+  const dateCellStyle = (d, idx, active, isPast) => {
+    const base = {
+      borderRadius: 12,
+      padding: '10px 0',
+      textAlign: 'center',
+      transition: '0.2s'
+    }
+    if(isPast){
+      base.opacity = 0.38
+      base.filter = 'grayscale(30%)'
+    }
+    if(hoverIdx === idx && !isPast){
+      base.boxShadow = '0 0 18px rgba(168,85,247,0.40)'
+      base.background = 'rgba(98,0,180,0.18)'
+      base.transform = 'translateY(-1px)'
+    }
+    if(active){
+      base.boxShadow = '0 0 24px rgba(168,85,247,0.55)'
+      base.background = 'rgba(98,0,180,0.22)'
+      base.fontWeight = 700
+    }
+    if(isToday(d) && !active){
+      base.boxShadow = '0 0 0 1px rgba(168,85,247,0.45) inset'
+    }
+    return base
+  }
+
+  const slotBtnStyle = (disabledLike) => ({
+    borderRadius: 10,
+    padding: '8px 12px',
+    border: '1px solid ' + (disabledLike ? 'rgba(180,180,200,0.25)' : 'rgba(168,85,247,0.45)'),
+    background: disabledLike ? 'rgba(255,255,255,0.04)' : 'rgba(98,0,180,0.18)',
+    color: '#fff',
+    cursor: disabledLike ? 'default' : 'pointer',
+    backdropFilter: 'blur(6px)',
+    transition: '0.2s'
+  })
 
   return (
-    <div style={{ width: "100%", marginTop: "20px" }}>
-      {/* ===================== PROFILE (если залогинен) ===================== */}
-      {user && (
-        <div
-          style={{
-            background: "rgba(18,10,30,0.75)",
-            borderRadius: "18px",
-            padding: "18px 26px",
-            marginBottom: "20px",
-            border: "1px solid rgba(150,80,255,0.3)",
-            display: "flex",
-            justifyContent: "space-between",
-          }}
-        >
-          <div>
-            <div style={{ fontSize: "20px", fontWeight: 600 }}>
-              {user.name}
-            </div>
-            <div style={{ opacity: 0.8 }}>{user.phone}</div>
-            <div style={{ opacity: 0.8 }}>{user.email}</div>
-            {user.instagram && (
-              <div style={{ opacity: 0.8 }}>{user.instagram}</div>
-            )}
-          </div>
+    <div className="card" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      
+      {/* ========= KAINAS SECTION ========= */}
+      <div style={{ width: "100%", marginBottom: "25px" }}>
+        <h2 style={{ color: "white", fontSize: "24px", paddingLeft: "6px" }}>Kainas</h2>
 
-          <button
-            style={{
-              padding: "12px 34px",
-              borderRadius: "14px",
-              fontSize: "0.95rem",
-              fontWeight: 500,
-              background: "rgba(80,0,160,0.55)",
-              border: "1px solid rgba(170,90,255,0.85)",
-              color: "#fff",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-              alignSelf: "center",
-            }}
-            onClick={() => {
-              localStorage.removeItem("currentUser");
-              window.location.reload();
-            }}
-          >
-            Выйти
-          </button>
-        </div>
-      )}
-
-      {/* ===================== KAINAS SECTION ===================== */}
-      <div style={{ width: "100%", marginBottom: "22px" }}>
-        <h2
-          style={{
-            color: "white",
-            fontSize: "22px",
-            fontWeight: 600,
-            paddingLeft: "6px",
-            marginBottom: "10px",
-          }}
-        >
-          Kainas
-        </h2>
-
-        {/* Кнопка раскрытия */}
         <div
           style={{
             background: "rgb(20,15,35)",
-            border: "1px solid rgba(150,80,255,0.35)",
-            padding: "16px 18px",
+            border: "1px solid rgba(150, 80, 255, 0.35)",
+            padding: "18px",
             borderRadius: "10px",
+            width: "100%",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             gap: "10px",
-            marginBottom: "16px",
+            marginBottom: "14px",
           }}
           onClick={() => setShowPriceList(!showPriceList)}
         >
@@ -201,21 +229,19 @@ export default function Calendar() {
         {showPriceList && (
           <div
             style={{
-              background: "rgba(20,10,40,0.9)",
+              background: "rgba(20,10,40,0.8)",
               border: "1px solid rgba(160,80,255,0.3)",
               borderRadius: "14px",
               padding: "22px 26px",
-              color: "white",
               lineHeight: "1.55",
               fontSize: "17px",
+              color: "white",
             }}
           >
             <div style={{ marginBottom: "16px" }}>
               <b>80–130 €</b><br />
               Šukuosenos kaina<br />
-              <span style={{ opacity: 0.75 }}>
-                Priklauso nuo darbo apimties
-              </span>
+              <span style={{ opacity: 0.75 }}>Priklauso nuo darbo apimties</span>
             </div>
 
             <div style={{ marginBottom: "16px" }}>
@@ -244,153 +270,101 @@ export default function Calendar() {
               <b>130 €</b><br />
               Atvykimas Klaipėdoje<br />
               <span style={{ opacity: 0.75 }}>
-                Daiktų kraustymai, važinėjimai — per tą laiką galiu priimti kitą klientę.
+                Daiktų kraustymai, važinėjimai – per tą laiką galiu priimti kitą klientę.
               </span>
             </div>
           </div>
         )}
       </div>
+      {/* ========= END KAINAS ========= */}
 
-      {/* ===================== CALENDAR NAVIGATION ===================== */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          gap: "16px",
-          marginBottom: "14px",
-        }}
-      >
-        <button
-          onClick={() => setSelectedDate(subMonths(selectedDate, 1))}
-          style={navBtn}
-        >
-          ←
-        </button>
 
-        <div style={{ fontSize: "18px", color: "#fff" }}>
-          {format(selectedDate, "MMMM yyyy")}
-        </div>
 
-        <button
-          onClick={() => setSelectedDate(addMonths(selectedDate, 1))}
-          style={navBtn}
-        >
-          →
-        </button>
+      {/* ==== NAVIGATION ==== */}
+      <div style={{display:'flex',gap:16,alignItems:'center',justifyContent:'center',marginBottom:12}}>
+        <button style={navBtnStyle} onClick={goPrev}>←</button>
+        <div style={centerPillStyle}>{monthLabel}</div>
+        <button style={navBtnStyle} onClick={goNext}>→</button>
       </div>
 
-      {/* ===================== CALENDAR GRID ===================== */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(7, 1fr)",
-          textAlign: "center",
-          marginBottom: "10px",
-        }}
-      >
-        {daysOfWeek.map((d) => (
-          <div key={d} style={{ color: "#fff", opacity: 0.8, paddingBottom: 8 }}>
-            {d}
-          </div>
-        ))}
+      <div className="hr" />
+
+      {/* ==== GRID ==== */}
+      <div>
+        <div className="grid">
+          {['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map((w,i)=>(
+            <div key={i} className="muted" style={{textAlign:'center',fontWeight:600}}>{w}</div>
+          ))}
+
+          {days.map((d,idx)=>{
+            const inMonth = isSameMonth(d,monthStart)
+            const active  = isSameDay(d,selectedDate)
+            const isPast = toDateOnly(d) < today
+            const disabled = isPast || toDateOnly(d) > toDateOnly(maxDate)
+
+            return (
+              <div
+                key={idx}
+                onMouseEnter={()=>setHoverIdx(idx)}
+                onMouseLeave={()=>setHoverIdx(-1)}
+                onClick={()=>!disabled&&setSelectedDate(d)}
+                style={{
+                  ...dateCellStyle(d, idx, active, isPast),
+                  opacity: inMonth?1:.4,
+                  cursor: disabled?'default':'pointer'
+                }}
+              >
+                {format(d,'d')}
+              </div>
+            )
+          })}
+        </div>
       </div>
 
-      {renderCalendar()}
+      <div className="hr" />
 
-      {/* ===================== SLOTS ===================== */}
-      <h3
-        style={{
-          color: "#fff",
-          marginTop: "20px",
-          marginBottom: "6px",
-          paddingLeft: "6px",
-        }}
-      >
-        Слоты на {format(selectedDate, "dd.MM.yyyy")}
-      </h3>
+      {/* ==== TIME SLOTS ==== */}
+      <div>
+        <div className="badge">{t('slots_for')} {format(selectedDate,'dd.MM.yyyy')}</div>
 
-      {availableSlots.map((slot) => (
-        <div
-          key={slot}
-          onClick={() => handleSlotClick(slot)}
-          style={slotStyle}
-        >
-          {slot}
+        <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:8}}>
+          {slotsForDay(selectedDate).map(ti=>{
+            const taken = isTaken(ti)
+            const disabledLike = taken || busy
+
+            return (
+              <button
+                key={ti.toISOString()}
+                disabled={disabledLike}
+                onClick={()=>book(ti)}
+                style={slotBtnStyle(disabledLike)}
+              >
+                {format(ti,'HH:mm')}
+              </button>
+            )
+          })}
         </div>
-      ))}
+      </div>
 
-      {/* ===================== MODAL ===================== */}
-      {modalInfo && (
-        <div style={modalBack}>
-          <div style={modalWindow}>
-            <h2 style={{ marginBottom: "10px" }}>Запись создана!</h2>
-            <div>{modalInfo.date}</div>
-            <div style={{ marginBottom: "10px" }}>{modalInfo.time}</div>
-            <button
-              onClick={() => setModalInfo(null)}
-              style={modalBtn}
-            >
+      {/* ==== MODAL ==== */}
+      {modal && (
+        <div className="modal-backdrop" onClick={closeModal}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <h3>{modal.title}</h3>
+            <p>{modal.dateStr}</p>
+            <p><b>{modal.timeStr}</b></p>
+            <p>{modal.caption}</p>
+
+            <button onClick={closeModal} style={{
+              marginTop:10, borderRadius:10, padding:'8px 14px',
+              border:'1px solid rgba(168,85,247,0.45)',
+              background:'rgba(98,0,180,0.18)', color:'#fff'
+            }}>
               OK
             </button>
           </div>
         </div>
       )}
     </div>
-  );
+  )
 }
-
-/* ===================== STYLES ===================== */
-
-const navBtn = {
-  background: "rgba(60,20,100,0.6)",
-  border: "1px solid rgba(160, 80, 255, 0.4)",
-  borderRadius: "10px",
-  padding: "6px 12px",
-  color: "#fff",
-  cursor: "pointer",
-};
-
-const slotStyle = {
-  background: "rgba(20,15,40,0.6)",
-  border: "1px solid rgba(150,80,255,0.3)",
-  borderRadius: "10px",
-  padding: "12px",
-  marginBottom: "6px",
-  color: "#fff",
-  cursor: "pointer",
-  textAlign: "center",
-  fontSize: "15px",
-};
-
-const modalBack = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  background: "rgba(0,0,0,0.6)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 999,
-};
-
-const modalWindow = {
-  background: "rgb(30,20,50)",
-  padding: "28px",
-  borderRadius: "12px",
-  border: "1px solid rgba(180,90,255,0.4)",
-  color: "#fff",
-  textAlign: "center",
-  width: "320px",
-};
-
-const modalBtn = {
-  marginTop: "14px",
-  padding: "10px 24px",
-  background: "rgba(120,60,200,0.9)",
-  border: "1px solid rgba(180,90,255,0.5)",
-  borderRadius: "10px",
-  color: "#fff",
-  cursor: "pointer",
-};
