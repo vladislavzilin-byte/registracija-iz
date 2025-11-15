@@ -19,16 +19,16 @@ export default function Calendar(){
   // -------------------------
   // KAINAS — accordion state
   // -------------------------
-const [openPrices, setOpenPrices] = useState(false)
+  const [openPrices, setOpenPrices] = useState(false)
 
-// Автоматическое открытие Kainas из App.jsx
-useEffect(() => {
-  const handler = () => {
-    setOpenPrices(prev => !prev)   // ← переключение!
-  }
-  window.addEventListener("togglePrices", handler)
-  return () => window.removeEventListener("togglePrices", handler)
-}, [])
+  // Автоматическое открытие Kainas из App.jsx (toggle)
+  useEffect(() => {
+    const handler = () => {
+      setOpenPrices(prev => !prev)
+    }
+    window.addEventListener("togglePrices", handler)
+    return () => window.removeEventListener("togglePrices", handler)
+  }, [])
 
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()))
   const [selectedDate, setSelectedDate] = useState(new Date())
@@ -36,6 +36,8 @@ useEffect(() => {
   const [processingISO, setProcessingISO] = useState(null)
   const [bookedISO, setBookedISO] = useState([])
   const [modal, setModal] = useState(null)
+  const [pendingTime, setPendingTime] = useState(null)
+  const [selectedServices, setSelectedServices] = useState([])
 
   const [hoverIdx, setHoverIdx] = useState(-1)
   const [animDir, setAnimDir] = useState(0)
@@ -82,21 +84,67 @@ useEffect(() => {
 
   const isTaken = (t) => {
     const storedTaken = bookings.some(
-      b => (b.status==='approved' || b.status==='pending') && isSameMinute(b.start, t)
+      b =>
+        (b.status === 'approved' || b.status === 'pending') &&
+        isSameMinute(b.start, t)
     )
     const isProc = processingISO && isSameMinute(processingISO, t)
     const isLocal = bookedISO.some(x => isSameMinute(x, t))
     return storedTaken || isProc || isLocal
   }
 
-  const book = (tSel) => {
-    if(toDateOnly(tSel) < today){
+  const openTimeModal = (tSel) => {
+    if (toDateOnly(tSel) < today) {
       alert(t('cannot_book_past') || 'Нельзя записываться на прошедшие даты')
       return
     }
     const user = getCurrentUser()
-    if(!user) { alert(t('login_or_register')); return }
-    if(isTaken(tSel)) { alert(t('already_booked')); return }
+    if (!user) {
+      alert(t('login_or_register'))
+      return
+    }
+    if (isTaken(tSel)) {
+      alert(t('already_booked'))
+      return
+    }
+
+    const end = new Date(tSel)
+    end.setMinutes(end.getMinutes() + settings.slotMinutes)
+
+    setPendingTime(tSel)
+    setSelectedServices([])
+
+    setModal({
+      title: t('booked_success'),
+      dateStr: format(tSel, 'dd.MM.yyyy'),
+      timeStr: format(tSel, 'HH:mm') + ' – ' + format(end, 'HH:mm'),
+      caption: t('wait_confirmation') + ' ' + t('details_in_my'),
+    })
+  }
+
+  const confirmBooking = () => {
+    if (!pendingTime) return
+    if (!selectedServices || selectedServices.length === 0) {
+      alert('Pasirinkite bent vieną paslaugą.')
+      return
+    }
+
+    const user = getCurrentUser()
+    if (!user) {
+      alert(t('login_or_register'))
+      return
+    }
+
+    const tSel = pendingTime
+
+    if (toDateOnly(tSel) < today) {
+      alert(t('cannot_book_past') || 'Нельзя записываться на прошедшие даты')
+      return
+    }
+    if (isTaken(tSel)) {
+      alert(t('already_booked'))
+      return
+    }
 
     setBusy(true)
     setProcessingISO(new Date(tSel))
@@ -112,21 +160,18 @@ useEffect(() => {
       start: tSel,
       end,
       status: 'pending',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      services: selectedServices,
     }
 
-    setTimeout(()=>{
-      saveBookings([ ...bookings, newB ])
-      setBookedISO(prev => [...prev, new Date(tSel)])
+    setTimeout(() => {
+      saveBookings([...bookings, newB])
+      setBookedISO((prev) => [...prev, new Date(tSel)])
       setBusy(false)
       setProcessingISO(null)
-
-      setModal({
-        title: t('booked_success'),
-        dateStr: format(tSel,'dd.MM.yyyy'),
-        timeStr: format(tSel,'HH:mm')+' – '+format(end,'HH:mm'),
-        caption: t('wait_confirmation')+' '+t('details_in_my')
-      })
+      setPendingTime(null)
+      setSelectedServices([])
+      closeModal()
     }, 600)
   }
 
@@ -223,181 +268,180 @@ useEffect(() => {
         }
       `}</style>
 
-{/* ------------------------- */}
-{/*         KAINAS           */}
-{/* ------------------------- */}
+      {/* ------------------------- */}
+      {/*         KAINAS           */}
+      {/* ------------------------- */}
 
-<div
-  style={{
-    width: "100%",
-    border: "1px solid rgba(170, 90, 255, 0.22)",
-    background:
-      "linear-gradient(180deg, rgba(18,18,30,0.96) 0%, rgba(12,12,22,0.92) 100%)",
-    borderRadius: 20,
-    padding: "22px 24px 26px",
-    marginTop: 0,
-    marginBottom: 32,
-    backdropFilter: "blur(22px)",
-    boxShadow: "0 0 28px rgba(170, 90, 255, 0.18)",
-  }}
->
-  {/* Заголовок */}
-  <h2
-    style={{
-      margin: "0 0 18px 0",
-      fontSize: 25,
-      fontWeight: 700,
-      color: "#ffffff",
-      letterSpacing: "0.3px",
-    }}
-  >
-    Kainas
-  </h2>
-
-  {/* Кнопка-аккордеон */}
-  <div
-    onClick={() => setOpenPrices(!openPrices)}
-    style={{
-      border: "1px solid rgba(180, 90, 255, 0.32)",
-      background: "rgba(22, 22, 35, 0.90)",
-      borderRadius: 16,
-      padding: "14px 16px",
-      display: "flex",
-      alignItems: "center",
-      gap: 12,
-      cursor: "pointer",
-      transition: ".28s ease",
-      boxShadow: openPrices
-        ? "0 0 20px rgba(180, 90, 255, 0.35)"
-        : "0 0 12px rgba(180, 90, 255, 0.15)",
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.borderColor = "rgba(210, 120, 255, 0.55)";
-      e.currentTarget.style.boxShadow =
-        "0 0 22px rgba(200, 110, 255, 0.48)";
-      e.currentTarget.style.background = "rgba(30, 24, 50, 0.92)";
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.borderColor = "rgba(180, 90, 255, 0.32)";
-      e.currentTarget.style.boxShadow = openPrices
-        ? "0 0 20px rgba(180, 90, 255, 0.35)"
-        : "0 0 12px rgba(180, 90, 255, 0.15)";
-      e.currentTarget.style.background = "rgba(22,22,35,0.90)";
-    }}
-  >
-    {/* Стрелка слева */}
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      style={{
-        transform: openPrices ? "rotate(180deg)" : "rotate(0deg)",
-        transition: "0.25s ease",
-        fill: "#e3b8ff",
-        filter: "drop-shadow(0 0 4px rgba(200,120,255,0.55))",
-      }}
-    >
-      <path d="M7 10l5 5 5-5z" />
-    </svg>
-
-    {/* Текст */}
-    <span style={{ fontSize: 17, color: "#fff" }}>Žiūrėti kainas</span>
-  </div>
-
-  {/* Раскрывающийся блок */}
-  <div
-    style={{
-      maxHeight: openPrices ? 2000 : 0,
-      overflow: "hidden",
-      transition: "max-height .55s cubic-bezier(.25,.8,.25,1)",
-      marginTop: openPrices ? 20 : 0,
-      opacity: openPrices ? 1 : 0,
-    }}
-  >
-    {/* Контейнер цен */}
-    <div
-      style={{
-        border: "1px solid rgba(170, 90, 255, 0.22)",
-        background: "rgba(15,15,28,0.90)",
-        borderRadius: 18,
-        padding: "22px 20px",
-        backdropFilter: "blur(16px)",
-        boxShadow: "0 0 20px rgba(150, 70, 255, 0.18)",
-        animation: openPrices ? "fadeIn .45s ease" : "none",
-      }}
-    >
-      <style>
-        {`
-          @keyframes fadeIn {
-            0% { opacity: 0; transform: translateY(6px); }
-            100% { opacity: 1; transform: translateY(0); }
-          }
-        `}
-      </style>
-
-      {[
-        {
-          price: "80–130 €",
-          title: "Šukuosenos kaina",
-          text: "Priklauso nuo darbo apimties",
-        },
-        {
-          price: "25 €",
-          title: "Konsultacija",
-          text: "Užtrunkame nuo 30 min. iki valandos",
-        },
-        {
-          price: "50 € užstatas / 100 €",
-          title: "Plaukų Tresų nuoma",
-          text:
-            "Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžinu užstatą",
-        },
-        {
-          price: "Iki 20 €",
-          title: "Papuošalų nuoma",
-          text: "",
-        },
-        {
-          price: "130 €",
-          title: "Atvykimas Klaipėdoje",
-          text:
-            "Daiktų kraustymai, važiavimai — per tą laiką galiu priimti kitą klientę.",
-        },
-      ].map((item, i) => (
-        <div
-          key={i}
+      <div
+        id="kainas-section"
+        style={{
+          width: "100%",
+          border: "1px solid rgba(170, 90, 255, 0.22)",
+          background:
+            "linear-gradient(180deg, rgba(18,18,30,0.96) 0%, rgba(12,12,22,0.92) 100%)",
+          borderRadius: 20,
+          padding: "22px 24px 26px",
+          marginTop: 0,
+          marginBottom: 32,
+          backdropFilter: "blur(22px)",
+          boxShadow: "0 0 28px rgba(170, 90, 255, 0.18)",
+        }}
+      >
+        {/* Заголовок */}
+        <h2
           style={{
-            border: "1px solid rgba(150, 80, 255, 0.28)",
-            borderRadius: 16,
-            padding: "16px 18px",
-            marginBottom: 16,
-            background: "rgba(22, 18, 38, 0.92)",
-            boxShadow: "0 0 12px rgba(150, 70, 255, 0.18)",
+            margin: "0 0 18px 0",
+            fontSize: 25,
+            fontWeight: 700,
+            color: "#ffffff",
+            letterSpacing: "0.3px",
           }}
         >
-          <p style={{ margin: 0, fontSize: 18, color: "#fff" }}>
-            <b>{item.price}</b>
-          </p>
-          <p style={{ margin: "4px 0 0 0", color: "#d6caff" }}>
-            {item.title}
-          </p>
-          {item.text && (
-            <p style={{ margin: "3px 0 0 0", color: "#a898ce" }}>
-              {item.text}
-            </p>
-          )}
-        </div>
-      ))}
-    </div>
-  </div>
-</div>
+          Kainas
+        </h2>
 
-      {/* ------------------------- */}
+        {/* Кнопка-аккордеон */}
+        <div
+          onClick={() => setOpenPrices(!openPrices)}
+          style={{
+            border: "1px solid rgba(180, 90, 255, 0.32)",
+            background: "rgba(22, 22, 35, 0.90)",
+            borderRadius: 16,
+            padding: "14px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            cursor: "pointer",
+            transition: ".28s ease",
+            boxShadow: openPrices
+              ? "0 0 20px rgba(180, 90, 255, 0.35)"
+              : "0 0 12px rgba(180, 90, 255, 0.15)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "rgba(210, 120, 255, 0.55)"
+            e.currentTarget.style.boxShadow =
+              "0 0 22px rgba(200, 110, 255, 0.48)"
+            e.currentTarget.style.background = "rgba(30, 24, 50, 0.92)"
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "rgba(180, 90, 255, 0.32)"
+            e.currentTarget.style.boxShadow = openPrices
+              ? "0 0 20px rgba(180, 90, 255, 0.35)"
+              : "0 0 12px rgba(180, 90, 255, 0.15)"
+            e.currentTarget.style.background = "rgba(22,22,35,0.90)"
+          }}
+        >
+          {/* Стрелка слева */}
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            style={{
+              transform: openPrices ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "0.25s ease",
+              fill: "#e3b8ff",
+              filter: "drop-shadow(0 0 4px rgba(200,120,255,0.55))",
+            }}
+          >
+            <path d="M7 10l5 5 5-5z" />
+          </svg>
+
+          {/* Текст */}
+          <span style={{ fontSize: 17, color: "#fff" }}>Žiūrėti kainas</span>
+        </div>
+
+        {/* Контент аккордеона */}
+        <div
+          style={{
+            maxHeight: openPrices ? 2000 : 0,
+            overflow: "hidden",
+            transition: "max-height .4s ease",
+            marginTop: openPrices ? 20 : 0,
+            border: openPrices ? "1px solid rgba(180, 100, 255, 0.35)" : "none",
+            borderRadius: 16,
+            padding: openPrices ? "18px 18px 4px" : "0 18px",
+            background: "radial-gradient(circle at 0 0, rgba(110,60,255,0.25), transparent 55%), rgba(10,8,20,0.96)",
+          }}
+        >
+          <p
+            style={{
+              margin: "0 0 14px 0",
+              fontSize: 16,
+              color: "#e7ddff",
+              lineHeight: 1.4,
+            }}
+          >
+            Kainos gali keistis priklausomai nuo darbo apimties, plaukų ilgio ir
+            papildomų paslaugų. Tikslią sumą visada patikslinsiu prieš pradedant
+            darbą.
+          </p>
+
+          <div style={{ marginTop: 10 }}>
+            {[
+              {
+                price: "80–130 €",
+                title: "Šukuosenos",
+                text: "Kaina priklauso nuo plaukų ilgio, tankio ir šukuosenos sudėtingumo.",
+              },
+              {
+                price: "25 €",
+                title: "Konsultacija",
+                text: "Aptariame jūsų norus, idėjas, plaukų būklę. Trukmė 30–60 min.",
+              },
+              {
+                price: "50 € užstatas + 100 €",
+                title: "Plaukų tresų nuoma",
+                text: "Užstatas grąžinamas, kai per 3–4 d. grąžinate tresus.",
+              },
+              {
+                price: "Iki 20 €",
+                title: "Papuošalų nuoma",
+                text: "Smeigtukai, segtukai, aksesuarai šukuosenai.",
+              },
+              {
+                price: "130 €",
+                title: "Atvykimas Klaipėdoje",
+                text: "Atvykstu su savo priemonėmis. Važiavimo laikas įtraukiamas į paslaugos trukmę.",
+              },
+            ].map((item, i) => (
+              <div
+                key={i}
+                style={{
+                  border: "1px solid rgba(150, 80, 255, 0.28)",
+                  borderRadius: 16,
+                  padding: "16px 18px",
+                  marginBottom: 16,
+                  background: "rgba(22, 18, 38, 0.92)",
+                  boxShadow: "0 0 12px rgba(150, 70, 255, 0.18)",
+                }}
+              >
+                <p style={{ margin: 0, fontSize: 18, color: "#fff" }}>
+                  <b>{item.price}</b>
+                </p>
+                <p style={{ margin: "4px 0 0 0", color: "#d6caff" }}>
+                  {item.title}
+                </p>
+                {item.text && (
+                  <p style={{ margin: "3px 0 0 0", color: "#a898ce" }}>
+                    {item.text}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+            {/* ------------------------- */}
       {/*   NAVIGATION + MONTH     */}
       {/* ------------------------- */}
 
       <style>{`
         @keyframes spin { to{ transform: rotate(360deg); } }
+        @keyframes fadeSlideLeft {
+          from { opacity:0; transform: translateY(6px); }
+          to { opacity:1; transform: translateY(0); }
+        }
 
         .modal-backdrop {
           position: fixed; inset: 0; background: rgba(0,0,0,0.55);
@@ -405,11 +449,12 @@ useEffect(() => {
           backdrop-filter: blur(2px);
         }
         .modal {
-          background: rgba(17, 0, 40, 0.85);
+          background: rgba(17, 0, 40, 0.65);
           border: 1px solid rgba(168,85,247,0.35);
           border-radius: 16px; padding: 20px; color: #fff;
           box-shadow: 0 8px 32px rgba(120,0,255,0.35);
           min-width: 280px;
+          animation: fadeSlideLeft .25s ease both;
         }
         .loader {
           width: 18px; height: 18px; border-radius: 50%;
@@ -418,32 +463,40 @@ useEffect(() => {
           animation: spin .8s linear infinite;
           display:inline-block; vertical-align:middle;
         }
+
+        /* past-day mark: small dot */
+        .datebtn.past::after {
+          content: '';
+          display:block;
+          width:6px; height:6px; border-radius:50%;
+          background: rgba(150,150,170,0.4);
+          margin:6px auto 0;
+        }
       `}</style>
 
-      <div
-        style={{
-          display:'flex',
-          gap:12,
-          alignItems:'center',
-          justifyContent:'center',
-          marginBottom:12,
-          flexWrap:'wrap'
-        }}
-      >
+      {/* NAVIGATION */}
+      <div style={{display:'flex',gap:16,alignItems:'center',justifyContent:'center',marginBottom:12}}>
         <button
           style={navBtnStyle}
           onClick={goPrev}
+          onMouseDown={e=>e.currentTarget.style.background='rgba(31,0,63,0.7)'}
+          onMouseUp={e=>e.currentTarget.style.background='rgba(31,0,63,0.55)'}
         >
           ←
         </button>
 
-        <div style={centerPillStyle}>
+        <div
+          style={centerPillStyle}
+          className={animDir<0 ? 'month-enter-right' : animDir>0 ? 'month-enter-left' : ''}
+        >
           {monthLabel}
         </div>
 
         <button
           style={navBtnStyle}
           onClick={goNext}
+          onMouseDown={e=>e.currentTarget.style.background='rgba(31,0,63,0.7)'}
+          onMouseUp={e=>e.currentTarget.style.background='rgba(31,0,63,0.55)'}
         >
           →
         </button>
@@ -451,48 +504,41 @@ useEffect(() => {
 
       <div className="hr" />
 
-      {/* ------------------------- */}
-      {/*       CALENDAR GRID       */}
-      {/* ------------------------- */}
+      {/* GRID */}
+      <div className={animDir<0 ? 'month-enter-right' : animDir>0 ? 'month-enter-left' : ''}>
+        <div className="grid">
+          {['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map((w,i)=>(
+            <div key={i} className="muted" style={{textAlign:'center',fontWeight:600}}>{w}</div>
+          ))}
 
-      <div className="grid">
-        {['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map((w,i)=>(
-          <div
-            key={i}
-            className="muted"
-            style={{textAlign:'center',fontWeight:600}}
-          >
-            {w}
-          </div>
-        ))}
+          {days.map((d,idx)=>{
+            const inMonth = isSameMonth(d,monthStart)
+            const active  = isSameDay(d,selectedDate)
+            const isPast = toDateOnly(d) < today
+            const disabled = isPast || toDateOnly(d) > toDateOnly(maxDate)
 
-        {days.map((d,idx)=>{
-          const inMonth = isSameMonth(d,monthStart)
-          const active  = isSameDay(d,selectedDate)
-          const isPast = toDateOnly(d) < today
-          const disabled = isPast || toDateOnly(d) > maxDate
-
-          return (
-            <div
-              key={idx}
-              className={
-                'datebtn' +
-                (active ? ' active' : '') +
-                (isPast ? ' past-day-dot' : '')
-              }
-              onMouseEnter={()=>setHoverIdx(idx)}
-              onMouseLeave={()=>setHoverIdx(-1)}
-              onClick={()=>!disabled && setSelectedDate(d)}
-              style={{
-                ...dateCellStyle(d, idx, active, isPast),
-                opacity: inMonth ? 1 : 0.4,
-                cursor: disabled ? 'default' : 'pointer'
-              }}
-            >
-              {format(d,'d')}
-            </div>
-          )
-        })}
+            return (
+              <div
+                key={idx}
+                className={
+                  'datebtn' +
+                  (active ? ' active' : '') +
+                  (isPast ? ' past-day-dot' : '')
+                }
+                onMouseEnter={()=>setHoverIdx(idx)}
+                onMouseLeave={()=>setHoverIdx(-1)}
+                onClick={()=>!disabled && setSelectedDate(d)}
+                style={{
+                  ...dateCellStyle(d, idx, active, isPast),
+                  opacity: inMonth ? 1 : 0.4,
+                  cursor: disabled ? 'default' : 'pointer'
+                }}
+              >
+                {format(d,'d')}
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       <div className="hr" />
@@ -521,7 +567,7 @@ useEffect(() => {
               <button
                 key={ti.toISOString()}
                 disabled={disabledLike}
-                onClick={()=>book(ti)}
+                onClick={()=>openTimeModal(ti)}
                 style={{
                   borderRadius:10,
                   padding:'8px 12px',
@@ -563,6 +609,51 @@ useEffect(() => {
           <div className="modal" onClick={e=>e.stopPropagation()}>
             <h3 style={{marginTop:0}}>{modal.title}</h3>
 
+            {pendingTime && (
+              <div style={{ marginTop: 12, marginBottom: 18, textAlign: 'center' }}>
+                <div style={{ fontSize: 18, marginBottom: 12, fontWeight: 500 }}>
+                  Какие услуги вы хотите выбрать?
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {[
+                    "Šukuosena",
+                    "Tresų nuoma",
+                    "Papuošalų nuoma",
+                    "Atvykimas",
+                    "Konsultacija"
+                  ].map(service => (
+                    <button
+                      key={service}
+                      onClick={() => {
+                        setSelectedServices(prev => (
+                          prev.includes(service)
+                            ? prev.filter(s => s !== service)
+                            : [...prev, service]
+                        ))
+                      }}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: 10,
+                        fontSize: 16,
+                        cursor: 'pointer',
+                        background: selectedServices.includes(service)
+                          ? 'rgba(150,80,255,0.35)'
+                          : 'rgba(255,255,255,0.06)',
+                        border: selectedServices.includes(service)
+                          ? '1.5px solid rgba(150,80,255,0.65)'
+                          : '1px solid rgba(255,255,255,0.12)',
+                        color: '#fff',
+                        transition: '.25s'
+                      }}
+                    >
+                      {service}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {modal.dateStr && (
               <p style={{margin:'6px 0', opacity:.9}}>
                 {modal.dateStr}
@@ -583,7 +674,7 @@ useEffect(() => {
 
             <div style={{marginTop:14, textAlign:'right'}}>
               <button
-                onClick={closeModal}
+                onClick={confirmBooking}
                 style={{
                   borderRadius:10,
                   padding:'8px 14px',
@@ -604,4 +695,3 @@ useEffect(() => {
     </div>
   )
 }
-
