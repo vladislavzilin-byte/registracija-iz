@@ -66,7 +66,7 @@ export default function App() {
               }, 150)
 
               // авто-открытие аккордеона
-              window.dispatchEvent(new Event('openPrices'))
+              window.dispatchEvent(new CustomEvent("togglePrices"))
             }}
           >
             Kainas
