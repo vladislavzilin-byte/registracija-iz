@@ -18,7 +18,7 @@ const DEFAULT_SERVICES = [
   { name: 'Šukuosena', duration: 60, deposit: 50 },
   { name: 'Tresų nuoma', duration: 15, deposit: 25 },
   { name: 'Papuošalų nuoma', duration: 15, deposit: 10 },
-  { name: 'Atvykimas', duration: 180, deposit: 50 }, // 3 часа
+  { name: 'Atvykimas', duration: 180, deposit: 50 },
   { name: 'Konsultacija', duration: 30, deposit: 10 },
 ]
 
@@ -44,6 +44,26 @@ const serviceStyles = {
     bg: 'rgba(34,197,94,0.14)',
     border: '1px solid rgba(34,197,94,0.9)',
   },
+}
+
+/* ===== helpers для дат/времени ===== */
+const pad2 = (n) => String(n).padStart(2, '0')
+
+const toInputDate = (dateLike) => {
+  const d = new Date(dateLike)
+  if (isNaN(d)) return ''
+  const y = d.getFullYear()
+  const m = pad2(d.getMonth() + 1)
+  const day = pad2(d.getDate())
+  return `${y}-${m}-${day}`
+}
+
+const toInputTime = (dateLike) => {
+  const d = new Date(dateLike)
+  if (isNaN(d)) return ''
+  const hh = pad2(d.getHours())
+  const mm = pad2(d.getMinutes())
+  return `${hh}:${mm}`
 }
 
 export default function Admin() {
@@ -125,18 +145,12 @@ export default function Admin() {
     return arr
   }, [bookings, search, statusFilter])
 
-  // === ОБЩИЙ апдейтер брони с автосохранением ===
+  // === helper для обновления одной записи ===
   const updateBooking = (id, updater) => {
     const all = getBookings()
-    const next = all.map((b) => {
-      if (b.id !== id) return b
-      const updated = typeof updater === 'function' ? updater(b) : { ...b, ...updater }
-      return updated
-    })
+    const next = all.map((b) => (b.id === id ? updater(b) : b))
     saveBookings(next)
     setBookings(next)
-    // если решишь — можно дергать событие для календаря
-    // window.dispatchEvent(new Event('bookingUpdated'))
   }
 
   // === ДЕЙСТВИЯ С ЗАПИСЯМИ ===
@@ -206,20 +220,6 @@ export default function Admin() {
     if (services.length <= 1) return
     const next = services.filter((_, i) => i !== index)
     updateSettings({ serviceList: next })
-  }
-
-  // форматирование для input[type=date]/[type=time]
-  const toInputDate = (d) => {
-    const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-
-  const toInputTime = (d) => {
-    const hh = String(d.getHours()).padStart(2, '0')
-    const mm = String(d.getMinutes()).padStart(2, '0')
-    return `${hh}:${mm}`
   }
 
   return (
@@ -442,7 +442,7 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* === ВСЕ ЗАПИСИ — КАРТОЧКИ === */}
+      {/* === ВСЕ ЗАПИСИ (КАРТОЧКИ) === */}
       <div style={{ width: '100%' }}>
         <div style={cardAurora}>
           <div style={topBar}>
@@ -498,7 +498,7 @@ export default function Admin() {
             {t('total_canceled')}: {stats.canceled}
           </div>
 
-          {/* КАРТОЧКИ ЗАПИСЕЙ */}
+          {/* === КАРТОЧКИ ЗАПИСЕЙ === */}
           <div
             style={{
               display: 'flex',
@@ -510,6 +510,9 @@ export default function Admin() {
             {filtered.map((b) => {
               const inFuture = new Date(b.start) > new Date()
               const servicesArr = Array.isArray(b.services) ? b.services : []
+
+              const startDate = new Date(b.start)
+              const endDate = new Date(b.end || b.start)
 
               const serviceTagStyle = (name) => {
                 const st = serviceStyles[name] || {
@@ -523,11 +526,6 @@ export default function Admin() {
                   ...st,
                 }
               }
-
-              const startDate = new Date(b.start)
-              const endDate = new Date(b.end || b.start)
-              const dateValue = toInputDate(startDate)
-              const timeValue = toInputTime(startDate)
 
               return (
                 <div
@@ -543,8 +541,16 @@ export default function Admin() {
                     gap: 10,
                   }}
                 >
-                  {/* HEADER: дата + время + точка статуса */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  {/* HEADER: статус + ДАТА + ВРЕМЯ ОТ/ДО */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 10,
+                      alignItems: 'center',
+                    }}
+                  >
+                    {/* статус-точка */}
                     <span
                       style={{
                         width: 10,
@@ -565,31 +571,20 @@ export default function Admin() {
                       }}
                     />
 
-                    <div style={{ fontWeight: 700, fontSize: 17 }}>
-                      {fmtDate(b.start)}
-                    </div>
-
-                    <div style={{ opacity: 0.9 }}>
-                      {fmtTime(b.start)} — {fmtTime(b.end)}
-                    </div>
-                  </div>
-
-                  {/* РЕДАКТИРОВАНИЕ ДАТЫ/ВРЕМЕНИ */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 10,
-                      marginTop: 4,
-                    }}
-                  >
-                    <div style={{ minWidth: 140 }}>
-                      <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 3 }}>
+                    {/* ДАТА (редактируемая) */}
+                    <div style={{ minWidth: 150 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          opacity: 0.8,
+                          marginBottom: 3,
+                        }}
+                      >
                         Дата
                       </div>
                       <input
                         type="date"
-                        value={dateValue}
+                        value={toInputDate(startDate)}
                         style={{
                           ...inputGlass,
                           padding: '6px 10px',
@@ -598,19 +593,19 @@ export default function Admin() {
                         onChange={(e) => {
                           const val = e.target.value // YYYY-MM-DD
                           if (!val) return
+                          const [y, m, d] = val.split('-').map(Number)
                           updateBooking(b.id, (orig) => {
                             const oldStart = new Date(orig.start)
                             const oldEnd = new Date(orig.end || orig.start)
-                            const durationMin = Math.max(
-                              5,
-                              Math.round((oldEnd - oldStart) / 60000) || 5
-                            )
+                            const duration =
+                              oldEnd.getTime() - oldStart.getTime()
 
-                            const [yy, mm, dd] = val.split('-').map(Number)
                             const newStart = new Date(oldStart)
-                            newStart.setFullYear(yy, mm - 1, dd)
+                            newStart.setFullYear(y, (m || 1) - 1, d || 1)
 
-                            const newEnd = new Date(newStart.getTime() + durationMin * 60000)
+                            const newEnd = new Date(
+                              newStart.getTime() + Math.max(duration, 15 * 60000)
+                            )
 
                             return {
                               ...orig,
@@ -622,86 +617,20 @@ export default function Admin() {
                       />
                     </div>
 
-                   {/* ВРЕМЯ ОТ */}
-<div style={{ minWidth: 120 }}>
-  <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 3 }}>
-    Время от
-  </div>
-  <input
-    type="time"
-    value={toInputTime(startDate)}
-    style={{
-      ...inputGlass,
-      padding: '6px 10px',
-      height: '32px',
-    }}
-    onChange={(e) => {
-      const val = e.target.value // HH:MM
-      if (!val) return
-      updateBooking(b.id, (orig) => {
-        const oldStart = new Date(orig.start)
-        const oldEnd = new Date(orig.end || orig.start)
-
-        const [hh, mm] = val.split(':').map(Number)
-        const newStart = new Date(oldStart)
-        newStart.setHours(hh, mm, 0, 0)
-
-        // если время конца раньше начала — двигаем конец
-        let newEnd = new Date(oldEnd)
-        if (newEnd <= newStart) {
-          newEnd = new Date(newStart.getTime() + 15 * 60000) // минимум 15 минут
-        }
-
-        return {
-          ...orig,
-          start: newStart,
-          end: newEnd,
-        }
-      })
-    }}
-  />
-</div>
-
-{/* ВРЕМЯ ДО */}
-<div style={{ minWidth: 120 }}>
-  <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 3 }}>
-    Время до
-  </div>
-  <input
-    type="time"
-    value={toInputTime(endDate)}
-    style={{
-      ...inputGlass,
-      padding: '6px 10px',
-      height: '32px',
-    }}
-    onChange={(e) => {
-      const val = e.target.value // HH:MM
-      if (!val) return
-
-      updateBooking(b.id, (orig) => {
-        const oldStart = new Date(orig.start)
-        const [hh, mm] = val.split(':').map(Number)
-
-        const newEnd = new Date(oldStart)
-        newEnd.setHours(hh, mm, 0, 0)
-
-        // если попытались поставить конец раньше начала — ставим минимум 15 минут
-        if (newEnd <= oldStart) {
-          newEnd.setTime(oldStart.getTime() + 15 * 60000)
-        }
-
-        return {
-          ...orig,
-          end: newEnd,
-        }
-      })
-    }}
-  />
-</div>
+                    {/* ВРЕМЯ ОТ */}
+                    <div style={{ minWidth: 120 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          opacity: 0.8,
+                          marginBottom: 3,
+                        }}
+                      >
+                        Время от
+                      </div>
                       <input
                         type="time"
-                        value={timeValue}
+                        value={toInputTime(startDate)}
                         style={{
                           ...inputGlass,
                           padding: '6px 10px',
@@ -710,19 +639,20 @@ export default function Admin() {
                         onChange={(e) => {
                           const val = e.target.value // HH:MM
                           if (!val) return
+                          const [hh, mm] = val.split(':').map(Number)
                           updateBooking(b.id, (orig) => {
                             const oldStart = new Date(orig.start)
                             const oldEnd = new Date(orig.end || orig.start)
-                            const durationMin = Math.max(
-                              5,
-                              Math.round((oldEnd - oldStart) / 60000) || 5
-                            )
 
-                            const [hh, mm] = val.split(':').map(Number)
                             const newStart = new Date(oldStart)
-                            newStart.setHours(hh, mm, 0, 0)
+                            newStart.setHours(hh || 0, mm || 0, 0, 0)
 
-                            const newEnd = new Date(newStart.getTime() + durationMin * 60000)
+                            let newEnd = new Date(oldEnd)
+                            if (newEnd <= newStart) {
+                              newEnd = new Date(
+                                newStart.getTime() + 15 * 60000
+                              )
+                            }
 
                             return {
                               ...orig,
@@ -734,29 +664,62 @@ export default function Admin() {
                       />
                     </div>
 
-                    <div style={{ minWidth: 110 }}>
-                      <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 3 }}>
-                        Аванс (€)
+                    {/* ВРЕМЯ ДО */}
+                    <div style={{ minWidth: 120 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          opacity: 0.8,
+                          marginBottom: 3,
+                        }}
+                      >
+                        Время до
                       </div>
                       <input
-                        type="number"
-                        min="0"
-                        value={b.price ?? ''}
+                        type="time"
+                        value={toInputTime(endDate)}
                         style={{
                           ...inputGlass,
                           padding: '6px 10px',
                           height: '32px',
                         }}
                         onChange={(e) => {
-                          const raw = e.target.value
-                          const num = raw === '' ? null : Number(raw.replace(',', '.')) || 0
-                          updateBooking(b.id, { ...b, price: num })
+                          const val = e.target.value // HH:MM
+                          if (!val) return
+                          const [hh, mm] = val.split(':').map(Number)
+                          updateBooking(b.id, (orig) => {
+                            const oldStart = new Date(orig.start)
+                            let newEnd = new Date(oldStart)
+                            newEnd.setHours(hh || 0, mm || 0, 0, 0)
+
+                            if (newEnd <= oldStart) {
+                              newEnd = new Date(
+                                oldStart.getTime() + 15 * 60000
+                              )
+                            }
+
+                            return {
+                              ...orig,
+                              end: newEnd,
+                            }
+                          })
                         }}
                       />
                     </div>
+
+                    {/* Текстовый вид времени (для контроля) */}
+                    <div
+                      style={{
+                        marginLeft: 'auto',
+                        fontSize: 13,
+                        opacity: 0.8,
+                      }}
+                    >
+                      {fmtTime(b.start)} – {fmtTime(b.end)}
+                    </div>
                   </div>
 
-                  {/* УСЛУГИ — цветные теги (только просмотр) */}
+                  {/* УСЛУГИ — цветные теги */}
                   <div
                     style={{
                       display: 'flex',
@@ -765,17 +728,22 @@ export default function Admin() {
                       marginTop: 4,
                     }}
                   >
-                    {servicesArr.map((s, i) => (
-                      <span key={i} style={serviceTagStyle(s)}>
-                        {s}
+                    {servicesArr.map((sName, i) => (
+                      <span key={i} style={serviceTagStyle(sName)}>
+                        {sName}
                       </span>
                     ))}
+                    {servicesArr.length === 0 && (
+                      <span className="muted">Без услуг</span>
+                    )}
                   </div>
 
                   {/* КЛИЕНТ */}
                   <div style={{ marginTop: 6 }}>
                     <b>{b.userName}</b>
-                    <div style={{ fontSize: 13, opacity: 0.8 }}>{b.userPhone}</div>
+                    <div style={{ fontSize: 13, opacity: 0.8 }}>
+                      {b.userPhone}
+                    </div>
                     {b.userInstagram && (
                       <div style={{ fontSize: 13, opacity: 0.8 }}>
                         @{b.userInstagram}
@@ -783,7 +751,7 @@ export default function Admin() {
                     )}
                   </div>
 
-                  {/* ОПЛАТА + аванс */}
+                  {/* ОПЛАТА + СУММА АВАНСА */}
                   <div
                     style={{
                       marginTop: 6,
@@ -796,7 +764,13 @@ export default function Admin() {
                       gap: 6,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
                       <span
                         style={{
                           width: 10,
@@ -815,24 +789,55 @@ export default function Admin() {
                           fontWeight: 600,
                         }}
                       >
-                        {b.paid ? 'Оплачено' : 'Не оплачено'}
+                        {b.paid ? 'Apmokėta' : 'Neapmokėta'}
                       </span>
                     </div>
 
-                    <div style={{ fontSize: 13, opacity: 0.9 }}>
-                      Аванс:{' '}
-                      <b>
-                        {b.price != null && b.price !== ''
-                          ? `${b.price} €`
-                          : '—'}
-                      </b>
+                    {/* СУММА АВАНСА (редактируемая) */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 8,
+                        alignItems: 'center',
+                        marginTop: 2,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 13,
+                          opacity: 0.85,
+                          minWidth: 90,
+                        }}
+                      >
+                        Avansas (€):
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={b.price ?? ''}
+                        style={{
+                          ...inputGlass,
+                          maxWidth: 120,
+                          padding: '6px 10px',
+                          height: '32px',
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          const num = val === '' ? null : Number(val) || 0
+                          updateBooking(b.id, (orig) => ({
+                            ...orig,
+                            price: num,
+                          }))
+                        }}
+                      />
                     </div>
 
-                    {b.price != null && (
+                    {b.price != null && b.price !== '' && (
                       <button
                         onClick={() => togglePaid(b.id)}
                         style={{
-                          marginTop: 4,
+                          marginTop: 6,
                           width: '100%',
                           padding: '8px 0',
                           borderRadius: 8,
@@ -840,6 +845,7 @@ export default function Admin() {
                           background: 'rgba(0,0,0,0.25)',
                           color: '#fff',
                           cursor: 'pointer',
+                          fontSize: 13,
                         }}
                       >
                         {b.paid ? 'Снять оплату' : 'Пометить оплаченой'}
@@ -869,7 +875,7 @@ export default function Admin() {
                           cursor: 'pointer',
                         }}
                       >
-                        Подтвердить
+                        {t('approve')}
                       </button>
                     )}
 
@@ -888,7 +894,7 @@ export default function Admin() {
                             cursor: 'pointer',
                           }}
                         >
-                          Отменить
+                          {t('rejected')}
                         </button>
                       )}
                   </div>
@@ -1009,15 +1015,6 @@ const btnPrimary = {
   background:
     'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
   boxShadow: '0 0 14px rgba(150,85,247,0.35)',
-  color: '#fff',
-}
-
-const btnOk = { ...btnPrimary }
-
-const btnDanger = {
-  ...btnBase,
-  border: '1px solid rgba(239,68,68,.6)',
-  background: 'rgba(110,20,30,.35)',
   color: '#fff',
 }
 
