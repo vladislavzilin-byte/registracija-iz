@@ -220,102 +220,161 @@ export default function Calendar(){
 
 <div
   style={{
-    border: "1px solid rgba(140, 70, 255, 0.18)",
-    background: "rgba(15, 15, 25, 0.93)",
-    borderRadius: 16,
-    padding: "16px 20px 18px",
-    marginTop: -4,
-    marginBottom: 20,
-    backdropFilter: "blur(20px)",
+    width: "100%",
+    border: "1px solid rgba(170, 90, 255, 0.22)",
+    background: "linear-gradient(180deg, rgba(18,18,30,0.95) 0%, rgba(10,10,20,0.92) 100%)",
+    borderRadius: 18,
+    padding: "20px 24px 24px",
+    marginTop: 0,
+    marginBottom: 26,
+    backdropFilter: "blur(22px)",
+    boxShadow: "0 0 25px rgba(150, 70, 255, 0.10)",
   }}
 >
+
   {/* Заголовок */}
   <h2
     style={{
-      margin: "0 0 14px 0",
+      margin: "0 0 16px 0",
       fontSize: 24,
       fontWeight: 700,
       color: "#ffffff",
-      letterSpacing: "0.2px",
+      letterSpacing: "0.3px",
     }}
   >
     Kainas
   </h2>
 
   {/* Кнопка-аккордеон */}
-<div
-  onClick={() => setOpenPrices(!openPrices)}
-  style={{
-    border: "1px solid rgba(150, 80, 255, 0.22)",
-    background: "rgba(18, 18, 32, 0.92)",
-    borderRadius: 14,
-    padding: "12px 14px",
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    cursor: "pointer",
-    transition: ".25s ease",
-  }}
->
-  {/* Стрелка как в профиле */}
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
+  <div
+    onClick={() => setOpenPrices(!openPrices)}
     style={{
-      transform: openPrices ? "rotate(180deg)" : "rotate(0deg)",
-      transition: "0.25s ease",
-      fill: "#c68bff",
-      opacity: 0.9,
+      border: "1px solid rgba(180, 90, 255, 0.28)",
+      background: "rgba(22, 22, 35, 0.90)",
+      borderRadius: 14,
+      padding: "14px 16px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      cursor: "pointer",
+      transition: ".25s ease",
+      boxShadow: openPrices
+        ? "0 0 12px rgba(170, 90, 255, 0.25)"
+        : "0 0 0 rgba(0,0,0,0)",
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.borderColor = "rgba(200, 110, 255, 0.42)";
+      e.currentTarget.style.boxShadow = "0 0 14px rgba(170, 90, 255, 0.28)";
+      e.currentTarget.style.background = "rgba(28, 20, 45, 0.92)";
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.borderColor = "rgba(180,90,255,0.28)";
+      e.currentTarget.style.boxShadow = openPrices
+        ? "0 0 12px rgba(170, 90, 255, 0.25)"
+        : "0 0 0 rgba(0,0,0,0)";
+      e.currentTarget.style.background = "rgba(22,22,35,0.90)";
     }}
   >
-    <path d="M7 10l5 5 5-5z" />
-  </svg>
+    <span style={{ fontSize: 17, color: "#fff" }}>Žiūrėti kainas</span>
 
-  <span style={{ fontSize: 17, color: "#fff" }}>Žiūrėti kainas</span>
-</div>
+    {/* iOS-styled chevron */}
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      style={{
+        transform: openPrices ? "rotate(180deg)" : "rotate(0deg)",
+        transition: "0.25s ease",
+        fill: "#d8a6ff",
+      }}
+    >
+      <path d="M7 10l5 5 5-5z" />
+    </svg>
+  </div>
 
   {/* Контент */}
   <div
     style={{
       maxHeight: openPrices ? 2000 : 0,
       overflow: "hidden",
-      transition: "max-height .45s ease",
-      marginTop: openPrices ? 16 : 0,
-      border: openPrices ? "1px solid rgba(150, 80, 255, 0.22)" : "none",
-      borderRadius: 14,
-      padding: openPrices ? "20px 18px" : "0 18px",
-      background: "rgba(18, 18, 32, 0.92)",
+      transition: "max-height .45s cubic-bezier(.25,.8,.25,1)",
+      marginTop: openPrices ? 18 : 0,
+      opacity: openPrices ? 1 : 0,
     }}
   >
     <div
       style={{
-        opacity: openPrices ? 1 : 0,
-        transition: "opacity .35s ease",
-        color: "#fff",
-        lineHeight: "1.55",
+        border: "1px solid rgba(170, 90, 255, 0.22)",
+        background: "rgba(15,15,28,0.85)",
+        borderRadius: 16,
+        padding: "20px 18px",
+        backdropFilter: "blur(16px)",
+        boxShadow: "0 0 18px rgba(150, 70, 255, 0.18)",
+        animation: openPrices ? "fadeIn .5s ease" : "none",
       }}
     >
-      <p><b>80–130 €</b><br/>Šukuosenos kaina<br/>Priklauso nuo darbo apimties</p>
+      {/* Карточки цен */}
+      <style>
+        {`
+          @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(4px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+        `}
+      </style>
 
-      <p><b>25 €</b><br/>Konsultacija<br/>Užtrunkame nuo 30 min. iki valandos</p>
-
-      <p>
-        <b>50 € užstatas</b><br/>
-        <b>100 €</b><br/>
-        Plaukų Tresų nuoma<br/>
-        Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžinu užstatą
-      </p>
-
-      <p><b>Iki 20 €</b><br/>Papuošalų nuoma</p>
-
-      <p>
-        <b>130 €</b><br/>Atvykimas Klaipėdoje<br/>
-        Daiktų kraustymai, važiavimai — per tą laiką galiu priimti kitą klientę.
-      </p>
+      {[
+        {
+          price: "80–130 €",
+          title: "Šukuosenos kaina",
+          text: "Priklauso nuo darbo apimties",
+        },
+        {
+          price: "25 €",
+          title: "Konsultacija",
+          text: "Užtrunkame nuo 30 min. iki valandos",
+        },
+        {
+          price: "50 € užstatas / 100 €",
+          title: "Plaukų Tresų nuoma",
+          text: "Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžinu užstatą",
+        },
+        {
+          price: "Iki 20 €",
+          title: "Papuošalų nuoma",
+          text: "",
+        },
+        {
+          price: "130 €",
+          title: "Atvykimas Klaipėdoje",
+          text: "Daiktų kraustymai, važiavimai — per tą laiką galiu priimti kitą klientę.",
+        },
+      ].map((item, i) => (
+        <div
+          key={i}
+          style={{
+            border: "1px solid rgba(150, 80, 255, 0.25)",
+            borderRadius: 14,
+            padding: "14px 16px",
+            marginBottom: 14,
+            background: "rgba(22, 18, 38, 0.85)",
+          }}
+        >
+          <p style={{ margin: 0, fontSize: 17, color: "#fff" }}>
+            <b>{item.price}</b>
+          </p>
+          <p style={{ margin: "4px 0 0 0", color: "#dad0ff" }}>{item.title}</p>
+          {item.text && (
+            <p style={{ margin: "2px 0 0 0", color: "#9f96bf" }}>
+              {item.text}
+            </p>
+          )}
+        </div>
+      ))}
     </div>
   </div>
 </div>
+
 
       {/* ------------------------- */}
       {/*   NAVIGATION + MONTH     */}
