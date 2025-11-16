@@ -301,10 +301,10 @@ export default function MyBookings() {
 <body>
   <div class="wrap">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
-      <div>
-        <div class="logo">IZ HAIR TREND</div>
-        <div class="sub">Kvitancija už rezervaciją</div>
-      </div>
+      <div style="text-align:left;">
+  <img src="/logo.svg" style="height:70px; margin-bottom:6px;" />
+  <div class="sub">Kvitancija už rezervaciją</div>
+</div>
       <div style="text-align:right; font-size:12px; opacity:0.8;">
         Nr.: <b>#${b.id.slice(0, 6)}</b><br/>
         Sukurta: ${createdStr}
