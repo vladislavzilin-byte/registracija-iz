@@ -1,82 +1,207 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
+  getCurrentUser,
   getBookings,
   saveBookings,
   fmtDate,
-  fmtTime
+  fmtTime,
+  getUsers,
+  saveUsers,
+  setCurrentUser
 } from '../lib/storage'
+import { useI18n } from '../lib/i18n'
 
-export default function Admin() {
+// Цвета для тегов услуг
+const tagColors = {
+  'Šukuosena': '#c084fc',
+  'Tresų nuoma': '#60a5fa',
+  'Papuošalų nuoma': '#f472b6',
+  'Atvykimas': '#facc15',
+  'Konsultacija': '#34d399'
+}
+
+// Реквизиты для банковского перевода
+const BANK_DETAILS = {
+  iban: 'LT00 0000 0000 0000 0000',
+  receiver: 'IZ HAIR TREND',
+  descriptionPrefix: 'Rezervacija'
+}
+
+export default function MyBookings() {
+  const { t } = useI18n()
+  const user = getCurrentUser()
+
+  const [form, setForm] = useState({
+    name: user?.name || '',
+    instagram: user?.instagram || '',
+    phone: user?.phone || '',
+    email: user?.email || '',
+    password: user?.password || ''
+  })
+  const [errors, setErrors] = useState({})
   const [filter, setFilter] = useState('all')
-  const [search, setSearch] = useState('')
+  const [confirmId, setConfirmId] = useState(null)
   const [version, setVersion] = useState(0)
+  const [modal, setModal] = useState(false)
+  const [approvedModal, setApprovedModal] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
 
-  const bookings = getBookings().sort(
-    (a, b) => new Date(a.start) - new Date(b.start)
-  )
+  // модалка оплаты
+  const [paymentBooking, setPaymentBooking] = useState(null)
+  const [paymentLoading, setPaymentLoading] = useState(false)
+  const [paymentError, setPaymentError] = useState('')
 
-  // === Фильтрация и поиск ===
-  const filtered = useMemo(() => {
-    let list = bookings
+  const bookingsAll = getBookings()
+  const all = bookingsAll
+    .filter(b => user && b.userPhone === user.phone)
+    .sort((a, b) => new Date(a.start) - new Date(b.start))
 
-    // фильтр по статусу
-    if (filter === 'pending') list = list.filter(b => b.status === 'pending')
-    if (filter === 'approved') list = list.filter(b => b.status === 'approved')
-    if (filter === 'paid') list = list.filter(b => b.status === 'approved_paid')
-    if (filter === 'canceled_client')
-      list = list.filter(b => b.status === 'canceled_client')
-    if (filter === 'canceled_admin')
-      list = list.filter(b => b.status === 'canceled_admin')
-
-    // поиск по имени, телефону, instagram
-    if (search.trim().length > 0) {
-      const q = search.toLowerCase()
-      list = list.filter(b =>
-        (b.userName && b.userName.toLowerCase().includes(q)) ||
-        (b.userPhone && b.userPhone.includes(q)) ||
-        (b.userInstagram && b.userInstagram.toLowerCase().includes(q))
+  const list = useMemo(() => {
+    if (filter === 'active') return all.filter(b =>
+      b.status === 'approved' || b.status === 'approved_paid'
+    )
+    if (filter === 'canceled')
+      return all.filter(
+        b => b.status === 'canceled_client' || b.status === 'canceled_admin'
       )
+    return all
+  }, [filter, version, bookingsAll.length])
+
+  // пуш-окно если запись подтверждена
+  useEffect(() => {
+    const prev = JSON.parse(localStorage.getItem('prevBookings') || '[]')
+    const approvedNow = all.find(
+      b =>
+        b.status === 'approved' &&
+        !prev.find(p => p.id === b.id && p.status === 'approved')
+    )
+    if (approvedNow) {
+      setApprovedModal(true)
+      setTimeout(() => setApprovedModal(false), 2500)
     }
+    localStorage.setItem('prevBookings', JSON.stringify(all))
+  }, [all])
 
-    return list
-  }, [filter, search, version])
+  const validate = () => {
+    const e = {}
+    if (!form.phone && !form.email) e.contact = 'Нужен телефон или email'
+    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) e.email = 'Некорректный email'
+    if (form.phone && !/^[+\d][\d\s\-()]{5,}$/.test(form.phone)) e.phone = 'Некорректный телефон'
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
 
-  // === Обновить запись в базе ===
-  const updateBooking = (id, data) => {
+  const saveProfile = (ev) => {
+    ev.preventDefault()
+    if (!validate()) return
+
+    const users = getUsers()
+    const idx = users.findIndex(u =>
+      (u.phone && u.phone === user.phone) ||
+      (u.email && u.email === user.email)
+    )
+
+    const updated = { ...user, ...form }
+    if (idx >= 0) users[idx] = updated
+    else users.push(updated)
+    saveUsers(users)
+    setCurrentUser(updated)
+
+    // обновляем записи пользователя
+    const bookings = getBookings().map(b =>
+      (b.userEmail === user.email || b.userPhone === user.phone)
+        ? {
+            ...b,
+            userName: updated.name,
+            userPhone: updated.phone,
+            userInstagram: updated.instagram,
+            userEmail: updated.email
+          }
+        : b
+    )
+    saveBookings(bookings)
+    window.dispatchEvent(new Event('profileUpdated'))
+
+    setModal(true)
+    setTimeout(() => setModal(false), 2000)
+  }
+
+  const cancel = (id) => setConfirmId(id)
+  const doCancel = () => {
+    const id = confirmId
     const arr = getBookings().map(b =>
-      b.id === id ? { ...b, ...data } : b
+      b.id === id
+        ? { ...b, status: 'canceled_client', canceledAt: new Date().toISOString() }
+        : b
     )
     saveBookings(arr)
+    setConfirmId(null)
     setVersion(v => v + 1)
   }
 
-  // === Метка оплаты ===
-  const markPaid = (b) => {
-    updateBooking(b.id, {
-      status: 'approved_paid',
-      paidAt: new Date().toISOString()
-    })
+  // === ОПЛАТА ===
+  const openPaymentModal = (booking) => {
+    setPaymentBooking(booking)
+    setPaymentError('')
+    setPaymentLoading(false)
+  }
+  const closePaymentModal = () => {
+    setPaymentBooking(null)
+    setPaymentError('')
+    setPaymentLoading(false)
   }
 
-  // === Подтверждение ===
-  const approveBooking = (b) => {
-    updateBooking(b.id, {
-      status: 'approved',
-      approvedAt: new Date().toISOString()
-    })
+  const startPayment = async (method) => {
+    if (!paymentBooking) return
+
+    if (method === 'bank') return
+
+    try {
+      setPaymentLoading(true)
+      setPaymentError('')
+
+      const res = await fetch('/api/payments/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingId: paymentBooking.id,
+          method
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Payment error')
+
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl
+      } else {
+        setPaymentError('Не удалось получить ссылку на оплату')
+      }
+    } catch (err) {
+      console.error(err)
+      setPaymentError(err.message || 'Payment error')
+    } finally {
+      setPaymentLoading(false)
+    }
   }
 
-  // === Отмена администратором ===
-  const cancelAdmin = (b) => {
-    updateBooking(b.id, {
-      status: 'canceled_admin',
-      canceledAt: new Date().toISOString()
-    })
+  if (!user) {
+    return (
+      <div className="card">
+        <b>{t('login_or_register')}</b>
+      </div>
+    )
   }
 
-  // === Статус-текст (как в MyBookings) ===
+  const statusDot = (b) => {
+    if (b.status === 'approved_paid') return <span style={{ ...dot, background: '#4ade80', boxShadow: '0 0 8px #4ade80' }}/>
+    if (b.status === 'approved') return <span style={{ ...dot, background: '#22c55e', boxShadow: '0 0 8px #22c55e' }}/>
+    if (b.status === 'pending') return <span style={{ ...dot, background: '#facc15' }}/>
+    return <span style={{ ...dot, background: '#9ca3af' }}/>
+  }
+
   const statusText = (b) => {
-    if (b.status === 'approved_paid') return '🟢 Оплачено и подтверждено'
+    if (b.status === 'approved_paid') return '🟢 Оплачена и подтверждена'
     if (b.status === 'approved') return '🟢 Бронирование подтверждено'
     if (b.status === 'pending') return '🟡 Ожидает подтверждения'
     if (b.status === 'canceled_client') return '❌ Отменена клиентом'
@@ -84,291 +209,291 @@ export default function Admin() {
     return b.status
   }
 
-  // === Цвет индикатора ===
-  const dotColor = (b) => {
-    if (b.status === 'approved_paid') return '#4ade80'
-    if (b.status === 'approved') return '#22c55e'
-    if (b.status === 'pending') return '#facc15'
-    return '#9ca3af'
-  }
-
   return (
-    <div style={{ padding: '20px' }}>
-      <h2 style={{ color: 'white', marginBottom: 15 }}>Все записи</h2>
+    <div style={container}>
 
-      {/* === Поиск === */}
-      <input
-        style={searchBox}
-        placeholder="Поиск по имени, телефону или Instagram"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-
-      {/* === Фильтры === */}
-      <div style={filterRow}>
-        <button
-          onClick={() => setFilter('all')}
-          style={filterBtn(filter === 'all')}
-        >Все</button>
-
-        <button
-          onClick={() => setFilter('pending')}
-          style={filterBtn(filter === 'pending')}
-        >Ожидает подтверждения</button>
-
-        <button
-          onClick={() => setFilter('approved')}
-          style={filterBtn(filter === 'approved')}
-        >Подтверждена</button>
-
-        <button
-          onClick={() => setFilter('paid')}
-          style={filterBtn(filter === 'paid')}
-        >Оплачена</button>
-
-        <button
-          onClick={() => setFilter('canceled_client')}
-          style={filterBtn(filter === 'canceled_client')}
-        >Отменено клиентом</button>
-
-        <button
-          onClick={() => setFilter('canceled_admin')}
-          style={filterBtn(filter === 'canceled_admin')}
-        >Отменено админом</button>
-      </div>
-
-            {/* === СПИСОК ЗАПИСЕЙ === */}
-      <div style={{ marginTop: 20 }}>
-        {filtered.map(b => (
-          <div key={b.id} style={itemCard}>
-
-            {/* Верхняя строка: дата, время */}
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span
-                  style={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    background: dotColor(b),
-                    boxShadow: `0 0 6px ${dotColor(b)}`,
-                    display: 'inline-block'
-                  }}
-                />
-                <b>{fmtDate(b.start)}</b>
-              </div>
-
-              <div style={{ opacity: 0.9 }}>
-                {fmtTime(b.start)} – {fmtTime(b.end)}
-              </div>
-            </div>
-
-            {/* Теги услуг */}
-            <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {b.services?.map(s => (
-                <span
-                  key={s}
-                  style={{
-                    padding: '5px 10px',
-                    background: 'rgba(255,255,255,0.07)',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(255,255,255,0.18)',
-                    fontSize: 13,
-                    color: 'white'
-                  }}
-                >
-                  {s}
-                </span>
-              ))}
-            </div>
-
-            {/* Клиент */}
-            <div style={{ marginTop: 14 }}>
-              <b>{b.userName}</b><br />
-              <span style={{ opacity: 0.8 }}>{b.userPhone}</span>
-              {b.userInstagram && (
-                <div style={{ opacity: 0.8 }}>IG: {b.userInstagram}</div>
-              )}
-            </div>
-
-            {/* Цена аванса */}
-            <div style={{ marginTop: 14 }}>
-              <div style={{ opacity: 0.8 }}>Avansas (€):</div>
-              <input
-                type="number"
-                value={b.price || ''}
-                onChange={(e) =>
-                  updateBooking(b.id, { price: e.target.value })
-                }
-                style={{
-                  marginTop: 4,
-                  width: 120,
-                  padding: '6px 10px',
-                  borderRadius: 8,
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  background: 'rgba(255,255,255,0.04)',
-                  color: 'white'
-                }}
-              />
-            </div>
-
-            {/* Статус */}
-            <div style={{ marginTop: 14, fontSize: 14 }}>
-              <span style={{ fontWeight: 600 }}>Статус: </span>
-              {statusText(b)}
-            </div>
-
-            {/* Кнопки действий */}
-            <div style={{ marginTop: 18 }}>
-              {/* Пометить оплаченной */}
-              {(b.status === 'pending' || b.status === 'approved') && (
-                <button
-                  style={paidBtn}
-                  onClick={() => markPaid(b)}
-                >
-                  Пометить оплаченной
-                </button>
-              )}
-
-              {/* Подтвердить */}
-              {b.status === 'pending' && (
-                <button
-                  style={approveBtn}
-                  onClick={() => approveBooking(b)}
-                >
-                  Подтвердить
-                </button>
-              )}
-
-              {/* Отменить */}
-              {b.status !== 'canceled_admin' &&
-                b.status !== 'canceled_client' &&
-                b.status !== 'approved_paid' && (
-                <button
-                  style={cancelBtn}
-                  onClick={() => cancelAdmin(b)}
-                >
-                  Отменить
-                </button>
-              )}
-            </div>
-
+      {/* === ПРОФИЛЬ === */}
+      <div style={outerCard}>
+        <h3 style={{ margin: 0, padding: '10px 20px' }}>Профиль</h3>
+        <div style={innerCard}>
+          <div style={innerHeader} onClick={() => setShowProfile(!showProfile)}>
+            <span style={{ color:'#a855f7', transform: showProfile ? 'rotate(180deg)' : 'rotate(0deg)', transition:'0.3s' }}>▾</span>
+            <span style={{ fontWeight: 600 }}>Редактировать профиль</span>
           </div>
-        ))}
 
-        {!filtered.length && (
-          <div style={{ opacity: 0.7, marginTop: 20 }}>Нет записей</div>
-        )}
+          <div style={{ ...profileBody, maxHeight: showProfile ? '900px':'0', opacity: showProfile ? 1 : 0, padding: showProfile ? '20px':'0 20px' }}>
+            <form className="col" style={{ gap:12 }} onSubmit={saveProfile}>
+              <div><label>Имя</label><input value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></div>
+              <div><label>Instagram</label><input value={form.instagram} onChange={e=>setForm({...form,instagram:e.target.value})}/></div>
+              <div><label>Телефон</label><input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/></div>
+              <div><label>Email</label><input value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></div>
+              <div><label>Пароль</label><input type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></div>
+
+              {errors.contact && <div style={{color:'#f87171'}}>{errors.contact}</div>}
+
+              <button type="submit" style={saveBtn}>💾 Сохранить</button>
+            </form>
+          </div>
+        </div>
       </div>
+
+      {/* === МОИ ЗАПИСИ === */}
+      <div style={bookingsCard}>
+        <div style={bookingsHeader}>
+          <h3 style={{ margin:0 }}>Мои записи</h3>
+
+          <div style={filterButtons}>
+            <button style={filterBtn(filter==='all')} onClick={()=>setFilter('all')}>Все</button>
+            <button style={filterBtn(filter==='active')} onClick={()=>setFilter('active')}>Активные</button>
+            <button style={filterBtn(filter==='canceled')} onClick={()=>setFilter('canceled')}>Отменённые</button>
+          </div>
+        </div>
+
+        <div className="mobile-list">
+          {list.map(b=>{
+            const canCancel =
+              (b.status==='pending' || b.status==='approved') &&
+              new Date(b.end) > new Date()
+
+            return (
+              <div key={b.id} style={cardItem}>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  {statusDot(b)}
+                  <b>{fmtDate(b.start)}</b>
+                </div>
+
+                <div style={{opacity:.8,marginTop:4}}>
+                  {fmtTime(b.start)} – {fmtTime(b.end)}
+                </div>
+
+                <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}}>
+                  {b.services?.map(s=>(
+                    <span key={s} style={{
+                      padding:'4px 8px',
+                      borderRadius:8,
+                      background:'rgba(255,255,255,0.08)',
+                      border:`1px solid ${tagColors[s]||'#a855f7'}55`,
+                      color:tagColors[s]||'#e5e7eb',
+                      fontSize:13
+                    }}>{s}</span>
+                  ))}
+                </div>
+
+                {/* Аванс */}
+                {b.price && (
+                  <div style={{marginTop:8,fontSize:13}}>
+                    <span style={{opacity:.8}}>Avansas: </span><b>{b.price} €</b>
+                  </div>
+                )}
+
+                {/* Статус */}
+                <div style={{marginTop:6,fontSize:13}}>
+                  <span style={{fontWeight:600}}>Статус: </span>
+                  <span>{statusText(b)}</span>
+                </div>
+
+                {/* Оплата */}
+                {(b.status==='pending' || b.status==='approved') && (
+                  <button style={payBtn} onClick={()=>openPaymentModal(b)}>💳 Apmokėti</button>
+                )}
+
+                {/* Отмена */}
+                {canCancel && (
+                  <button style={cancelBtn} onClick={()=>cancel(b.id)}>Отменить</button>
+                )}
+
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ===== МОДАЛКИ ===== */}
+
+      {modal && (
+        <div style={modalBackdrop}>
+          <div style={modalBox}>
+            <h3>Данные обновлены</h3>
+          </div>
+        </div>
+      )}
+
+      {approvedModal && (
+        <div style={modalBackdrop}>
+          <div style={modalBox}>
+            <h3 style={{color:'#4ade80'}}>✅ Ваша запись подтверждена!</h3>
+          </div>
+        </div>
+      )}
+
+      {/* Подтверждение отмены */}
+      {confirmId && (
+        <div style={modalBackdrop}>
+          <div style={modalBox}>
+            <h3>Отменить запись?</h3>
+            <button onClick={doCancel} style={cancelBtn}>Да</button>
+            <button onClick={()=>setConfirmId(null)} style={{...cancelBtn,background:'rgba(80,80,120,0.4)'}}>Нет</button>
+          </div>
+        </div>
+      )}
+
+      {/* Модалка оплаты */}
+      {paymentBooking && (
+        <div style={modalBackdrop}>
+          <div style={modalBox}>
+            <h3>Выберите способ оплаты</h3>
+
+            <p style={{ opacity:.9 }}>{fmtDate(paymentBooking.start)} • {fmtTime(paymentBooking.start)} – {fmtTime(paymentBooking.end)}</p>
+
+            {paymentBooking.price && (
+              <p>Avansas: <b>{paymentBooking.price} €</b></p>
+            )}
+
+            {paymentError && (
+              <div style={{
+                marginBottom:8,
+                padding:6,
+                borderRadius:8,
+                background:'rgba(127,29,29,0.6)',
+                color:'#fecaca'
+              }}>{paymentError}</div>
+            )}
+
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              <button disabled={paymentLoading} style={payOptionBtn} onClick={()=>startPayment('paypal')}>PayPal</button>
+              <button disabled={paymentLoading} style={payOptionBtn} onClick={()=>startPayment('paysera')}>Paysera</button>
+              <button disabled={paymentLoading} style={payOptionBtn} onClick={()=>startPayment('bank')}>Banko pavedimas</button>
+            </div>
+
+            {/* Реквизиты */}
+            <div style={{marginTop:10,fontSize:12,opacity:.85}}>
+              <b>Banko duomenys:</b><br/>
+              Gavėjas: {BANK_DETAILS.receiver}<br/>
+              IBAN: {BANK_DETAILS.iban}<br/>
+              Paskirtis: {BANK_DETAILS.descriptionPrefix} #{paymentBooking.id.slice(0,6)}
+            </div>
+
+            <button onClick={closePaymentModal} style={{...cancelBtn,marginTop:14}}>Закрыть</button>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
 
-/* === СТИЛИ и вспомогательные функции === */
+/* ==== СТИЛИ ==== */
 
-const searchBox = {
-  width: '100%',
-  padding: '10px 14px',
-  borderRadius: 12,
-  border: '1px solid rgba(255,255,255,0.15)',
-  background: 'rgba(255,255,255,0.08)',
-  color: 'white',
-  marginBottom: 16
+const container = { paddingBottom:'40px' }
+const dot = { width:12, height:12, borderRadius:'50%', display:'inline-block' }
+
+const outerCard = {
+  background:'rgba(15,10,25,0.9)',
+  border:'1px solid rgba(168,85,247,0.3)',
+  borderRadius:14,
+  color:'#fff',
+  marginBottom:24
 }
 
-const tabs = {
-  display: 'flex',
-  gap: 8,
-  marginBottom: 10
+const innerCard = {
+  margin:'0 20px 20px',
+  border:'1px solid rgba(168,85,247,0.2)',
+  borderRadius:12,
+  background:'rgba(20,10,35,0.8)'
 }
 
-const tab = (active) => ({
-  padding: '10px 20px',
-  borderRadius: 12,
-  background: active ? 'rgba(140,68,255,0.35)' : 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(255,255,255,0.15)',
-  color: '#fff',
-  cursor: 'pointer',
-  transition: '0.25s'
+const innerHeader = {
+  display:'flex',
+  alignItems:'center',
+  gap:8,
+  padding:'12px 16px',
+  cursor:'pointer',
+  background:'rgba(25,15,45,0.8)',
+  borderBottom:'1px solid rgba(168,85,247,0.25)'
+}
+
+const profileBody = { overflow:'hidden', transition:'all 0.45s ease' }
+
+const saveBtn = {
+  marginTop:10,
+  width:'100%',
+  padding:'10px 20px',
+  borderRadius:10,
+  background:'linear-gradient(180deg,#9333ea,#4c1d95)',
+  color:'#fff',
+  cursor:'pointer'
+}
+
+const bookingsCard = { ...outerCard, padding:'18px' }
+const bookingsHeader = { display:'flex', justifyContent:'space-between', marginBottom:10 }
+const filterButtons = { display:'flex', gap:8 }
+
+const filterBtn = (active)=>({
+  padding:'8px 18px',
+  borderRadius:10,
+  background: active ? 'rgba(130,60,255,0.25)' : 'rgba(30,20,40,0.6)',
+  border:'1px solid rgba(168,85,247,0.5)',
+  color:'#fff',
+  cursor:'pointer'
 })
 
-const exportBtn = {
-  marginLeft: 'auto',
-  padding: '10px 18px',
-  borderRadius: 12,
-  background: 'linear-gradient(90deg, #7c3aed, #6d28d9)',
-  border: '1px solid rgba(255,255,255,0.2)',
-  color: 'white',
-  cursor: 'pointer'
+const cardItem = {
+  border:'1px solid rgba(168,85,247,0.25)',
+  background:'rgba(20,10,30,0.55)',
+  padding:14,
+  borderRadius:14,
+  marginBottom:12
 }
 
-const counters = {
-  opacity: 0.75,
-  fontSize: 13,
-  marginBottom: 12
+const payBtn = {
+  marginTop:10,
+  width:'100%',
+  padding:'8px 10px',
+  borderRadius:10,
+  background:'rgba(50,180,80,0.25)',
+  border:'1px solid #4ade80',
+  color:'#4ade80',
+  cursor:'pointer'
 }
 
-const itemCard = {
-  marginTop: 16,
-  background: 'rgba(18,12,28,0.85)',
-  borderRadius: 16,
-  padding: 18,
-  border: '1px solid rgba(140,68,255,0.25)',
-  boxShadow: '0 0 18px rgba(140,68,255,0.15)'
-}
-
-const paidBtn = {
-  width: '100%',
-  marginTop: 10,
-  padding: '10px 14px',
-  borderRadius: 10,
-  cursor: 'pointer',
-  background: 'rgba(50,200,120,0.25)',
-  border: '1px solid #22c55e',
-  color: '#22c55e',
-  fontSize: 15
-}
-
-const approveBtn = {
-  width: '100%',
-  marginTop: 10,
-  padding: '10px 14px',
-  borderRadius: 10,
-  cursor: 'pointer',
-  background: 'linear-gradient(90deg,#7c3aed,#6d28d9)',
-  border: '1px solid rgba(255,255,255,0.25)',
-  color: 'white',
-  fontSize: 15
+const payOptionBtn = {
+  width:'100%',
+  padding:'8px 10px',
+  borderRadius:10,
+  border:'1px solid rgba(148,163,184,0.7)',
+  background:'rgba(15,23,42,0.9)',
+  color:'#e5e7eb',
+  cursor:'pointer',
+  fontSize:14
 }
 
 const cancelBtn = {
-  width: '100%',
-  marginTop: 10,
-  padding: '10px 14px',
-  borderRadius: 10,
-  cursor: 'pointer',
-  background: 'rgba(120,30,60,0.45)',
-  border: '1px solid rgba(200,80,120,0.5)',
-  color: 'white',
-  fontSize: 15
+  marginTop:10,
+  padding:'8px 12px',
+  borderRadius:10,
+  background:'rgba(120,30,60,0.4)',
+  border:'1px solid rgba(200,80,120,0.6)',
+  color:'#fff',
+  cursor:'pointer'
 }
 
-/* === ЦВЕТ ТОЧКИ СТАТУСА === */
-function dotColor(b) {
-  if (b.status === 'approved_paid') return '#4ade80'   // зелёный — оплачено
-  if (b.status === 'approved') return '#22c55e'        // зелёный — подтверждено
-  if (b.status === 'pending') return '#facc15'         // жёлтый — ожидает
-  if (b.status === 'canceled_client') return '#f87171' // красный — клиент
-  if (b.status === 'canceled_admin') return '#ef4444'  // красный — админ
-  return '#9ca3af'
+const modalBackdrop = {
+  position:'fixed',
+  inset:0,
+  background:'rgba(0,0,0,0.6)',
+  display:'flex',
+  justifyContent:'center',
+  alignItems:'center',
+  zIndex:3000
 }
 
-/* === ТЕКСТОВЫЕ СТАТУСЫ === */
-function statusText(b) {
-  if (b.status === 'approved_paid') return '🟢 Оплачено и подтверждено'
-  if (b.status === 'approved') return '🟢 Бронирование подтверждено'
-  if (b.status === 'pending') return '🟡 Ожидает подтверждения'
-  if (b.status === 'canceled_client') return '❌ Отменено клиентом'
-  if (b.status === 'canceled_admin') return '🔴 Отменено администратором'
-  return b.status
+const modalBox = {
+  background:'rgba(20,15,35,0.85)',
+  borderRadius:14,
+  padding:'24px 32px',
+  border:'1px solid rgba(168,85,247,0.3)',
+  color:'#fff',
+  textAlign:'center',
+  maxWidth:420,
+  width:'90%'
 }
