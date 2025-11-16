@@ -331,19 +331,20 @@ export default function MyBookings() {
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="top-row">
-      <div class="top-left">
-        <img src="/logo2.svg" style="height:70px; margin-bottom:6px;" />
-        <div class="sub">Kvitancija už rezervaciją</div>
-      </div>
-      <div class="top-right">
-        Nr.: <b>#${b.id.slice(0, 6)}</b><br/>
-        Sukurta: ${createdStr}<br/>
-        <img src="${qrUrl}" alt="IZ HAIR TREND vCard" style="margin-top:6px; border-radius:12px; border:1px solid rgba(148,163,184,0.7); padding:4px; background:rgba(15,23,42,0.9);" />
-        <div class="qr-label">Skenuokite ir išsaugokite kontaktą</div>
-      </div>
-    </div>
+  <div class="top-row">
+  <div class="top-left">
+    <img src="/logo2.svg" style="height:50px; margin-bottom:6px;" />
+    <div class="sub">Kvitancija už rezervaciją</div>
+  </div>
+  <div class="top-right">
+    Nr.: <b>#${b.id.slice(0, 6)}</b><br/>
+    Sukurta: ${createdStr}<br/>
+    <img src="${qrUrl}" alt="IZ HAIR TREND vCard" 
+         style="margin-top:6px; border-radius:10px; border:1px solid rgba(148,163,184,0.7); 
+                padding:4px; background:rgba(15,23,42,0.9); width:70px; height:70px;" />
+    <div class="qr-label">Skenuokite ir išsaugokite kontaktą</div>
+  </div>
+</div>
 
     <div class="title">Kvitancija</div>
 
