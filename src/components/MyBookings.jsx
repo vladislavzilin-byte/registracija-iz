@@ -13,11 +13,18 @@ import { useI18n } from '../lib/i18n'
 
 // Цвета для тегов услуг
 const tagColors = {
-  "Šukuosena": "#c084fc",
-  "Tresų nuoma": "#60a5fa",
-  "Papuošalų nuoma": "#f472b6",
-  "Atvykimas": "#facc15",
-  "Konsultacija": "#34d399"
+  'Šukuosena': '#c084fc',
+  'Tresų nuoma': '#60a5fa',
+  'Papuošalų nuoma': '#f472b6',
+  'Atvykimas': '#facc15',
+  'Konsultacija': '#34d399'
+}
+
+// Реквизиты для банковского перевода (заполни под себя)
+const BANK_DETAILS = {
+  iban: 'LT00 0000 0000 0000 0000',
+  receiver: 'IZ HAIR TREND',
+  descriptionPrefix: 'Rezervacija'
 }
 
 export default function MyBookings() {
@@ -39,22 +46,35 @@ export default function MyBookings() {
   const [approvedModal, setApprovedModal] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
 
+  // модалка оплаты
+  const [paymentBooking, setPaymentBooking] = useState(null)
+  const [paymentLoading, setPaymentLoading] = useState(false)
+  const [paymentError, setPaymentError] = useState('')
+
   const bookingsAll = getBookings()
   const all = bookingsAll
     .filter(b => user && b.userPhone === user.phone)
     .sort((a, b) => new Date(a.start) - new Date(b.start))
 
   const list = useMemo(() => {
-    if (filter === 'active') return all.filter(b => b.status === 'approved' || b.status === 'approved_paid')
+    if (filter === 'active') return all.filter(b =>
+      b.status === 'approved' || b.status === 'approved_paid'
+    )
     if (filter === 'canceled')
-      return all.filter(b => b.status === 'canceled_client' || b.status === 'canceled_admin')
+      return all.filter(
+        b => b.status === 'canceled_client' || b.status === 'canceled_admin'
+      )
     return all
   }, [filter, version, bookingsAll.length])
 
-  // ПУШ-окно если запись только что подтверждена
+  // пуш-окно если запись только что подтверждена
   useEffect(() => {
     const prev = JSON.parse(localStorage.getItem('prevBookings') || '[]')
-    const approvedNow = all.find(b => b.status === 'approved' && !prev.find(p => p.id === b.id && p.status === 'approved'))
+    const approvedNow = all.find(
+      b =>
+        b.status === 'approved' &&
+        !prev.find(p => p.id === b.id && p.status === 'approved')
+    )
     if (approvedNow) {
       setApprovedModal(true)
       setTimeout(() => setApprovedModal(false), 2500)
@@ -90,7 +110,13 @@ export default function MyBookings() {
     // обновляем все записи этого пользователя
     const bookings = getBookings().map(b =>
       (b.userEmail === user.email || b.userPhone === user.phone)
-        ? { ...b, userName: updated.name, userPhone: updated.phone, userInstagram: updated.instagram, userEmail: updated.email }
+        ? {
+            ...b,
+            userName: updated.name,
+            userPhone: updated.phone,
+            userInstagram: updated.instagram,
+            userEmail: updated.email
+          }
         : b
     )
     saveBookings(bookings)
@@ -104,65 +130,212 @@ export default function MyBookings() {
   const doCancel = () => {
     const id = confirmId
     const arr = getBookings().map(b =>
-      b.id === id ? { ...b, status: 'canceled_client', canceledAt: new Date().toISOString() } : b
+      b.id === id
+        ? { ...b, status: 'canceled_client', canceledAt: new Date().toISOString() }
+        : b
     )
     saveBookings(arr)
     setConfirmId(null)
     setVersion(v => v + 1)
   }
 
-  // Оплата → меняем статус
-  const pay = (id) => {
-    const arr = getBookings().map(b =>
-      b.id === id ? { ...b, status: 'approved_paid', paidAt: new Date().toISOString() } : b
-    )
-    saveBookings(arr)
-    setVersion(v => v + 1)
+  // === ОПЛАТА ===
+
+  const openPaymentModal = (booking) => {
+    setPaymentBooking(booking)
+    setPaymentError('')
+    setPaymentLoading(false)
   }
 
-  if (!user) return <div className="card"><b>{t('login_or_register')}</b></div>
+  const closePaymentModal = () => {
+    setPaymentBooking(null)
+    setPaymentError('')
+    setPaymentLoading(false)
+  }
+
+  // Запуск реальной оплаты:
+  // бекенд по адресу /api/payments/start должен:
+  // - создать платёж (PayPal / Paysera)
+  // - вернуть { redirectUrl } для перехода на страницу оплаты
+  // - после успешной оплаты по webhook обновить статус брони в БД
+  const startPayment = async (method) => {
+    if (!paymentBooking) return
+
+    // банковский перевод — просто показываем реквизиты, без запросов
+    if (method === 'bank') {
+      // тут всё уже показано в модалке, просто не закрываем её
+      return
+    }
+
+    try {
+      setPaymentLoading(true)
+      setPaymentError('')
+
+      const res = await fetch('/api/payments/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingId: paymentBooking.id,
+          method
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Payment error')
+      }
+
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl
+      } else {
+        setPaymentError('Не удалось получить ссылку на оплату')
+      }
+    } catch (err) {
+      console.error(err)
+      setPaymentError(err.message || 'Payment error')
+    } finally {
+      setPaymentLoading(false)
+    }
+  }
+
+  if (!user) {
+    return (
+      <div className="card">
+        <b>{t('login_or_register')}</b>
+      </div>
+    )
+  }
 
   const statusDot = (b) => {
-    if (b.status === 'approved_paid')
-      return <span style={{ ...dot, background: '#4ade80', boxShadow: '0 0 8px #4ade80' }}></span>
+    if (b.status === 'approved_paid') {
+      return (
+        <span
+          style={{
+            ...dot,
+            background: '#4ade80',
+            boxShadow: '0 0 8px #4ade80'
+          }}
+        />
+      )
+    }
+    if (b.status === 'approved') {
+      return (
+        <span
+          style={{
+            ...dot,
+            background: '#22c55e',
+            boxShadow: '0 0 8px #22c55e'
+          }}
+        />
+      )
+    }
+    if (b.status === 'pending') {
+      return (
+        <span
+          style={{
+            ...dot,
+            background: '#facc15',
+            boxShadow: '0 0 6px rgba(250,204,21,0.8)'
+          }}
+        />
+      )
+    }
+    // отменённые
+    return (
+      <span
+        style={{
+          ...dot,
+          background: '#9ca3af'
+        }}
+      />
+    )
+  }
 
-    if (b.status === 'approved')
-      return <span style={{ ...dot, background: '#ef4444', boxShadow: '0 0 8px #ef4444' }}></span>
-
-    if (b.status === 'pending')
-      return <span style={{ ...dot, background: '#facc15' }}></span>
-
-    return <span style={{ ...dot, background: '#999' }}></span>
+  const statusText = (b) => {
+    if (b.status === 'approved_paid') return '🟢 Оплачена и подтверждена'
+    if (b.status === 'approved') return '🟢 Подтверждена'
+    if (b.status === 'pending') return '🟡 Ожидает подтверждения'
+    if (b.status === 'canceled_client') return '❌ Отменена клиентом'
+    if (b.status === 'canceled_admin') return '🔴 Отменена администратором'
+    return b.status
   }
 
   return (
     <div style={container}>
-
-      {/* === ПРОФИЛЬ (как раньше!) === */}
+      {/* === ПРОФИЛЬ === */}
       <div style={outerCard}>
         <h3 style={{ margin: 0, padding: '10px 20px' }}>Профиль</h3>
         <div style={innerCard}>
           <div style={innerHeader} onClick={() => setShowProfile(!showProfile)}>
-            <span style={{ color: '#a855f7', transform: showProfile ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.3s' }}>▾</span>
+            <span
+              style={{
+                color: '#a855f7',
+                transform: showProfile ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: '0.3s'
+              }}
+            >
+              ▾
+            </span>
             <span style={{ fontWeight: 600 }}>Редактировать профиль</span>
           </div>
 
-          <div style={{
-            ...profileBody,
-            maxHeight: showProfile ? '900px' : '0',
-            opacity: showProfile ? 1 : 0,
-            padding: showProfile ? '20px' : '0 20px'
-          }}>
+          <div
+            style={{
+              ...profileBody,
+              maxHeight: showProfile ? '900px' : '0',
+              opacity: showProfile ? 1 : 0,
+              padding: showProfile ? '20px' : '0 20px'
+            }}
+          >
             <form className="col" style={{ gap: 12 }} onSubmit={saveProfile}>
-              <div><label>Имя</label><input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-              <div><label>Instagram</label><input value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} /></div>
-              <div><label>Телефон</label><input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
-              <div><label>Email</label><input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
-              <div><label>Пароль</label><input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></div>
+              <div>
+                <label>Имя</label>
+                <input
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label>Instagram</label>
+                <input
+                  value={form.instagram}
+                  onChange={e =>
+                    setForm({ ...form, instagram: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label>Телефон</label>
+                <input
+                  value={form.phone}
+                  onChange={e => setForm({ ...form, phone: e.target.value })}
+                />
+              </div>
+              <div>
+                <label>Email</label>
+                <input
+                  value={form.email}
+                  onChange={e => setForm({ ...form, email: e.target.value })}
+                />
+              </div>
+              <div>
+                <label>Пароль</label>
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={e =>
+                    setForm({ ...form, password: e.target.value })
+                  }
+                />
+              </div>
 
-              {errors.contact && <div style={{ color: '#f87171' }}>{errors.contact}</div>}
+              {errors.contact && (
+                <div style={{ color: '#f87171' }}>{errors.contact}</div>
+              )}
 
-              <button type="submit" style={saveBtn}>💾 Сохранить</button>
+              <button type="submit" style={saveBtn}>
+                💾 Сохранить
+              </button>
             </form>
           </div>
         </div>
@@ -174,13 +347,28 @@ export default function MyBookings() {
           <h3 style={{ margin: 0 }}>Мои записи</h3>
 
           <div style={filterButtons}>
-            <button style={filterBtn(filter === 'all')} onClick={() => setFilter('all')}>Все</button>
-            <button style={filterBtn(filter === 'active')} onClick={() => setFilter('active')}>Активные</button>
-            <button style={filterBtn(filter === 'canceled')} onClick={() => setFilter('canceled')}>Отменённые</button>
+            <button
+              style={filterBtn(filter === 'all')}
+              onClick={() => setFilter('all')}
+            >
+              Все
+            </button>
+            <button
+              style={filterBtn(filter === 'active')}
+              onClick={() => setFilter('active')}
+            >
+              Активные
+            </button>
+            <button
+              style={filterBtn(filter === 'canceled')}
+              onClick={() => setFilter('canceled')}
+            >
+              Отменённые
+            </button>
           </div>
         </div>
 
-        {/* 📱 Мобильные карточки */}
+        {/* Карточки */}
         <div className="mobile-list">
           {list.map(b => {
             const canCancel =
@@ -188,80 +376,83 @@ export default function MyBookings() {
               new Date(b.end) > new Date()
 
             return (
-            <div key={b.id} style={cardItem}>
-  {/* Дата + статус */}
-  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-    {statusDot(b)}
-    <b>{fmtDate(b.start)}</b>
-  </div>
+              <div key={b.id} style={cardItem}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {statusDot(b)}
+                  <b>{fmtDate(b.start)}</b>
+                </div>
 
-  {/* Время (24h формат работает в storage.js) */}
-  <div style={{ opacity: .8, marginTop: 4 }}>
-    {fmtTime(b.start)} – {fmtTime(b.end)}
-  </div>
+                <div style={{ opacity: 0.8, marginTop: 4 }}>
+                  {fmtTime(b.start)} – {fmtTime(b.end)}
+                </div>
 
-  {/* Теги услуг */}
-  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-    {b.services?.map(s => (
-      <span key={s} style={{
-        padding: '4px 8px',
-        borderRadius: 8,
-        background: 'rgba(255,255,255,0.08)',
-        border: `1px solid ${tagColors[s]}55`,
-        color: tagColors[s],
-        fontSize: 13
-      }}>
-        {s}
-      </span>
-    ))}
-  </div>
+                {/* Теги услуг */}
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 6,
+                    marginTop: 8
+                  }}
+                >
+                  {b.services?.map(s => (
+                    <span
+                      key={s}
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: 8,
+                        background: 'rgba(255,255,255,0.08)',
+                        border: `1px solid ${tagColors[s] || '#a855f7'}55`,
+                        color: tagColors[s] || '#e5e7eb',
+                        fontSize: 13,
+                        animation: 'fadeIn .3s ease'
+                      }}
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
 
-  {/* 💰 ДЕПОЗИТ */}
-  {b.price && (
-    <div style={{
-      marginTop: 10,
-      padding: '10px 12px',
-      borderRadius: 10,
-      background: 'rgba(255,255,255,0.06)',
-      border: '1px solid rgba(148,163,184,0.3)',
-      fontSize: 14,
-      color: '#fff'
-    }}>
-      Avansas (€): <b>{b.price}</b>
-    </div>
-  )}
+                {/* Сумма аванса */}
+                {b.price != null && b.price !== '' && (
+                  <div style={{ marginTop: 8, fontSize: 13 }}>
+                    <span style={{ opacity: 0.8 }}>Avansas: </span>
+                    <b>{b.price} €</b>
+                  </div>
+                )}
 
-  {/* 📌 СТАТУС */}
-  <div style={{ marginTop: 10, fontSize: 14 }}>
-    <b>Статус: </b>
-    {b.status === 'approved_paid' && (
-      <span style={{ color: '#4ade80' }}>🟢 Оплачено</span>
-    )}
-    {b.status === 'approved' && (
-      <span style={{ color: '#22c55e' }}>🟢 Подтверждена</span>
-    )}
-    {b.status === 'pending' && (
-      <span style={{ color: '#eab308' }}>🟡 Ожидает подтверждения</span>
-    )}
-    {(b.status === 'canceled_client' || b.status === 'canceled_admin') && (
-      <span style={{ color: '#ef4444' }}>🔴 Отменена</span>
-    )}
-  </div>
+                {/* Статус */}
+                <div style={{ marginTop: 6, fontSize: 13 }}>
+                  <span style={{ fontWeight: 600 }}>Статус: </span>
+                  <span>{statusText(b)}</span>
+                </div>
 
-  {/* Оплата */}
-  {b.status === 'approved' && (
-    <button style={payBtn} onClick={() => pay(b.id)}>💳 Apmokėti</button>
-  )}
+                {/* Кнопка оплаты — доступна до и после подтверждения */}
+                {(b.status === 'pending' || b.status === 'approved') && (
+                  <button
+                    style={payBtn}
+                    onClick={() => openPaymentModal(b)}
+                  >
+                    💳 Apmokėti
+                  </button>
+                )}
 
-  {/* Отмена */}
-  {canCancel && (
-    <button style={cancelBtn} onClick={() => cancel(b.id)}>Отменить</button>
-  )}
-</div>
+                {/* Отмена */}
+                {canCancel && (
+                  <button style={cancelBtn} onClick={() => cancel(b.id)}>
+                    Отменить
+                  </button>
+                )}
+              </div>
             )
           })}
-        </div>
 
+          {!list.length && (
+            <small className="muted" style={{ opacity: 0.7 }}>
+              {t('no_records')}
+            </small>
+          )}
+        </div>
       </div>
 
       {/* === МОДАЛКИ === */}
@@ -286,12 +477,112 @@ export default function MyBookings() {
         <div style={modalBackdrop}>
           <div style={modalBox}>
             <h3>Отменить запись?</h3>
-            <button onClick={doCancel} style={cancelBtn}>Да</button>
-            <button onClick={() => setConfirmId(null)} style={{ ...cancelBtn, background: 'rgba(80,80,120,0.4)' }}>Нет</button>
+            <button onClick={doCancel} style={cancelBtn}>
+              Да
+            </button>
+            <button
+              onClick={() => setConfirmId(null)}
+              style={{ ...cancelBtn, background: 'rgba(80,80,120,0.4)' }}
+            >
+              Нет
+            </button>
           </div>
         </div>
       )}
 
+      {/* Модалка выбора способа оплаты */}
+      {paymentBooking && (
+        <div style={modalBackdrop}>
+          <div style={modalBox}>
+            <h3 style={{ marginTop: 0 }}>Выберите способ оплаты</h3>
+            <p style={{ fontSize: 14, opacity: 0.9 }}>
+              {fmtDate(paymentBooking.start)} • {fmtTime(paymentBooking.start)} –{' '}
+              {fmtTime(paymentBooking.end)}
+            </p>
+            {paymentBooking.price != null && (
+              <p style={{ fontSize: 14 }}>
+                Avansas:{' '}
+                <b>
+                  {paymentBooking.price} €
+                </b>
+              </p>
+            )}
+
+            {paymentError && (
+              <div
+                style={{
+                  marginBottom: 8,
+                  padding: 6,
+                  borderRadius: 8,
+                  background: 'rgba(127,29,29,0.6)',
+                  color: '#fecaca',
+                  fontSize: 13
+                }}
+              >
+                {paymentError}
+              </div>
+            )}
+
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                marginTop: 8
+              }}
+            >
+              <button
+                disabled={paymentLoading}
+                style={payOptionBtn}
+                onClick={() => startPayment('paypal')}
+              >
+                PayPal
+              </button>
+              <button
+                disabled={paymentLoading}
+                style={payOptionBtn}
+                onClick={() => startPayment('paysera')}
+              >
+                Paysera
+              </button>
+              <button
+                disabled={paymentLoading}
+                style={payOptionBtn}
+                onClick={() => startPayment('bank')}
+              >
+                Banko pavedimas
+              </button>
+            </div>
+
+            {/* Инструкция для банковского перевода */}
+            <div
+              style={{
+                marginTop: 10,
+                fontSize: 12,
+                opacity: 0.85,
+                textAlign: 'left'
+              }}
+            >
+              <div>
+                <b>Banko duomenys:</b>
+              </div>
+              <div>Gavėjas: {BANK_DETAILS.receiver}</div>
+              <div>IBAN: {BANK_DETAILS.iban}</div>
+              <div>
+                Paskirtis:{' '}
+                {BANK_DETAILS.descriptionPrefix} #{paymentBooking.id.slice(0, 6)}
+              </div>
+            </div>
+
+            <button
+              onClick={closePaymentModal}
+              style={{ ...cancelBtn, marginTop: 14 }}
+            >
+              Закрыть
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -345,7 +636,11 @@ const saveBtn = {
 }
 
 const bookingsCard = { ...outerCard, padding: '18px' }
-const bookingsHeader = { display: 'flex', justifyContent: 'space-between', marginBottom: 10 }
+const bookingsHeader = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  marginBottom: 10
+}
 const filterButtons = { display: 'flex', gap: 8 }
 
 const filterBtn = (active) => ({
@@ -353,7 +648,8 @@ const filterBtn = (active) => ({
   borderRadius: '10px',
   background: active ? 'rgba(130,60,255,0.25)' : 'rgba(30,20,40,0.6)',
   border: '1px solid rgba(168,85,247,0.5)',
-  color: '#fff'
+  color: '#fff',
+  cursor: 'pointer'
 })
 
 const cardItem = {
@@ -374,6 +670,17 @@ const payBtn = {
   border: '1px solid #4ade80',
   color: '#4ade80',
   cursor: 'pointer'
+}
+
+const payOptionBtn = {
+  width: '100%',
+  padding: '8px 10px',
+  borderRadius: 10,
+  border: '1px solid rgba(148,163,184,0.7)',
+  background: 'rgba(15,23,42,0.9)',
+  color: '#e5e7eb',
+  cursor: 'pointer',
+  fontSize: 14
 }
 
 const cancelBtn = {
@@ -402,6 +709,7 @@ const modalBox = {
   padding: '24px 32px',
   border: '1px solid rgba(168,85,247,0.3)',
   color: '#fff',
-  textAlign: 'center'
+  textAlign: 'center',
+  maxWidth: 420,
+  width: '90%'
 }
-
