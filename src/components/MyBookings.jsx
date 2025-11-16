@@ -1,715 +1,1049 @@
-import React, { useEffect, useMemo, useState } from 'react'
+const ADMINS = ['irina.abramova7@gmail.com', 'vladislavzilin@gmail.com']
+
+import { useState, useMemo, useEffect } from 'react'
 import {
-  getCurrentUser,
+  getSettings,
+  saveSettings,
   getBookings,
   saveBookings,
   fmtDate,
-  fmtTime,
-  getUsers,
-  saveUsers,
-  setCurrentUser
+  fmtTime,       // можно оставить, вдруг где-то ещё используется
+  getCurrentUser,
 } from '../lib/storage'
+import { exportBookingsToCSV } from '../lib/export'
 import { useI18n } from '../lib/i18n'
 
-// Цвета для тегов услуг
-const tagColors = {
-  'Šukuosena': '#c084fc',
-  'Tresų nuoma': '#60a5fa',
-  'Papuošalų nuoma': '#f472b6',
-  'Atvykimas': '#facc15',
-  'Konsultacija': '#34d399'
+// === дефолтные услуги, если в настройках ещё нет serviceList ===
+const DEFAULT_SERVICES = [
+  { name: 'Šukuosena', duration: 60, deposit: 50 },
+  { name: 'Tresų nuoma', duration: 15, deposit: 25 },
+  { name: 'Papuošalų nuoma', duration: 15, deposit: 10 },
+  { name: 'Atvykimas', duration: 180, deposit: 50 },
+  { name: 'Konsultacija', duration: 30, deposit: 10 },
+]
+
+// цвета для тегов услуг
+const serviceStyles = {
+  'Šukuosena': {
+    bg: 'rgba(99,102,241,0.16)',
+    border: '1px solid rgba(129,140,248,0.8)',
+  },
+  'Tresų nuoma': {
+    bg: 'rgba(56,189,248,0.16)',
+    border: '1px solid rgba(56,189,248,0.8)',
+  },
+  'Papuošalų nuoma': {
+    bg: 'rgba(245,158,11,0.14)',
+    border: '1px solid rgba(245,158,11,0.9)',
+  },
+  Atvykimas: {
+    bg: 'rgba(248,113,113,0.14)',
+    border: '1px solid rgba(248,113,113,0.9)',
+  },
+  Konsultacija: {
+    bg: 'rgba(34,197,94,0.14)',
+    border: '1px solid rgba(34,197,94,0.9)',
+  },
 }
 
-// Реквизиты для банковского перевода (заполни под себя)
-const BANK_DETAILS = {
-  iban: 'LT00 0000 0000 0000 0000',
-  receiver: 'IZ HAIR TREND',
-  descriptionPrefix: 'Rezervacija'
+/* ===== helpers для дат/времени ===== */
+const pad2 = (n) => String(n).padStart(2, '0')
+
+const toInputDate = (dateLike) => {
+  const d = new Date(dateLike)
+  if (isNaN(d)) return ''
+  const y = d.getFullYear()
+  const m = pad2(d.getMonth() + 1)
+  const day = pad2(d.getDate())
+  return `${y}-${m}-${day}`
 }
 
-export default function MyBookings() {
-  const { t } = useI18n()
-  const user = getCurrentUser()
+const toInputTime = (dateLike) => {
+  const d = new Date(dateLike)
+  if (isNaN(d)) return ''
+  const hh = pad2(d.getHours())
+  const mm = pad2(d.getMinutes())
+  return `${hh}:${mm}`
+}
 
-  const [form, setForm] = useState({
-    name: user?.name || '',
-    instagram: user?.instagram || '',
-    phone: user?.phone || '',
-    email: user?.email || '',
-    password: user?.password || ''
-  })
-  const [errors, setErrors] = useState({})
-  const [filter, setFilter] = useState('all')
-  const [confirmId, setConfirmId] = useState(null)
-  const [version, setVersion] = useState(0)
-  const [modal, setModal] = useState(false)
-  const [approvedModal, setApprovedModal] = useState(false)
-  const [showProfile, setShowProfile] = useState(false)
+// ⚙️ ЖЁСТКИЙ 24-часовой формат "HH:MM"
+const formatTime24 = (dateLike) => {
+  const d = new Date(dateLike)
+  if (isNaN(d)) return ''
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
 
-  // модалка оплаты
-  const [paymentBooking, setPaymentBooking] = useState(null)
-  const [paymentLoading, setPaymentLoading] = useState(false)
-  const [paymentError, setPaymentError] = useState('')
+export default function Admin() {
+  const me = getCurrentUser()
+  const isAdmin = me && (me.role === 'admin' || ADMINS.includes(me.email))
 
-  const bookingsAll = getBookings()
-  const all = bookingsAll
-    .filter(b => user && b.userPhone === user.phone)
-    .sort((a, b) => new Date(a.start) - new Date(b.start))
-
-  const list = useMemo(() => {
-    if (filter === 'active') return all.filter(b =>
-      b.status === 'approved' || b.status === 'approved_paid'
-    )
-    if (filter === 'canceled')
-      return all.filter(
-        b => b.status === 'canceled_client' || b.status === 'canceled_admin'
-      )
-    return all
-  }, [filter, version, bookingsAll.length])
-
-  // пуш-окно если запись только что подтверждена
-  useEffect(() => {
-    const prev = JSON.parse(localStorage.getItem('prevBookings') || '[]')
-    const approvedNow = all.find(
-      b =>
-        b.status === 'approved' &&
-        !prev.find(p => p.id === b.id && p.status === 'approved')
-    )
-    if (approvedNow) {
-      setApprovedModal(true)
-      setTimeout(() => setApprovedModal(false), 2500)
-    }
-    localStorage.setItem('prevBookings', JSON.stringify(all))
-  }, [all])
-
-  const validate = () => {
-    const e = {}
-    if (!form.phone && !form.email) e.contact = 'Нужен телефон или email'
-    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) e.email = 'Некорректный email'
-    if (form.phone && !/^[+\d][\d\s\-()]{5,}$/.test(form.phone)) e.phone = 'Некорректный телефон'
-    setErrors(e)
-    return Object.keys(e).length === 0
-  }
-
-  const saveProfile = (ev) => {
-    ev.preventDefault()
-    if (!validate()) return
-
-    const users = getUsers()
-    const idx = users.findIndex(u =>
-      (u.phone && u.phone === user.phone) ||
-      (u.email && u.email === user.email)
-    )
-
-    const updated = { ...user, ...form }
-    if (idx >= 0) users[idx] = updated
-    else users.push(updated)
-    saveUsers(users)
-    setCurrentUser(updated)
-
-    // обновляем все записи этого пользователя
-    const bookings = getBookings().map(b =>
-      (b.userEmail === user.email || b.userPhone === user.phone)
-        ? {
-            ...b,
-            userName: updated.name,
-            userPhone: updated.phone,
-            userInstagram: updated.instagram,
-            userEmail: updated.email
-          }
-        : b
-    )
-    saveBookings(bookings)
-    window.dispatchEvent(new Event('profileUpdated'))
-
-    setModal(true)
-    setTimeout(() => setModal(false), 2000)
-  }
-
-  const cancel = (id) => setConfirmId(id)
-  const doCancel = () => {
-    const id = confirmId
-    const arr = getBookings().map(b =>
-      b.id === id
-        ? { ...b, status: 'canceled_client', canceledAt: new Date().toISOString() }
-        : b
-    )
-    saveBookings(arr)
-    setConfirmId(null)
-    setVersion(v => v + 1)
-  }
-
-  // === ОПЛАТА ===
-
-  const openPaymentModal = (booking) => {
-    setPaymentBooking(booking)
-    setPaymentError('')
-    setPaymentLoading(false)
-  }
-
-  const closePaymentModal = () => {
-    setPaymentBooking(null)
-    setPaymentError('')
-    setPaymentLoading(false)
-  }
-
-  // Запуск реальной оплаты:
-  // бекенд по адресу /api/payments/start должен:
-  // - создать платёж (PayPal / Paysera)
-  // - вернуть { redirectUrl } для перехода на страницу оплаты
-  // - после успешной оплаты по webhook обновить статус брони в БД
-  const startPayment = async (method) => {
-    if (!paymentBooking) return
-
-    // банковский перевод — просто показываем реквизиты, без запросов
-    if (method === 'bank') {
-      // тут всё уже показано в модалке, просто не закрываем её
-      return
-    }
-
-    try {
-      setPaymentLoading(true)
-      setPaymentError('')
-
-      const res = await fetch('/api/payments/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookingId: paymentBooking.id,
-          method
-        })
-      })
-
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Payment error')
-      }
-
-      if (data.redirectUrl) {
-        window.location.href = data.redirectUrl
-      } else {
-        setPaymentError('Не удалось получить ссылку на оплату')
-      }
-    } catch (err) {
-      console.error(err)
-      setPaymentError(err.message || 'Payment error')
-    } finally {
-      setPaymentLoading(false)
-    }
-  }
-
-  if (!user) {
+  if (!isAdmin) {
     return (
       <div className="card">
-        <b>{t('login_or_register')}</b>
+        <h3>Доступ запрещён</h3>
+        <p className="muted">Эта страница доступна только администраторам.</p>
       </div>
     )
   }
 
-  const statusDot = (b) => {
-    if (b.status === 'approved_paid') {
-      return (
-        <span
-          style={{
-            ...dot,
-            background: '#4ade80',
-            boxShadow: '0 0 8px #4ade80'
-          }}
-        />
-      )
+  const { t } = useI18n()
+
+  // === НАСТРОЙКИ ===
+  const [settings, setSettings] = useState(() => {
+    const s = getSettings()
+    if (!Array.isArray(s.serviceList) || !s.serviceList.length) {
+      s.serviceList = [...DEFAULT_SERVICES]
+      saveSettings(s)
     }
-    if (b.status === 'approved') {
-      return (
-        <span
-          style={{
-            ...dot,
-            background: '#22c55e',
-            boxShadow: '0 0 8px #22c55e'
-          }}
-        />
-      )
-    }
-    if (b.status === 'pending') {
-      return (
-        <span
-          style={{
-            ...dot,
-            background: '#facc15',
-            boxShadow: '0 0 6px rgba(250,204,21,0.8)'
-          }}
-        />
-      )
-    }
-    // отменённые
-    return (
-      <span
-        style={{
-          ...dot,
-          background: '#9ca3af'
-        }}
-      />
-    )
+    return s
+  })
+
+  const [bookings, setBookings] = useState(getBookings())
+  const [showSettings, setShowSettings] = useState(false)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [toast, setToast] = useState(null)
+
+  const updateSettings = (patch) => {
+    const next = { ...settings, ...patch }
+    setSettings(next)
+    saveSettings(next)
   }
 
-  const statusText = (b) => {
-    if (b.status === 'approved_paid') return '🟢 Оплачена и подтверждена'
-    if (b.status === 'approved') return '🟢 Подтверждена'
-    if (b.status === 'pending') return '🟡 Ожидает подтверждения'
-    if (b.status === 'canceled_client') return '❌ Отменена клиентом'
-    if (b.status === 'canceled_admin') return '🔴 Отменена администратором'
-    return b.status
+  // синк записей при обновлении профиля
+  useEffect(() => {
+    const handler = () => setBookings(getBookings())
+    window.addEventListener('profileUpdated', handler)
+    return () => window.removeEventListener('profileUpdated', handler)
+  }, [])
+
+  // === СТАТИСТИКА ===
+  const stats = useMemo(() => {
+    const total = bookings.length
+    const active = bookings.filter(
+      (b) => b.status === 'approved' || b.status === 'pending'
+    ).length
+    const canceled = bookings.filter(
+      (b) => b.status === 'canceled_client' || b.status === 'canceled_admin'
+    ).length
+    return { total, active, canceled }
+  }, [bookings])
+
+  // === ФИЛЬТР СПИСКА ===
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim()
+
+    const arr = bookings.filter((b) => {
+      const matchQ =
+        !q ||
+        (b.userName?.toLowerCase().includes(q) ||
+          b.userPhone?.toLowerCase().includes(q) ||
+          b.userInstagram?.toLowerCase().includes(q))
+
+      const matchStatus =
+        statusFilter === 'all'
+          ? true
+          : b.status === statusFilter
+
+      return matchQ && matchStatus
+    })
+
+    arr.sort((a, b) => new Date(a.start) - new Date(b.start))
+    return arr
+  }, [bookings, search, statusFilter])
+
+  // === helper для обновления одной записи ===
+  const updateBooking = (id, updater) => {
+    const all = getBookings()
+    const next = all.map((b) => (b.id === id ? updater(b) : b))
+    saveBookings(next)
+    setBookings(next)
+  }
+
+  // === ДЕЙСТВИЯ С ЗАПИСЯМИ ===
+  const cancelByAdmin = (id) => {
+    if (!confirm('Отменить эту запись?')) return
+    updateBooking(id, (b) => ({
+      ...b,
+      status: 'canceled_admin',
+      canceledAt: new Date().toISOString(),
+    }))
+  }
+
+  const approveByAdmin = (id) => {
+    updateBooking(id, (b) => ({
+      ...b,
+      status: 'approved',
+      approvedAt: new Date().toISOString(),
+    }))
+  }
+
+  const togglePaid = (id) => {
+    updateBooking(id, (b) => ({
+      ...b,
+      paid: !b.paid,
+    }))
+  }
+
+  const handleExport = () => {
+    const { name, count } = exportBookingsToCSV(filtered)
+    setToast(`✅ ${t('export')} ${count} → ${name}`)
+    setTimeout(() => setToast(null), 3500)
+  }
+
+  const statusLabel = (b) =>
+    b.status === 'approved'
+      ? '🟢 ' + t('approved')
+      : b.status === 'pending'
+      ? '🟡 ' + t('pending')
+      : b.status === 'canceled_client'
+      ? '❌ ' + t('canceled_by_client')
+      : '🔴 ' + t('canceled_by_admin')
+
+  // === РАБОТА С УСЛУГАМИ В НАСТРОЙКАХ ===
+  const services = settings.serviceList || []
+
+  const updateServiceField = (index, field, value) => {
+    const next = [...services]
+    next[index] = {
+      ...next[index],
+      [field]:
+        field === 'duration' || field === 'deposit'
+          ? Number(value) || 0
+          : value,
+    }
+    updateSettings({ serviceList: next })
+  }
+
+  const addService = () => {
+    const next = [
+      ...services,
+      { name: 'Новая услуга', duration: 60, deposit: 0 },
+    ]
+    updateSettings({ serviceList: next })
+  }
+
+  const removeService = (index) => {
+    if (services.length <= 1) return
+    const next = services.filter((_, i) => i !== index)
+    updateSettings({ serviceList: next })
   }
 
   return (
-    <div style={container}>
-      {/* === ПРОФИЛЬ === */}
-      <div style={outerCard}>
-        <h3 style={{ margin: 0, padding: '10px 20px' }}>Профиль</h3>
-        <div style={innerCard}>
-          <div style={innerHeader} onClick={() => setShowProfile(!showProfile)}>
+    <div className="col" style={{ gap: 16 }}>
+      {/* === РЕДАКТИРОВАТЬ НАСТРОЙКИ + УСЛУГИ === */}
+      <div style={{ width: '100%' }}>
+        <div style={cardAurora}>
+          <button
+            onClick={() => setShowSettings((s) => !s)}
+            style={headerToggle}
+          >
             <span
               style={{
-                color: '#a855f7',
-                transform: showProfile ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: '0.3s'
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 10,
               }}
             >
-              ▾
+              <Chevron open={showSettings} />
+              <span style={{ fontWeight: 700 }}>Редактировать настройки</span>
             </span>
-            <span style={{ fontWeight: 600 }}>Редактировать профиль</span>
+          </button>
+
+          <div
+            style={{
+              maxHeight: showSettings ? 1200 : 0,
+              overflow: 'hidden',
+              transition: 'max-height .35s ease',
+            }}
+          >
+            <div style={{ paddingTop: 10 }}>
+              {/* БАЗОВЫЕ НАСТРОЙКИ */}
+              <div className="row" style={{ gap: 12 }}>
+                <div className="col">
+                  <label style={labelStyle}>{t('master_name')}</label>
+                  <input
+                    style={inputGlass}
+                    value={settings.masterName}
+                    onChange={(e) =>
+                      updateSettings({ masterName: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="col">
+                  <label style={labelStyle}>{t('admin_phone')}</label>
+                  <input
+                    style={inputGlass}
+                    value={settings.adminPhone}
+                    onChange={(e) =>
+                      updateSettings({ adminPhone: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div
+                className="row"
+                style={{ gap: 12, marginTop: 12, marginBottom: 8 }}
+              >
+                <div className="col">
+                  <label style={labelStyle}>{t('day_start')}</label>
+                  <select
+                    style={inputGlass}
+                    value={settings.workStart}
+                    onChange={(e) =>
+                      updateSettings({ workStart: e.target.value })
+                    }
+                  >
+                    {generateTimes(0, 12).map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col">
+                  <label style={labelStyle}>{t('day_end')}</label>
+                  <select
+                    style={inputGlass}
+                    value={settings.workEnd}
+                    onChange={(e) =>
+                      updateSettings({ workEnd: e.target.value })
+                    }
+                  >
+                    {generateTimes(12, 24).map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col">
+                  <label style={labelStyle}>{t('slot_minutes')}</label>
+                  <select
+                    style={inputGlass}
+                    value={settings.slotMinutes}
+                    onChange={(e) =>
+                      updateSettings({
+                        slotMinutes: parseInt(e.target.value, 10),
+                      })
+                    }
+                  >
+                    {[15, 30, 45, 60].map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* === УСЛУГИ: ДЛИТЕЛЬНОСТЬ + ЗАЛОГ === */}
+              <div
+                style={{
+                  marginTop: 18,
+                  paddingTop: 14,
+                  borderTop: '1px solid rgba(148,85,247,0.35)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 8,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                      Услуги
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        opacity: 0.75,
+                        maxWidth: 480,
+                      }}
+                    >
+                      Здесь можно менять название, длительность и залог каждой
+                      услуги. Эти значения используются при создании записи в
+                      календаре (суммарная длительность и сумма залога).
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    style={btnPrimary}
+                    onClick={addService}
+                  >
+                    + Добавить услугу
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                    marginTop: 6,
+                  }}
+                >
+                  {services.map((s, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns:
+                          'minmax(140px, 1.4fr) minmax(80px, .7fr) minmax(80px, .7fr) auto',
+                        gap: 8,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <input
+                        style={inputGlass}
+                        value={s.name}
+                        onChange={(e) =>
+                          updateServiceField(idx, 'name', e.target.value)
+                        }
+                        placeholder="Название"
+                      />
+                      <input
+                        style={inputGlass}
+                        type="number"
+                        min="0"
+                        value={s.duration}
+                        onChange={(e) =>
+                          updateServiceField(idx, 'duration', e.target.value)
+                        }
+                        placeholder="Минут"
+                      />
+                      <input
+                        style={inputGlass}
+                        type="number"
+                        min="0"
+                        value={s.deposit}
+                        onChange={(e) =>
+                          updateServiceField(idx, 'deposit', e.target.value)
+                        }
+                        placeholder="€"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeService(idx)}
+                        style={{
+                          borderRadius: 10,
+                          padding: '8px 10px',
+                          border: '1px solid rgba(248,113,113,0.7)',
+                          background: 'rgba(127,29,29,0.6)',
+                          color: '#fff',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* === ВСЕ ЗАПИСИ (КАРТОЧКИ) === */}
+      <div style={{ width: '100%' }}>
+        <div style={cardAurora}>
+          <div style={topBar}>
+            <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>
+              Все записи
+            </div>
           </div>
 
           <div
             style={{
-              ...profileBody,
-              maxHeight: showProfile ? '900px' : '0',
-              opacity: showProfile ? 1 : 0,
-              padding: showProfile ? '20px' : '0 20px'
+              display: 'flex',
+              gap: 10,
+              margin: '8px 0 12px 0',
+              flexWrap: 'wrap',
             }}
           >
-            <form className="col" style={{ gap: 12 }} onSubmit={saveProfile}>
-              <div>
-                <label>Имя</label>
-                <input
-                  value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })}
-                />
-              </div>
-              <div>
-                <label>Instagram</label>
-                <input
-                  value={form.instagram}
-                  onChange={e =>
-                    setForm({ ...form, instagram: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label>Телефон</label>
-                <input
-                  value={form.phone}
-                  onChange={e => setForm({ ...form, phone: e.target.value })}
-                />
-              </div>
-              <div>
-                <label>Email</label>
-                <input
-                  value={form.email}
-                  onChange={e => setForm({ ...form, email: e.target.value })}
-                />
-              </div>
-              <div>
-                <label>Пароль</label>
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={e =>
-                    setForm({ ...form, password: e.target.value })
-                  }
-                />
-              </div>
-
-              {errors.contact && (
-                <div style={{ color: '#f87171' }}>{errors.contact}</div>
-              )}
-
-              <button type="submit" style={saveBtn}>
-                💾 Сохранить
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      {/* === МОИ ЗАПИСИ === */}
-      <div style={bookingsCard}>
-        <div style={bookingsHeader}>
-          <h3 style={{ margin: 0 }}>Мои записи</h3>
-
-          <div style={filterButtons}>
-            <button
-              style={filterBtn(filter === 'all')}
-              onClick={() => setFilter('all')}
-            >
-              Все
-            </button>
-            <button
-              style={filterBtn(filter === 'active')}
-              onClick={() => setFilter('active')}
-            >
-              Активные
-            </button>
-            <button
-              style={filterBtn(filter === 'canceled')}
-              onClick={() => setFilter('canceled')}
-            >
-              Отменённые
-            </button>
-          </div>
-        </div>
-
-        {/* Карточки */}
-        <div className="mobile-list">
-          {list.map(b => {
-            const canCancel =
-              (b.status === 'pending' || b.status === 'approved') &&
-              new Date(b.end) > new Date()
-
-            return (
-              <div key={b.id} style={cardItem}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  {statusDot(b)}
-                  <b>{fmtDate(b.start)}</b>
-                </div>
-
-                <div style={{ opacity: 0.8, marginTop: 4 }}>
-                  {fmtTime(b.start)} – {fmtTime(b.end)}
-                </div>
-
-                {/* Теги услуг */}
-                <div
+            <input
+              style={{ ...inputGlass, flex: '1 1 260px' }}
+              placeholder={t('search_placeholder')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <div style={segmented}>
+              {[
+                { v: 'all', label: t('all') },
+                { v: 'pending', label: t('pending') },
+                { v: 'approved', label: t('approved') },
+                { v: 'canceled_client', label: t('canceled_by_client') },
+                { v: 'canceled_admin', label: t('canceled_by_admin') },
+              ].map((it) => (
+                <button
+                  key={it.v}
+                  onClick={() => setStatusFilter(it.v)}
                   style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 6,
-                    marginTop: 8
+                    ...segBtn,
+                    ...(statusFilter === it.v ? segActive : {}),
                   }}
                 >
-                  {b.services?.map(s => (
+                  {it.label}
+                </button>
+              ))}
+            </div>
+            <button
+              style={{ ...btnPrimary, flex: '1' }}
+              onClick={handleExport}
+            >
+              {t('export')}
+            </button>
+          </div>
+
+          <div className="badge" style={{ marginBottom: 10 }}>
+            {t('total')}: {stats.total} • {t('total_active')}: {stats.active} •{' '}
+            {t('total_canceled')}: {stats.canceled}
+          </div>
+
+          {/* === КАРТОЧКИ ЗАПИСЕЙ === */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 18,
+              marginTop: 12,
+            }}
+          >
+            {filtered.map((b) => {
+              const inFuture = new Date(b.start) > new Date()
+              const servicesArr = Array.isArray(b.services) ? b.services : []
+
+              const startDate = new Date(b.start)
+              const endDate = new Date(b.end || b.start)
+
+              const serviceTagStyle = (name) => {
+                const st = serviceStyles[name] || {
+                  bg: 'rgba(148,163,184,0.15)',
+                  border: '1px solid rgba(148,163,184,0.7)',
+                }
+                return {
+                  padding: '4px 12px',
+                  borderRadius: 999,
+                  fontSize: 13,
+                  ...st,
+                }
+              }
+
+              return (
+                <div
+                  key={b.id}
+                  style={{
+                    borderRadius: 16,
+                    border: '1px solid rgba(168,85,247,0.25)',
+                    background: 'rgba(15,10,25,0.85)',
+                    padding: '16px 20px',
+                    boxShadow: '0 0 18px rgba(168,85,247,0.20)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                  }}
+                >
+                  {/* HEADER: статус + ДАТА + ВРЕМЯ ОТ/ДО */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 10,
+                      alignItems: 'center',
+                    }}
+                  >
+                    {/* статус-точка */}
                     <span
-                      key={s}
                       style={{
-                        padding: '4px 8px',
-                        borderRadius: 8,
-                        background: 'rgba(255,255,255,0.08)',
-                        border: `1px solid ${tagColors[s] || '#a855f7'}55`,
-                        color: tagColors[s] || '#e5e7eb',
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        background:
+                          b.status === 'approved'
+                            ? '#22c55e'
+                            : b.status === 'pending'
+                            ? '#eab308'
+                            : '#ef4444',
+                        boxShadow:
+                          b.status === 'approved'
+                            ? '0 0 8px rgba(34,197,94,0.9)'
+                            : b.status === 'pending'
+                            ? '0 0 8px rgba(234,179,8,0.9)'
+                            : '0 0 8px rgba(248,113,113,0.9)',
+                      }}
+                    />
+
+                    {/* ДАТА (редактируемая) */}
+                    <div style={{ minWidth: 150 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          opacity: 0.8,
+                          marginBottom: 3,
+                        }}
+                      >
+                        Дата
+                      </div>
+                      <input
+                        type="date"
+                        value={toInputDate(startDate)}
+                        style={{
+                          ...inputGlass,
+                          padding: '6px 10px',
+                          height: '32px',
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value // YYYY-MM-DD
+                          if (!val) return
+                          const [y, m, d] = val.split('-').map(Number)
+                          updateBooking(b.id, (orig) => {
+                            const oldStart = new Date(orig.start)
+                            const oldEnd = new Date(orig.end || orig.start)
+                            const duration =
+                              oldEnd.getTime() - oldStart.getTime()
+
+                            const newStart = new Date(oldStart)
+                            newStart.setFullYear(y, (m || 1) - 1, d || 1)
+
+                            const newEnd = new Date(
+                              newStart.getTime() + Math.max(duration, 15 * 60000)
+                            )
+
+                            return {
+                              ...orig,
+                              start: newStart,
+                              end: newEnd,
+                            }
+                          })
+                        }}
+                      />
+                    </div>
+
+                    {/* ВРЕМЯ ОТ */}
+                    <div style={{ minWidth: 120 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          opacity: 0.8,
+                          marginBottom: 3,
+                        }}
+                      >
+                        Время от
+                      </div>
+                      <input
+                        type="time"
+                        value={toInputTime(startDate)}
+                        style={{
+                          ...inputGlass,
+                          padding: '6px 10px',
+                          height: '32px',
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value // HH:MM
+                          if (!val) return
+                          const [hh, mm] = val.split(':').map(Number)
+                          updateBooking(b.id, (orig) => {
+                            const oldStart = new Date(orig.start)
+                            const oldEnd = new Date(orig.end || orig.start)
+
+                            const newStart = new Date(oldStart)
+                            newStart.setHours(hh || 0, mm || 0, 0, 0)
+
+                            let newEnd = new Date(oldEnd)
+                            if (newEnd <= newStart) {
+                              newEnd = new Date(
+                                newStart.getTime() + 15 * 60000
+                              )
+                            }
+
+                            return {
+                              ...orig,
+                              start: newStart,
+                              end: newEnd,
+                            }
+                          })
+                        }}
+                      />
+                    </div>
+
+                    {/* ВРЕМЯ ДО */}
+                    <div style={{ minWidth: 120 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          opacity: 0.8,
+                          marginBottom: 3,
+                        }}
+                      >
+                        Время до
+                      </div>
+                      <input
+                        type="time"
+                        value={toInputTime(endDate)}
+                        style={{
+                          ...inputGlass,
+                          padding: '6px 10px',
+                          height: '32px',
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value // HH:MM
+                          if (!val) return
+                          const [hh, mm] = val.split(':').map(Number)
+                          updateBooking(b.id, (orig) => {
+                            const oldStart = new Date(orig.start)
+                            let newEnd = new Date(oldStart)
+                            newEnd.setHours(hh || 0, mm || 0, 0, 0)
+
+                            if (newEnd <= oldStart) {
+                              newEnd = new Date(
+                                oldStart.getTime() + 15 * 60000
+                              )
+                            }
+
+                            return {
+                              ...orig,
+                              end: newEnd,
+                            }
+                          })
+                        }}
+                      />
+                    </div>
+
+                    {/* Текстовый вид времени (для контроля) */}
+                    <div
+                      style={{
+                        marginLeft: 'auto',
                         fontSize: 13,
-                        animation: 'fadeIn .3s ease'
+                        opacity: 0.8,
                       }}
                     >
-                      {s}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Сумма аванса */}
-                {b.price != null && b.price !== '' && (
-                  <div style={{ marginTop: 8, fontSize: 13 }}>
-                    <span style={{ opacity: 0.8 }}>Avansas: </span>
-                    <b>{b.price} €</b>
+                      {formatTime24(b.start)} – {formatTime24(b.end)}
+                    </div>
                   </div>
-                )}
 
-                {/* Статус */}
-                <div style={{ marginTop: 6, fontSize: 13 }}>
-                  <span style={{ fontWeight: 600 }}>Статус: </span>
-                  <span>{statusText(b)}</span>
-                </div>
-
-                {/* Кнопка оплаты — доступна до и после подтверждения */}
-                {(b.status === 'pending' || b.status === 'approved') && (
-                  <button
-                    style={payBtn}
-                    onClick={() => openPaymentModal(b)}
+                  {/* УСЛУГИ — цветные теги */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 8,
+                      marginTop: 4,
+                    }}
                   >
-                    💳 Apmokėti
-                  </button>
-                )}
+                    {servicesArr.map((sName, i) => (
+                      <span key={i} style={serviceTagStyle(sName)}>
+                        {sName}
+                      </span>
+                    ))}
+                    {servicesArr.length === 0 && (
+                      <span className="muted">Без услуг</span>
+                    )}
+                  </div>
 
-                {/* Отмена */}
-                {canCancel && (
-                  <button style={cancelBtn} onClick={() => cancel(b.id)}>
-                    Отменить
-                  </button>
-                )}
-              </div>
-            )
-          })}
+                  {/* КЛИЕНТ */}
+                  <div style={{ marginTop: 6 }}>
+                    <b>{b.userName}</b>
+                    <div style={{ fontSize: 13, opacity: 0.8 }}>
+                      {b.userPhone}
+                    </div>
+                    {b.userInstagram && (
+                      <div style={{ fontSize: 13, opacity: 0.8 }}>
+                        @{b.userInstagram}
+                      </div>
+                    )}
+                  </div>
 
-          {!list.length && (
-            <small className="muted" style={{ opacity: 0.7 }}>
-              {t('no_records')}
-            </small>
+                  {/* ОПЛАТА + СУММА АВАНСА */}
+                  <div
+                    style={{
+                      marginTop: 6,
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(148,163,184,0.25)',
+                      background: 'rgba(30,20,40,0.55)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          background: b.paid ? '#22c55e' : '#ef4444',
+                          boxShadow: b.paid
+                            ? '0 0 8px rgba(34,197,94,0.9)'
+                            : '0 0 8px rgba(248,113,113,0.9)',
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: 14,
+                          color: b.paid ? '#bbf7d0' : '#fecaca',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {b.paid ? 'Apmokėta' : 'Neapmokėta'}
+                      </span>
+                    </div>
+
+                    {/* СУММА АВАНСА (редактируемая) */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 8,
+                        alignItems: 'center',
+                        marginTop: 2,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 13,
+                          opacity: 0.85,
+                          minWidth: 90,
+                        }}
+                      >
+                        Avansas (€):
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={b.price ?? ''}
+                        style={{
+                          ...inputGlass,
+                          maxWidth: 120,
+                          padding: '6px 10px',
+                          height: '32px',
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          const num = val === '' ? null : Number(val) || 0
+                          updateBooking(b.id, (orig) => ({
+                            ...orig,
+                            price: num,
+                          }))
+                        }}
+                      />
+                    </div>
+
+                    {b.price != null && b.price !== '' && (
+                      <button
+                        onClick={() => togglePaid(b.id)}
+                        style={{
+                          marginTop: 6,
+                          width: '100%',
+                          padding: '8px 0',
+                          borderRadius: 8,
+                          border: '1px solid rgba(148,163,184,0.5)',
+                          background: 'rgba(0,0,0,0.25)',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          fontSize: 13,
+                        }}
+                      >
+                        {b.paid ? 'Снять оплату' : 'Пометить оплаченой'}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* СТАТУС */}
+                  <div style={{ marginTop: 4 }}>
+                    <span style={{ fontWeight: 600 }}>{t('status')}: </span>
+                    {statusLabel(b)}
+                  </div>
+
+                  {/* КНОПКИ */}
+                  <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                    {b.status === 'pending' && (
+                      <button
+                        onClick={() => approveByAdmin(b.id)}
+                        style={{
+                          flex: 1,
+                          borderRadius: 10,
+                          padding: '10px',
+                          background:
+                            'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
+                          color: '#fff',
+                          border: '1px solid rgba(168,85,247,0.45)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {t('approve')}
+                      </button>
+                    )}
+
+                    {b.status !== 'canceled_admin' &&
+                      b.status !== 'canceled_client' &&
+                      inFuture && (
+                        <button
+                          onClick={() => cancelByAdmin(b.id)}
+                          style={{
+                            flex: 1,
+                            borderRadius: 10,
+                            padding: '10px',
+                            background: 'rgba(110,20,30,.35)',
+                            border: '1px solid rgba(239,68,68,.6)',
+                            color: '#fff',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {t('rejected')}
+                        </button>
+                      )}
+                  </div>
+                </div>
+              )
+            })}
+
+            {!filtered.length && (
+              <small className="muted" style={{ marginTop: 20 }}>
+                {t('no_records')}
+              </small>
+            )}
+          </div>
+
+          {toast && (
+            <div className="toast" style={{ marginTop: 10 }}>
+              {toast}
+            </div>
           )}
         </div>
       </div>
-
-      {/* === МОДАЛКИ === */}
-      {modal && (
-        <div style={modalBackdrop}>
-          <div style={modalBox}>
-            <h3 style={{ marginTop: 10 }}>Данные обновлены</h3>
-          </div>
-        </div>
-      )}
-
-      {approvedModal && (
-        <div style={modalBackdrop}>
-          <div style={modalBox}>
-            <h3 style={{ color: '#4ade80' }}>✅ Ваша запись подтверждена!</h3>
-          </div>
-        </div>
-      )}
-
-      {/* Подтверждение отмены */}
-      {confirmId && (
-        <div style={modalBackdrop}>
-          <div style={modalBox}>
-            <h3>Отменить запись?</h3>
-            <button onClick={doCancel} style={cancelBtn}>
-              Да
-            </button>
-            <button
-              onClick={() => setConfirmId(null)}
-              style={{ ...cancelBtn, background: 'rgba(80,80,120,0.4)' }}
-            >
-              Нет
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Модалка выбора способа оплаты */}
-      {paymentBooking && (
-        <div style={modalBackdrop}>
-          <div style={modalBox}>
-            <h3 style={{ marginTop: 0 }}>Выберите способ оплаты</h3>
-            <p style={{ fontSize: 14, opacity: 0.9 }}>
-              {fmtDate(paymentBooking.start)} • {fmtTime(paymentBooking.start)} –{' '}
-              {fmtTime(paymentBooking.end)}
-            </p>
-            {paymentBooking.price != null && (
-              <p style={{ fontSize: 14 }}>
-                Avansas:{' '}
-                <b>
-                  {paymentBooking.price} €
-                </b>
-              </p>
-            )}
-
-            {paymentError && (
-              <div
-                style={{
-                  marginBottom: 8,
-                  padding: 6,
-                  borderRadius: 8,
-                  background: 'rgba(127,29,29,0.6)',
-                  color: '#fecaca',
-                  fontSize: 13
-                }}
-              >
-                {paymentError}
-              </div>
-            )}
-
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-                marginTop: 8
-              }}
-            >
-              <button
-                disabled={paymentLoading}
-                style={payOptionBtn}
-                onClick={() => startPayment('paypal')}
-              >
-                PayPal
-              </button>
-              <button
-                disabled={paymentLoading}
-                style={payOptionBtn}
-                onClick={() => startPayment('paysera')}
-              >
-                Paysera
-              </button>
-              <button
-                disabled={paymentLoading}
-                style={payOptionBtn}
-                onClick={() => startPayment('bank')}
-              >
-                Banko pavedimas
-              </button>
-            </div>
-
-            {/* Инструкция для банковского перевода */}
-            <div
-              style={{
-                marginTop: 10,
-                fontSize: 12,
-                opacity: 0.85,
-                textAlign: 'left'
-              }}
-            >
-              <div>
-                <b>Banko duomenys:</b>
-              </div>
-              <div>Gavėjas: {BANK_DETAILS.receiver}</div>
-              <div>IBAN: {BANK_DETAILS.iban}</div>
-              <div>
-                Paskirtis:{' '}
-                {BANK_DETAILS.descriptionPrefix} #{paymentBooking.id.slice(0, 6)}
-              </div>
-            </div>
-
-            <button
-              onClick={closePaymentModal}
-              style={{ ...cancelBtn, marginTop: 14 }}
-            >
-              Закрыть
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
+/* === ВСПОМОГАТЕЛЬНОЕ === */
+function Chevron({ open }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#cbb6ff"
+      strokeWidth="2"
+    >
+      {open ? (
+        <path d="M6 15l6-6 6 6" />
+      ) : (
+        <path d="M6 9l6 6 6-6" />
+      )}
+    </svg>
+  )
+}
+
+function generateTimes(start, end) {
+  const result = []
+  for (let h = start; h < end; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const hh = String(h).padStart(2, '0')
+      const mm = String(m).padStart(2, '0')
+      result.push(`${hh}:${mm}`)
+    }
+  }
+  return result
+}
+
 /* === СТИЛИ === */
-
-const container = { paddingBottom: '40px' }
-
-const dot = {
-  width: 12,
-  height: 12,
-  borderRadius: '50%',
-  display: 'inline-block'
+const cardAurora = {
+  background:
+    'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))',
+  border: '1px solid rgba(168,85,247,0.18)',
+  borderRadius: 16,
+  padding: 14,
+  boxShadow:
+    '0 8px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.03)',
 }
 
-const outerCard = {
-  background: 'rgba(15,10,25,0.9)',
-  border: '1px solid rgba(168,85,247,0.3)',
-  borderRadius: '14px',
-  color: '#fff',
-  marginBottom: '24px'
-}
-
-const innerCard = {
-  margin: '0 20px 20px',
-  border: '1px solid rgba(168,85,247,0.2)',
-  borderRadius: '12px',
-  background: 'rgba(20,10,35,0.8)'
-}
-
-const innerHeader = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  padding: '12px 16px',
-  cursor: 'pointer',
-  background: 'rgba(25,15,45,0.8)',
-  borderBottom: '1px solid rgba(168,85,247,0.25)'
-}
-
-const profileBody = { overflow: 'hidden', transition: 'all 0.45s ease' }
-
-const saveBtn = {
-  marginTop: '10px',
+const headerToggle = {
   width: '100%',
-  padding: '10px 20px',
-  borderRadius: '10px',
-  background: 'linear-gradient(180deg, #9333ea, #4c1d95)',
-  color: '#fff',
-  cursor: 'pointer'
-}
-
-const bookingsCard = { ...outerCard, padding: '18px' }
-const bookingsHeader = {
   display: 'flex',
   justifyContent: 'space-between',
-  marginBottom: 10
-}
-const filterButtons = { display: 'flex', gap: 8 }
-
-const filterBtn = (active) => ({
-  padding: '8px 18px',
-  borderRadius: '10px',
-  background: active ? 'rgba(130,60,255,0.25)' : 'rgba(30,20,40,0.6)',
-  border: '1px solid rgba(168,85,247,0.5)',
-  color: '#fff',
-  cursor: 'pointer'
-})
-
-const cardItem = {
-  border: '1px solid rgba(168,85,247,0.25)',
-  background: 'rgba(20,10,30,0.55)',
-  padding: 14,
-  borderRadius: 14,
-  marginBottom: 12,
-  animation: 'fadeIn .35s ease'
-}
-
-const payBtn = {
-  marginTop: 10,
-  width: '100%',
-  padding: '8px 10px',
-  borderRadius: 10,
-  background: 'rgba(50,180,80,0.25)',
-  border: '1px solid #4ade80',
-  color: '#4ade80',
-  cursor: 'pointer'
-}
-
-const payOptionBtn = {
-  width: '100%',
-  padding: '8px 10px',
-  borderRadius: 10,
-  border: '1px solid rgba(148,163,184,0.7)',
-  background: 'rgba(15,23,42,0.9)',
-  color: '#e5e7eb',
-  cursor: 'pointer',
-  fontSize: 14
-}
-
-const cancelBtn = {
-  marginTop: 10,
-  padding: '8px 12px',
-  borderRadius: 10,
-  background: 'rgba(120,30,60,0.4)',
-  border: '1px solid rgba(200,80,120,0.6)',
-  color: '#fff',
-  cursor: 'pointer'
-}
-
-const modalBackdrop = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0,0,0,0.6)',
-  display: 'flex',
-  justifyContent: 'center',
   alignItems: 'center',
-  zIndex: 3000
+  gap: 10,
+  borderRadius: 12,
+  padding: '14px 18px',
+  border: '1px solid rgba(168,85,247,0.25)',
+  background: 'rgba(25,10,45,0.55)',
+  color: '#fff',
+  cursor: 'pointer',
 }
 
-const modalBox = {
-  background: 'rgba(20,15,35,0.85)',
-  borderRadius: 14,
-  padding: '24px 32px',
-  border: '1px solid rgba(168,85,247,0.3)',
+const labelStyle = {
+  fontSize: 12,
+  opacity: 0.8,
+  marginBottom: 6,
+  display: 'block',
+}
+
+const inputGlass = {
+  width: '100%',
+  padding: '10px 12px',
+  borderRadius: 10,
   color: '#fff',
-  textAlign: 'center',
-  maxWidth: 420,
-  width: '90%'
+  border: '1px solid rgba(168,85,247,0.35)',
+  background: 'rgba(17,0,40,0.45)',
+  outline: 'none',
+}
+
+const topBar = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '4px 2px 10px 2px',
+}
+
+const btnBase = {
+  borderRadius: 10,
+  padding: '8px 14px',
+  fontWeight: 600,
+  cursor: 'pointer',
+  border: '1px solid rgba(168,85,247,0.45)',
+  transition: '0.2s',
+}
+
+const btnPrimary = {
+  ...btnBase,
+  background:
+    'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
+  boxShadow: '0 0 14px rgba(150,85,247,0.35)',
+  color: '#fff',
+}
+
+const segmented = {
+  display: 'flex',
+  gap: 8,
+  background: 'rgba(17,0,40,0.45)',
+  border: '1px solid rgba(168,85,247,0.25)',
+  borderRadius: 12,
+  padding: 6,
+}
+
+const segBtn = {
+  ...btnBase,
+  padding: '8px 12px',
+  background: 'rgba(25,10,45,0.35)',
+  border: '1px solid rgba(168,85,247,0.25)',
+}
+
+const segActive = {
+  background:
+    'linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))',
+  border: '1px solid rgba(180,95,255,0.7)',
+  boxShadow: '0 0 12px rgba(150,90,255,0.30)',
 }
