@@ -721,15 +721,30 @@ export default function Admin() {
                         {fmtTime(b.start)} – {fmtTime(b.end)}
                       </div>
 
-                      {paid && (
-                        <button
-                          type="button"
-                          style={receiptBtn}
-                          onClick={() => downloadReceipt(b)}
-                        >
-                          📄 Скачать квитанцию
-                        </button>
-                      )}
+{paid && (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+    
+    <button
+      type="button"
+      style={receiptBtn}
+      onClick={() => downloadReceipt(b)}
+    >
+      📄 Скачать квитанцию
+    </button>
+
+    <div
+      style={{
+        marginTop: 4,
+        fontSize: 11,
+        opacity: 0.75,
+        color: '#e5e7eb',
+      }}
+    >
+      Nr. kvitancii: <b>#{b.id.slice(0, 6)}</b>
+    </div>
+
+  </div>
+)}
                     </div>
                   </div>
 
