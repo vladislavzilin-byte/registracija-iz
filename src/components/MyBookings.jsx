@@ -711,11 +711,52 @@ const list = useMemo(() => {
                   </div>
                 )}
 
-                {/* Статус + оплата */}
-                <div style={{ marginTop: 6, fontSize: 13 }}>
-                  <span style={{ fontWeight: 600 }}>Статус: </span>
-                  <span>{statusText(b)}</span>
-                </div>
+          {/* СТАТУСЫ В ВИДЕ БЕЙДЖЕЙ */}
+<div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+  {/* Статус подтверждения */}
+  <span
+    style={{
+      padding: '4px 10px',
+      borderRadius: 8,
+      fontSize: 13,
+      border: '1px solid rgba(255,255,255,0.15)',
+      background:
+        b.status === 'approved' || b.status === 'approved_paid'
+          ? 'rgba(168,85,247,0.25)'          // фиолетовый
+          : b.status === 'pending'
+          ? 'rgba(250,204,21,0.25)'          // жёлтый
+          : 'rgba(107,114,128,0.25)',         // серый
+      color:
+        b.status === 'approved' || b.status === 'approved_paid'
+          ? '#d8b4fe'
+          : b.status === 'pending'
+          ? '#fde047'
+          : '#d1d5db'
+    }}
+  >
+    {b.status === 'approved' || b.status === 'approved_paid'
+      ? 'Бронирование подтверждено'
+      : b.status === 'pending'
+      ? 'Ожидает подтверждения'
+      : 'Отменено'}
+  </span>
+
+  {/* Статус оплаты */}
+  <span
+    style={{
+      padding: '4px 10px',
+      borderRadius: 8,
+      fontSize: 13,
+      border: '1px solid rgba(255,255,255,0.15)',
+      background: isPaid(b)
+        ? 'rgba(34,197,94,0.25)' // зелёный
+        : 'rgba(239,68,68,0.25)', // красный
+      color: isPaid(b) ? '#4ade80' : '#fca5a5'
+    }}
+  >
+    {isPaid(b) ? 'Оплачено' : 'Не оплачено'}
+  </span>
+</div>
 
                 {/* Оплата — только если ещё не оплачено */}
                 {(b.status === 'pending' ||
