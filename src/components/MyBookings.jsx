@@ -11,215 +11,6 @@ import {
 } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
 
-const tagColors = {
-  'Šukuosena': '#c084fc',
-  'Tresų nuoma': '#60a5fa',
-  'Papuošalų nuoma': '#f472b6',
-  'Atvykimas': '#facc15',
-  'Konsultacija': '#34d399'
-}
-
-const BANK_DETAILS = {
-  iban: 'LT00 0000 0000 0000 0000',
-  receiver: 'IZ HAIR TREND',
-  descriptionPrefix: 'Rezervacija'
-}
-
-const isPaid = (b) => !!(b?.paid || b?.status === 'approved_paid')
-
-export default function MyBookings() {
-  const { t } = useI18n()
-  const user = getCurrentUser()
-
-  const [form, setForm] = useState({
-    name: user?.name || '',
-    instagram: user?.instagram || '',
-    phone: user?.phone || '',
-    email: user?.email || '',
-    password: user?.password || ''
-  })
-  const [errors, setErrors] = useState({})
-  const [filter, setFilter] = useState('all')
-  const [confirmId, setConfirmId] = useState(null)
-  const [version, setVersion] = useState(0)
-  const [modal, setModal] = useState(false)
-  const [approvedModal, setApprovedModal] = useState(false)
-  const [showProfile, setShowProfile] = useState(false)
-
-  const [paymentBooking, setPaymentBooking] = useState(null)
-  const [paymentLoading, setPaymentLoading] = useState(false)
-  const [paymentError, setPaymentError] = useState('')
-
-  const bookingsAll = getBookings()
-  const all = bookingsAll
-    .filter(b => user && b.userPhone === user.phone)
-    .sort((a, b) => new Date(a.start) - new Date(b.start))
-
-  // === ФИЛЬТРЫ ===
-  const list = useMemo(() => {
-    const now = new Date()
-
-    if (filter === 'active') {
-      return all.filter(b => {
-        const d = new Date(b.start)
-        const notCanceled =
-          b.status !== 'canceled_client' &&
-          b.status !== 'canceled_admin'
-        return notCanceled && d > now
-      })
-    }
-
-    if (filter === 'history') {
-      return all.filter(b => new Date(b.start) < now)
-    }
-
-    return all
-  }, [filter, version, bookingsAll.length])
-  // пуш-уведомление когда бронь подтверждена админом
-  useEffect(() => {
-    const prev = JSON.parse(localStorage.getItem('prevBookings') || '[]')
-    const approvedNow = all.find(
-      b =>
-        (b.status === 'approved' || b.status === 'approved_paid') &&
-        !prev.find(p => p.id === b.id && p.status === 'approved')
-    )
-    if (approvedNow) {
-      setApprovedModal(true)
-      setTimeout(() => setApprovedModal(false), 2500)
-    }
-    localStorage.setItem('prevBookings', JSON.stringify(all))
-  }, [all])
-
-  // авто-синхронизация с админкой
-  useEffect(() => {
-    const onStorage = (e) => {
-      if (!e.key || e.key === 'iz.bookings.v7') {
-        setVersion(v => v + 1)
-      }
-    }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [])
-
-  const cancel = (id) => setConfirmId(id)
-  const doCancel = () => {
-    const id = confirmId
-    const arr = getBookings().map(b =>
-      b.id === id
-        ? { ...b, status: 'canceled_client', canceledAt: new Date().toISOString() }
-        : b
-    )
-    saveBookings(arr)
-    setConfirmId(null)
-    setVersion(v => v + 1)
-  }
-
-  // === МОДАЛКА ОПЛАТЫ ===
-  const openPaymentModal = (booking) => {
-    setPaymentBooking(booking)
-    setPaymentError('')
-    setPaymentLoading(false)
-  }
-  const closePaymentModal = () => {
-    setPaymentBooking(null)
-    setPaymentError('')
-    setPaymentLoading(false)
-  }
-
-  const startPayment = async (method) => {
-    if (!paymentBooking) return
-
-    if (method === 'bank') return // инструкции без оплаты
-
-    try {
-      setPaymentLoading(true)
-      setPaymentError('')
-
-      const res = await fetch('/api/payments/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookingId: paymentBooking.id,
-          method
-        })
-      })
-
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Payment error')
-
-      if (data.redirectUrl) {
-        window.location.href = data.redirectUrl
-      } else {
-        setPaymentError('Не удалось получить ссылку на оплату')
-      }
-    } catch (err) {
-      setPaymentError(err.message || 'Payment error')
-    } finally {
-      setPaymentLoading(false)
-    }
-  }
-
-  if (!user) {
-    return (
-      <div className="card">
-        <b>{t('login_or_register')}</b>
-      </div>
-    )
-  }
-
-  // === ЛАМПОЧКИ СТАТУСОВ ===
-  const lamp = (color) => ({
-    width: 12,
-    height: 12,
-    borderRadius: '50%',
-    background: color,
-    boxShadow: `0 0 8px ${color}`,
-    display: 'inline-block'
-  })
-
-  const statusDot = (b) => {
-    const paid = isPaid(b)
-
-    if (b.status === 'approved' || b.status === 'approved_paid') {
-      return <span style={lamp(paid ? '#22c55e' : '#f97316')} /> // зелёная или оранжевая
-    }
-
-    if (b.status === 'pending') {
-      return <span style={lamp('#facc15')} />
-    }
-
-    return <span style={lamp('#6b7280')} />
-  }
-
-  const statusText = (b) => {
-    const paid = isPaid(b)
-
-    if (b.status === 'approved' || b.status === 'approved_paid') {
-      if (paid) return 'Бронирование подтверждено • Оплачено'
-      return 'Бронирование подтверждено • Ожидает оплаты'
-    }
-
-    if (b.status === 'pending')
-      return paid ? 'Ожидает подтверждения • Оплачено' : 'Ожидает подтверждения • Не оплачено'
-
-    if (b.status === 'canceled_client') return 'Отменено клиентом'
-    if (b.status === 'canceled_admin') return 'Отменено администратором'
-
-    return b.status
-  }
-import React, { useEffect, useMemo, useState } from 'react'
-import {
-  getCurrentUser,
-  getBookings,
-  saveBookings,
-  fmtDate,
-  fmtTime,
-  getUsers,
-  saveUsers,
-  setCurrentUser
-} from '../lib/storage'
-import { useI18n } from '../lib/i18n'
-
 // Цвета для тегов услуг
 const tagColors = {
   'Šukuosena': '#c084fc',
@@ -304,7 +95,10 @@ export default function MyBookings() {
     const approvedNow = all.find(
       b =>
         (b.status === 'approved' || b.status === 'approved_paid') &&
-        !prev.find(p => p.id === b.id && p.status === 'approved')
+        !prev.find(p =>
+          p.id === b.id &&
+          (p.status === 'approved' || p.status === 'approved_paid')
+        )
     )
     if (approvedNow) {
       setApprovedModal(true)
@@ -515,6 +309,7 @@ export default function MyBookings() {
     }
     .row {
       display: flex;
+      justify-content: space между;
       justify-content: space-between;
       gap: 12px;
       margin: 4px 0;
