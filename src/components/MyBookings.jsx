@@ -27,6 +27,11 @@ const BANK_DETAILS = {
   descriptionPrefix: 'Rezervacija'
 }
 
+// helper: считается, что бронь оплачена,
+// если либо установлен флаг paid = true,
+// либо старый статус 'approved_paid'
+const isPaid = (b) => !!(b?.paid || b?.status === 'approved_paid')
+
 export default function MyBookings() {
   const { t } = useI18n()
   const user = getCurrentUser()
@@ -51,6 +56,7 @@ export default function MyBookings() {
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [paymentError, setPaymentError] = useState('')
 
+  // читаем брони при каждом рендере (обновление через version)
   const bookingsAll = getBookings()
   const all = bookingsAll
     .filter(b => user && b.userPhone === user.phone)
@@ -58,11 +64,8 @@ export default function MyBookings() {
 
   const list = useMemo(() => {
     if (filter === 'active') {
-      // активные = все не отменённые
-      return all.filter(
-        b =>
-          b.status === 'approved' ||
-          b.status === 'pending'
+      return all.filter(b =>
+        b.status === 'approved' || b.status === 'approved_paid'
       )
     }
     if (filter === 'canceled') {
@@ -87,6 +90,17 @@ export default function MyBookings() {
     }
     localStorage.setItem('prevBookings', JSON.stringify(all))
   }, [all])
+
+  // авто-синхронизация с изменениями в localStorage (админка)
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (!e.key || e.key === 'iz.bookings.v7') {
+        setVersion(v => v + 1)
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   const validate = () => {
     const e = {}
@@ -151,7 +165,6 @@ export default function MyBookings() {
     setPaymentError('')
     setPaymentLoading(false)
   }
-
   const closePaymentModal = () => {
     setPaymentBooking(null)
     setPaymentError('')
@@ -161,7 +174,7 @@ export default function MyBookings() {
   const startPayment = async (method) => {
     if (!paymentBooking) return
 
-    // банковский перевод — просто показываем реквизиты
+    // банковский перевод — только инструкции, без запросов
     if (method === 'bank') return
 
     try {
@@ -193,26 +206,211 @@ export default function MyBookings() {
     }
   }
 
-  // === КВИТАНЦИЯ ===
-  const downloadReceipt = (booking) => {
+  // === КВИТАНЦИЯ (HTML → печать → PDF пользователем) ===
+  const downloadReceipt = (b) => {
     try {
-      const logoUrl = `${window.location.origin}/logo2.svg`
-      const html = buildReceiptHtml(booking, logoUrl)
-      const win = window.open('', '_blank')
-
+      const win = window.open('', '_blank', 'width=700,height=900')
       if (!win) return
 
+      const dateStr = fmtDate(b.start)
+      const timeStr = `${fmtTime(b.start)} – ${fmtTime(b.end)}`
+      const createdStr = b.createdAt
+        ? new Date(b.createdAt).toLocaleString('lt-LT')
+        : new Date(b.start).toLocaleString('lt-LT')
+      const servicesStr = (b.services || []).join(', ') || '—'
+      const paidLabel = isPaid(b) ? 'Оплачено' : 'Не оплачено'
+
+      // vCard для QR-визитки Ирины
+      const vcard = [
+        'BEGIN:VCARD',
+        'VERSION:3.0',
+        'N:Žilina;Irina;;;',
+        'FN:Irina Žilina',
+        'ORG:IZ HAIR TREND',
+        'TEL;TYPE=CELL,VOICE:+37060128458',
+        'EMAIL;TYPE=WORK:info@izhairtrend.lt',
+        'URL:https://izhairtrend.lt',
+        'ADR;TYPE=WORK:;;Sodo g. 2a;Klaipeda;;;LT',
+        'NOTE:Šukuosenų meistrė',
+        'END:VCARD'
+      ].join('\n')
+
+      const qrUrl =
+        'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' +
+        encodeURIComponent(vcard)
+
+      const html = `<!doctype html>
+<html>
+<head>
+  <meta charSet="utf-8" />
+  <title>Квитанция #${b.id.slice(0, 6)}</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0b0217;
+      color: #f9fafb;
+      margin: 0;
+      padding: 24px;
+    }
+    .wrap {
+      max-width: 640px;
+      margin: 0 auto;
+      border-radius: 16px;
+      border: 1px solid rgba(168,85,247,0.5);
+      background: radial-gradient(circle at top left, rgba(168,85,247,0.2), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(56,189,248,0.15), transparent 60%),
+                  rgba(15,23,42,0.95);
+      padding: 24px 28px 28px;
+    }
+    .sub {
+      font-size: 13px;
+      opacity: 0.75;
+    }
+    .title {
+      margin-top: 16px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .top-left {
+      text-align: left;
+    }
+    .top-right {
+      text-align: right;
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    .section {
+      margin-top: 16px;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(148,163,184,0.5);
+      font-size: 14px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 4px 0;
+    }
+    .label {
+      opacity: 0.8;
+    }
+    .value {
+      font-weight: 500;
+      text-align: right;
+    }
+    .services {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tag {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(168,85,247,0.7);
+      background: rgba(30,64,175,0.35);
+      font-size: 12px;
+    }
+    .footer {
+      margin-top: 18px;
+      font-size: 11px;
+      opacity: 0.75;
+      line-height: 1.5;
+    }
+    .qr-label {
+      font-size: 11px;
+      margin-top: 4px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top-row">
+      <div class="top-left">
+        <img src="/logo2.svg" style="height:70px; margin-bottom:6px;" />
+        <div class="sub">Kvitancija už rezervaciją</div>
+      </div>
+      <div class="top-right">
+        Nr.: <b>#${b.id.slice(0, 6)}</b><br/>
+        Sukurta: ${createdStr}<br/>
+        <img src="${qrUrl}" alt="IZ HAIR TREND vCard" style="margin-top:6px; border-radius:12px; border:1px solid rgba(148,163,184,0.7); padding:4px; background:rgba(15,23,42,0.9);" />
+        <div class="qr-label">Skenuokite ir išsaugokite kontaktą</div>
+      </div>
+    </div>
+
+    <div class="title">Kvitancija</div>
+
+    <div class="section">
+      <div class="row">
+        <div class="label">Klientas:</div>
+        <div class="value">${b.userName || '-'}</div>
+      </div>
+      <div class="row">
+        <div class="label">Telefonas:</div>
+        <div class="value">${b.userPhone || '-'}</div>
+      </div>
+      <div class="row">
+        <div class="label">El. paštas:</div>
+        <div class="value">${b.userEmail || '-'}</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="row">
+        <div class="label">Data:</div>
+        <div class="value">${dateStr}</div>
+      </div>
+      <div class="row">
+        <div class="label">Laikas:</div>
+        <div class="value">${timeStr}</div>
+      </div>
+      <div class="row">
+        <div class="label">Paslaugos:</div>
+        <div class="value">${servicesStr}</div>
+      </div>
+      <div class="services">
+        ${(b.services || []).map(s => `<span class="tag">${s}</span>`).join('')}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="row">
+        <div class="label">Avansas:</div>
+        <div class="value">${b.price ? `${b.price} €` : '—'}</div>
+      </div>
+      <div class="row">
+        <div class="label">Mokėjimo būsena:</div>
+        <div class="value">${paidLabel}</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Ši kvitancija sugeneruota internetu ir galioja be parašo.<br/>
+      Jei reikia, galite ją išsisaugoti kaip PDF: naršyklėje pasirinkite "Spausdinti" → "Save as PDF".
+    </div>
+  </div>
+
+  <script>
+    window.focus();
+    setTimeout(function(){
+      window.print();
+    }, 400);
+  </script>
+</body>
+</html>`
+
+      win.document.open()
       win.document.write(html)
       win.document.close()
-
-      // Небольшая задержка, чтобы всё отрисовалось, и сразу Print → Save as PDF
-      setTimeout(() => {
-        win.focus()
-        win.print()
-      }, 300)
     } catch (e) {
-      console.error(e)
-      alert('Не удалось открыть квитанцию. Попробуйте отключить блокировщик всплывающих окон.')
+      console.error('Receipt error', e)
     }
   }
 
@@ -225,7 +423,7 @@ export default function MyBookings() {
   }
 
   const statusDot = (b) => {
-    if (b.status === 'approved') {
+    if (b.status === 'approved' || b.status === 'approved_paid') {
       return (
         <span
           style={{
@@ -247,20 +445,30 @@ export default function MyBookings() {
         />
       )
     }
-    // отменённые / прочие
-    return <span style={{ ...dot, background: '#9ca3af' }} />
+    return (
+      <span
+        style={{
+          ...dot,
+          background: '#9ca3af'
+        }}
+      />
+    )
   }
 
   const statusText = (b) => {
-    if (b.status === 'approved') return '🟢 Бронирование подтверждено'
+    const paid = isPaid(b)
+
+    if (b.status === 'approved' || b.status === 'approved_paid') {
+      if (paid) {
+        return '🟢 Бронирование подтверждено • 💰 Оплачено'
+      }
+      return '🟢 Бронирование подтверждено • ⏳ Ожидает оплаты'
+    }
     if (b.status === 'pending') return '🟡 Ожидает подтверждения'
     if (b.status === 'canceled_client') return '❌ Отменена клиентом'
     if (b.status === 'canceled_admin') return '🔴 Отменена администратором'
     return b.status
   }
-
-  const paymentStatusText = (b) =>
-    b.paid ? '🟢 Apmokėta' : '🟡 Laukiama apmokėjimo'
 
   return (
     <div style={container}>
@@ -311,14 +519,18 @@ export default function MyBookings() {
                 <label>Телефон</label>
                 <input
                   value={form.phone}
-                  onChange={e => setForm({ ...form, phone: e.target.value })}
+                  onChange={e =>
+                    setForm({ ...form, phone: e.target.value })
+                  }
                 />
               </div>
               <div>
                 <label>Email</label>
                 <input
                   value={form.email}
-                  onChange={e => setForm({ ...form, email: e.target.value })}
+                  onChange={e =>
+                    setForm({ ...form, email: e.target.value })
+                  }
                 />
               </div>
               <div>
@@ -374,17 +586,61 @@ export default function MyBookings() {
         <div className="mobile-list">
           {list.map(b => {
             const canCancel =
-              (b.status === 'pending' || b.status === 'approved') &&
+              (b.status === 'pending' ||
+                b.status === 'approved' ||
+                b.status === 'approved_paid') &&
               new Date(b.end) > new Date()
-
-            const canDownloadReceipt =
-              b.status === 'approved' && new Date(b.end) > new Date()
+            const paid = isPaid(b)
+            const shortId = b.id.slice(0, 6)
 
             return (
               <div key={b.id} style={cardItem}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  {statusDot(b)}
-                  <b>{fmtDate(b.start)}</b>
+                {/* HEADER: дата + статусная точка + квитанция справа */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 10
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10
+                    }}
+                  >
+                    {statusDot(b)}
+                    <b>{fmtDate(b.start)}</b>
+                  </div>
+
+                  {paid && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-end',
+                        gap: 3
+                      }}
+                    >
+                      <button
+                        type="button"
+                        style={receiptBtn}
+                        onClick={() => downloadReceipt(b)}
+                      >
+                        🧾 Скачать квитанцию
+                      </button>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          opacity: 0.75
+                        }}
+                      >
+                        Nr. kvitancii: <b>#{shortId}</b>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ opacity: 0.8, marginTop: 4 }}>
@@ -425,21 +681,17 @@ export default function MyBookings() {
                   </div>
                 )}
 
-                {/* Статус бронирования */}
+                {/* Статус + оплата */}
                 <div style={{ marginTop: 6, fontSize: 13 }}>
-                  <span style={{ fontWeight: 600 }}>Бронирование: </span>
+                  <span style={{ fontWeight: 600 }}>Статус: </span>
                   <span>{statusText(b)}</span>
                 </div>
 
-                {/* Статус оплаты */}
-                <div style={{ marginTop: 2, fontSize: 13 }}>
-                  <span style={{ fontWeight: 600 }}>Оплата: </span>
-                  <span>{paymentStatusText(b)}</span>
-                </div>
-
-                {/* Кнопка оплаты — только если ещё не оплачено */}
-                {!b.paid &&
-                  (b.status === 'pending' || b.status === 'approved') && (
+                {/* Оплата — только если ещё не оплачено */}
+                {(b.status === 'pending' ||
+                  b.status === 'approved' ||
+                  b.status === 'approved_paid') &&
+                  !paid && (
                     <button
                       style={payBtn}
                       onClick={() => openPaymentModal(b)}
@@ -447,16 +699,6 @@ export default function MyBookings() {
                       💳 Apmokėti
                     </button>
                   )}
-
-                {/* Скачать квитанцию — после подтверждения брони */}
-                {canDownloadReceipt && (
-                  <button
-                    style={receiptBtn}
-                    onClick={() => downloadReceipt(b)}
-                  >
-                    📄 Скачать квитанцию
-                  </button>
-                )}
 
                 {/* Отмена */}
                 {canCancel && (
@@ -522,8 +764,8 @@ export default function MyBookings() {
             <h3>Выберите способ оплаты</h3>
 
             <p style={{ opacity: 0.9 }}>
-              {fmtDate(paymentBooking.start)} •{' '}
-              {fmtTime(paymentBooking.start)} – {fmtTime(paymentBooking.end)}
+              {fmtDate(paymentBooking.start)} • {fmtTime(paymentBooking.start)} –{' '}
+              {fmtTime(paymentBooking.end)}
             </p>
 
             {paymentBooking.price && (
@@ -570,7 +812,7 @@ export default function MyBookings() {
               </button>
             </div>
 
-            {/* Реквизиты */}
+            {/* Реквизиты (без QR) */}
             <div style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>
               <b>Banko duomenys:</b>
               <br />
@@ -578,8 +820,7 @@ export default function MyBookings() {
               <br />
               IBAN: {BANK_DETAILS.iban}
               <br />
-              Paskirtis: {BANK_DETAILS.descriptionPrefix}{' '}
-              #{paymentBooking.id.slice(0, 6)}
+              Paskirtis: {BANK_DETAILS.descriptionPrefix} #{paymentBooking.id.slice(0, 6)}
             </div>
 
             <button
@@ -596,280 +837,7 @@ export default function MyBookings() {
   )
 }
 
-/* ====== HTML для квитанции ====== */
-
-function buildReceiptHtml(booking, logoUrl) {
-  const dateStr = fmtDate(booking.start)
-  const timeStr = `${fmtTime(booking.start)} – ${fmtTime(booking.end)}`
-  const services = Array.isArray(booking.services)
-    ? booking.services.join(', ')
-    : ''
-  const avansas = booking.price || 0
-
-  const bookingStatus =
-    booking.status === 'approved'
-      ? 'Бронирование подтверждено'
-      : booking.status === 'pending'
-      ? 'Ожидает подтверждения'
-      : booking.status === 'canceled_client'
-      ? 'Отменена клиентом'
-      : booking.status === 'canceled_admin'
-      ? 'Отменена администратором'
-      : booking.status
-
-  const paymentStatus = booking.paid ? 'Apmokėta' : 'Laukiama apmokėjimo'
-
-  const payUrl = `https://izhairtrend.lt/pay?to=bank&sum=${encodeURIComponent(
-    avansas
-  )}&id=${encodeURIComponent(booking.id)}`
-
-  const vcard = [
-    'BEGIN:VCARD',
-    'VERSION:3.0',
-    'FN:Irina Žilina',
-    'ORG:IZ HAIR TREND',
-    'TEL:+37060128458',
-    'EMAIL:info@izhairtrend.lt',
-    'URL:https://izhairtrend.lt',
-    'ADR:;;Sodo g. 2a;Klaipėda;;;',
-    'NOTE:Šukuosenų meistrė',
-    'X-SOCIALPROFILE;type=instagram:https://instagram.com/irinazilina.hairtrend',
-    'END:VCARD'
-  ].join('\n')
-
-  const payQrSrc =
-    'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' +
-    encodeURIComponent(payUrl)
-
-  const vcardQrSrc =
-    'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' +
-    encodeURIComponent(vcard)
-
-  return `
-<!DOCTYPE html>
-<html lang="lt">
-<head>
-<meta charset="UTF-8" />
-<title>Kvitancija</title>
-<style>
-  body {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #0b0714;
-    color: #111827;
-    padding: 32px;
-  }
-  .wrapper {
-    max-width: 720px;
-    margin: 0 auto;
-    background: #f9fafb;
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(15,23,42,0.55);
-    padding: 28px 32px 32px;
-  }
-  .logo {
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  .logo img {
-    max-width: 220px;
-    height: auto;
-  }
-  h1 {
-    font-size: 22px;
-    text-align: center;
-    margin: 0 0 8px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #4b5563;
-  }
-  .sub {
-    text-align: center;
-    font-size: 13px;
-    color: #6b7280;
-    margin-bottom: 20px;
-  }
-  .section {
-    margin-bottom: 14px;
-  }
-  .section-title {
-    font-size: 13px;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    margin-bottom: 4px;
-  }
-  .box {
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    background: #ffffff;
-    padding: 10px 12px;
-    font-size: 14px;
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    gap: 12px;
-  }
-  .label {
-    color: #6b7280;
-    font-size: 13px;
-  }
-  .value {
-    font-weight: 600;
-    color: #111827;
-  }
-  .status-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 14px;
-  }
-  .status-pill {
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: #ecfdf5;
-    color: #15803d;
-    font-weight: 600;
-    font-size: 13px;
-  }
-  .status-pill.pending {
-    background: #fffbeb;
-    color: #92400e;
-  }
-  .status-pill.cancel {
-    background: #fef2f2;
-    color: #b91c1c;
-  }
-  .qr-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0,1fr));
-    gap: 12px;
-    margin-top: 8px;
-  }
-  .qr-card {
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    background: #ffffff;
-    padding: 10px 10px 12px;
-    text-align: center;
-  }
-  .qr-card img {
-    width: 160px;
-    height: 160px;
-  }
-  .qr-title {
-    font-size: 13px;
-    margin-top: 6px;
-    color: #374151;
-    font-weight: 600;
-  }
-  .qr-desc {
-    font-size: 11px;
-    color: #6b7280;
-    margin-top: 2px;
-  }
-  .footer {
-    margin-top: 16px;
-    font-size: 11px;
-    color: #9ca3af;
-    text-align: center;
-  }
-  @media print {
-    body {
-      background: #ffffff;
-      padding: 0;
-    }
-    .wrapper {
-      box-shadow: none;
-      border-radius: 0;
-    }
-  }
-</style>
-</head>
-<body>
-  <div class="wrapper">
-    <div class="logo">
-      <img src="${logoUrl}" alt="IZ HAIR TREND" />
-    </div>
-    <h1>AVANSO KVITAS</h1>
-    <div class="sub">
-      Ši kvitas patvirtina avanso gavimą už šukuosenų paslaugą.
-    </div>
-
-    <div class="section">
-      <div class="section-title">Rezervacijos duomenys</div>
-      <div class="box grid">
-        <div>
-          <div class="label">Data</div>
-          <div class="value">${dateStr}</div>
-        </div>
-        <div>
-          <div class="label">Laikas</div>
-          <div class="value">${timeStr}</div>
-        </div>
-        <div>
-          <div class="label">Paslaugos</div>
-          <div class="value">${services || '—'}</div>
-        </div>
-        <div>
-          <div class="label">Klientas</div>
-          <div class="value">${booking.userName || ''}</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Avansas</div>
-      <div class="box status-row">
-        <div>
-          <div class="label">Suma</div>
-          <div class="value">${avansas} €</div>
-        </div>
-        <div>
-          <div class="label">Būklė</div>
-          <div class="status-pill ${
-            booking.status === 'approved'
-              ? ''
-              : booking.status === 'pending'
-              ? 'pending'
-              : 'cancel'
-          }">${bookingStatus}</div>
-        </div>
-        <div>
-          <div class="label">Apmokėjimas</div>
-          <div class="status-pill ${
-            booking.paid ? '' : 'pending'
-          }">${paymentStatus}</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">QR kodai</div>
-      <div class="qr-grid">
-        <div class="qr-card">
-          <img src="${payQrSrc}" alt="Pay QR" />
-          <div class="qr-title">QR apmokėjimui</div>
-          <div class="qr-desc">Atidaro puslapį su apmokėjimo informacija.</div>
-        </div>
-        <div class="qr-card">
-          <img src="${vcardQrSrc}" alt="Contact QR" />
-          <div class="qr-title">Kontakto QR (vCard)</div>
-          <div class="qr-desc">Įsiminkite Irina Žilina kontaktą telefone.</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="footer">
-      Kvitas sugeneruotas automatiškai iš rezervacijos sistemos izhairtrend.lt
-    </div>
-  </div>
-</body>
-</html>
-`
-}
-
-/* ==== СТИЛИ КОМПОНЕНТА ==== */
+/* ==== СТИЛИ ==== */
 
 const container = { paddingBottom: '40px' }
 const dot = { width: 12, height: 12, borderRadius: '50%', display: 'inline-block' }
@@ -944,15 +912,14 @@ const payBtn = {
 }
 
 const receiptBtn = {
-  marginTop: 8,
-  width: '100%',
-  padding: '8px 10px',
-  borderRadius: 10,
-  background: 'rgba(129,140,248,0.18)',
-  border: '1px solid rgba(129,140,248,0.8)',
+  padding: '6px 10px',
+  borderRadius: 8,
+  border: '1px solid rgba(148,163,184,0.7)',
+  background: 'rgba(15,23,42,0.9)',
   color: '#e5e7eb',
+  fontSize: 12,
   cursor: 'pointer',
-  fontSize: 13
+  whiteSpace: 'nowrap'
 }
 
 const payOptionBtn = {
