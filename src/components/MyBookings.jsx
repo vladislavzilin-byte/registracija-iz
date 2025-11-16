@@ -32,12 +32,6 @@ const BANK_DETAILS = {
 // либо старый статус 'approved_paid'
 const isPaid = (b) => !!(b?.paid || b?.status === 'approved_paid')
 
-// запись считается в прошлом, если время окончания уже прошло
-const isPastBooking = (b, nowMs) => {
-  const end = new Date(b.end || b.start).getTime()
-  return end <= nowMs
-}
-
 export default function MyBookings() {
   const { t } = useI18n()
   const user = getCurrentUser()
@@ -68,27 +62,44 @@ export default function MyBookings() {
     .filter(b => user && b.userPhone === user.phone)
     .sort((a, b) => new Date(a.start) - new Date(b.start))
 
+  // === ФИЛЬТР: Все — Активные — История ===
+  // Активные: будущие, не отменённые
+  // История: все прошедшие + все отменённые (в любом дне)
   const list = useMemo(() => {
-    const nowMs = Date.now()
+    const now = new Date()
+
+    const withFlags = all.map(b => {
+      const end = new Date(b.end || b.start)
+      const isCanceled =
+        b.status === 'canceled_client' || b.status === 'canceled_admin'
+      const isPast = end < now
+      const isFuture = !isPast
+      return { b, end, isCanceled, isPast, isFuture }
+    })
 
     if (filter === 'active') {
-      // Активные: будущие записи, не отменённые
-      return all.filter(b => {
-        const past = isPastBooking(b, nowMs)
-        const canceled =
-          b.status === 'canceled_client' || b.status === 'canceled_admin'
-        return !past && !canceled
-      })
+      // только активные будущие записи (не отменённые)
+      return withFlags
+        .filter(x =>
+          !x.isCanceled &&
+          x.isFuture &&
+          (x.b.status === 'pending' ||
+            x.b.status === 'approved' ||
+            x.b.status === 'approved_paid')
+        )
+        .map(x => x.b)
     }
 
     if (filter === 'history') {
-      // История: все записи, которые уже закончились (по времени)
-      return all.filter(b => isPastBooking(b, nowMs))
+      // всё, что в прошлом ИЛИ отменено
+      return withFlags
+        .filter(x => x.isPast || x.isCanceled)
+        .map(x => x.b)
     }
 
-    // "Все": всё подряд
+    // "Все"
     return all
-  }, [filter, version, bookingsAll.length])
+  }, [all, filter, version, bookingsAll.length])
 
   // пуш-окно если запись подтверждена
   useEffect(() => {
@@ -234,6 +245,25 @@ export default function MyBookings() {
       const servicesStr = (b.services || []).join(', ') || '—'
       const paidLabel = isPaid(b) ? 'Оплачено' : 'Не оплачено'
 
+      // vCard для QR-визитки Ирины
+      const vcard = [
+        'BEGIN:VCARD',
+        'VERSION:3.0',
+        'N:Žilina;Irina;;;',
+        'FN:Irina Žilina',
+        'ORG:IZ HAIR TREND',
+        'TEL;TYPE=CELL,VOICE:+37060128458',
+        'EMAIL;TYPE=WORK:info@izhairtrend.lt',
+        'URL:https://izhairtrend.lt',
+        'ADR;TYPE=WORK:;;Sodo g. 2a;Klaipeda;;;LT',
+        'NOTE:Šukuosenų meistrė',
+        'END:VCARD'
+      ].join('\n')
+
+      const qrUrl =
+        'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' +
+        encodeURIComponent(vcard)
+
       const html = `<!doctype html>
 <html>
 <head>
@@ -265,6 +295,20 @@ export default function MyBookings() {
       margin-top: 16px;
       font-size: 20px;
       font-weight: 700;
+    }
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .top-left {
+      text-align: left;
+    }
+    .top-right {
+      text-align: right;
+      font-size: 12px;
+      opacity: 0.9;
     }
     .section {
       margin-top: 16px;
@@ -304,18 +348,39 @@ export default function MyBookings() {
       opacity: 0.75;
       line-height: 1.5;
     }
+    .qr-label {
+      font-size: 11px;
+      margin-top: 4px;
+      opacity: 0.8;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
-      <div style="text-align:left;">
-        <img src="/logo2.svg" style="height:140px; margin-bottom:6px;" />
+    <div class="top-row">
+      <div class="top-left">
+        <img src="/logo2.svg" style="height:100px; margin-bottom:6px;" />
         <div class="sub">Kvitancija už rezervaciją</div>
       </div>
-      <div style="text-align:right; font-size:12px; opacity:0.8;">
+
+      <div class="top-right">
         Nr.: <b>#${b.id.slice(0, 6)}</b><br/>
-        Sukurta: ${createdStr}
+        Sukurta: ${createdStr}<br/>
+
+        <img src="${qrUrl}" alt="IZ HAIR TREND vCard"
+             style="
+               margin-top:10px;
+               border-radius:10px;
+               border:1px solid rgba(148,163,184,0.6);
+               padding:6px;
+               background:rgba(15,23,42,0.9);
+               width:90px;
+               height:90px;
+             "/>
+
+        <div class="qr-label">
+          Skenuokite ir išsaugokite kontaktą
+        </div>
       </div>
     </div>
 
@@ -438,14 +503,7 @@ export default function MyBookings() {
       }
       return '🟢 Бронирование подтверждено • ⏳ Ожидает оплаты'
     }
-
-    if (b.status === 'pending') {
-      if (paid) {
-        return '🟡 Ожидает подтверждения • 💰 Оплачено'
-      }
-      return '🟡 Ожидает подтверждения • ⏳ Ожидает оплаты'
-    }
-
+    if (b.status === 'pending') return '🟡 Ожидает подтверждения'
     if (b.status === 'canceled_client') return '❌ Отменена клиентом'
     if (b.status === 'canceled_admin') return '🔴 Отменена администратором'
     return b.status
@@ -453,6 +511,7 @@ export default function MyBookings() {
 
   return (
     <div style={container}>
+
       {/* === ПРОФИЛЬ === */}
       <div style={outerCard}>
         <h3 style={{ margin: 0, padding: '10px 20px' }}>Профиль</h3>
@@ -565,18 +624,18 @@ export default function MyBookings() {
 
         <div className="mobile-list">
           {list.map(b => {
-            const nowMs = Date.now()
-            const past = isPastBooking(b, nowMs)
+            const end = new Date(b.end || b.start)
             const canCancel =
-              !past &&
               (b.status === 'pending' ||
                 b.status === 'approved' ||
-                b.status === 'approved_paid')
+                b.status === 'approved_paid') &&
+              end > new Date()
             const paid = isPaid(b)
+            const shortId = b.id.slice(0, 6)
 
             return (
               <div key={b.id} style={cardItem}>
-                {/* HEADER: дата + статус + кнопка квитанции справа */}
+                {/* HEADER: дата + статусная точка + квитанция справа */}
                 <div
                   style={{
                     display: 'flex',
@@ -585,13 +644,26 @@ export default function MyBookings() {
                     gap: 10
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10
+                    }}
+                  >
                     {statusDot(b)}
                     <b>{fmtDate(b.start)}</b>
                   </div>
 
                   {paid && (
-                    <div style={{ textAlign: 'right' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-end',
+                        gap: 3
+                      }}
+                    >
                       <button
                         type="button"
                         style={receiptBtn}
@@ -602,11 +674,10 @@ export default function MyBookings() {
                       <div
                         style={{
                           fontSize: 11,
-                          opacity: 0.7,
-                          marginTop: 2
+                          opacity: 0.75
                         }}
                       >
-                        Nr.: #{b.id.slice(0, 6)}
+                        Nr. kvitancii: <b>#{shortId}</b>
                       </div>
                     </div>
                   )}
@@ -656,7 +727,7 @@ export default function MyBookings() {
                   <span>{statusText(b)}</span>
                 </div>
 
-                {/* Оплата — кнопка только если ещё не оплачено */}
+                {/* Оплата — только если ещё не оплачено */}
                 {(b.status === 'pending' ||
                   b.status === 'approved' ||
                   b.status === 'approved_paid') &&
@@ -781,7 +852,7 @@ export default function MyBookings() {
               </button>
             </div>
 
-            {/* Реквизиты */}
+            {/* Реквизиты (без QR) */}
             <div style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>
               <b>Banko duomenys:</b>
               <br />
@@ -789,8 +860,7 @@ export default function MyBookings() {
               <br />
               IBAN: {BANK_DETAILS.iban}
               <br />
-              Paskirtis: {BANK_DETAILS.descriptionPrefix} #
-              {paymentBooking.id.slice(0, 6)}
+              Paskirtis: {BANK_DETAILS.descriptionPrefix} #{paymentBooking.id.slice(0, 6)}
             </div>
 
             <button
@@ -802,6 +872,7 @@ export default function MyBookings() {
           </div>
         </div>
       )}
+
     </div>
   )
 }
