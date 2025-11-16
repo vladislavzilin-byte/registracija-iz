@@ -27,6 +27,11 @@ const BANK_DETAILS = {
   descriptionPrefix: 'Rezervacija'
 }
 
+// helper: считается, что бронь оплачена,
+// если либо установлен флаг paid = true,
+// либо старый статус 'approved_paid'
+const isPaid = (b) => !!(b?.paid || b?.status === 'approved_paid')
+
 export default function MyBookings() {
   const { t } = useI18n()
   const user = getCurrentUser()
@@ -51,19 +56,23 @@ export default function MyBookings() {
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [paymentError, setPaymentError] = useState('')
 
+  // читаем брони при каждом рендере (обновление через version)
   const bookingsAll = getBookings()
   const all = bookingsAll
     .filter(b => user && b.userPhone === user.phone)
     .sort((a, b) => new Date(a.start) - new Date(b.start))
 
   const list = useMemo(() => {
-    if (filter === 'active') return all.filter(b =>
-      b.status === 'approved' || b.status === 'approved_paid'
-    )
-    if (filter === 'canceled')
+    if (filter === 'active') {
+      return all.filter(b =>
+        b.status === 'approved' || b.status === 'approved_paid'
+      )
+    }
+    if (filter === 'canceled') {
       return all.filter(
         b => b.status === 'canceled_client' || b.status === 'canceled_admin'
       )
+    }
     return all
   }, [filter, version, bookingsAll.length])
 
@@ -81,6 +90,18 @@ export default function MyBookings() {
     }
     localStorage.setItem('prevBookings', JSON.stringify(all))
   }, [all])
+
+  // авто-синхронизация с изменениями в localStorage (админка)
+  useEffect(() => {
+    const onStorage = (e) => {
+      // если изменились записи — обновляем список
+      if (!e.key || e.key === 'iz.bookings.v7') {
+        setVersion(v => v + 1)
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   const validate = () => {
     const e = {}
@@ -154,6 +175,7 @@ export default function MyBookings() {
   const startPayment = async (method) => {
     if (!paymentBooking) return
 
+    // банковский перевод — только инструкции, без запросов
     if (method === 'bank') return
 
     try {
@@ -185,6 +207,179 @@ export default function MyBookings() {
     }
   }
 
+  // === КВИТАНЦИЯ (HTML → печать → PDF пользователем) ===
+  const downloadReceipt = (b) => {
+    try {
+      const win = window.open('', '_blank', 'width=700,height=900')
+      if (!win) return
+
+      const dateStr = fmtDate(b.start)
+      const timeStr = `${fmtTime(b.start)} – ${fmtTime(b.end)}`
+      const createdStr = b.createdAt
+        ? new Date(b.createdAt).toLocaleString('lt-LT')
+        : new Date(b.start).toLocaleString('lt-LT')
+      const servicesStr = (b.services || []).join(', ') || '—'
+      const paidLabel = isPaid(b) ? 'Оплачено' : 'Не оплачено'
+
+      const html = `<!doctype html>
+<html>
+<head>
+  <meta charSet="utf-8" />
+  <title>Квитанция #${b.id.slice(0, 6)}</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0b0217;
+      color: #f9fafb;
+      margin: 0;
+      padding: 24px;
+    }
+    .wrap {
+      max-width: 640px;
+      margin: 0 auto;
+      border-radius: 16px;
+      border: 1px solid rgba(168,85,247,0.5);
+      background: radial-gradient(circle at top left, rgba(168,85,247,0.2), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(56,189,248,0.15), transparent 60%),
+                  rgba(15,23,42,0.95);
+      padding: 24px 28px 28px;
+    }
+    .logo {
+      font-weight: 800;
+      font-size: 22px;
+      letter-spacing: 0.08em;
+    }
+    .sub {
+      font-size: 13px;
+      opacity: 0.75;
+    }
+    .title {
+      margin-top: 16px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .section {
+      margin-top: 16px;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(148,163,184,0.5);
+      font-size: 14px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 4px 0;
+    }
+    .label {
+      opacity: 0.8;
+    }
+    .value {
+      font-weight: 500;
+      text-align: right;
+    }
+    .services {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tag {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(168,85,247,0.7);
+      background: rgba(30,64,175,0.35);
+      font-size: 12px;
+    }
+    .footer {
+      margin-top: 18px;
+      font-size: 11px;
+      opacity: 0.75;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+      <div>
+        <div class="logo">IZ HAIR TREND</div>
+        <div class="sub">Kvitancija už rezervaciją</div>
+      </div>
+      <div style="text-align:right; font-size:12px; opacity:0.8;">
+        Nr.: <b>#${b.id.slice(0, 6)}</b><br/>
+        Sukurta: ${createdStr}
+      </div>
+    </div>
+
+    <div class="title">Kvitancija</div>
+
+    <div class="section">
+      <div class="row">
+        <div class="label">Klientas:</div>
+        <div class="value">${b.userName || '-'}</div>
+      </div>
+      <div class="row">
+        <div class="label">Telefonas:</div>
+        <div class="value">${b.userPhone || '-'}</div>
+      </div>
+      <div class="row">
+        <div class="label">El. paštas:</div>
+        <div class="value">${b.userEmail || '-'}</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="row">
+        <div class="label">Data:</div>
+        <div class="value">${dateStr}</div>
+      </div>
+      <div class="row">
+        <div class="label">Laikas:</div>
+        <div class="value">${timeStr}</div>
+      </div>
+      <div class="row">
+        <div class="label">Paslaugos:</div>
+        <div class="value">${servicesStr}</div>
+      </div>
+      <div class="services">
+        ${(b.services || []).map(s => `<span class="tag">${s}</span>`).join('')}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="row">
+        <div class="label">Avansas:</div>
+        <div class="value">${b.price ? `${b.price} €` : '—'}</div>
+      </div>
+      <div class="row">
+        <div class="label">Mokėjimo būsena:</div>
+        <div class="value">${paidLabel}</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Ši kvitancija sugeneruota internetu ir galioja be parašo.<br/>
+      Jei reikia, galite ją išsisaugoti kaip PDF: naršyklėje pasirinkite "Spausdinti" → "Save as PDF".
+    </div>
+  </div>
+
+  <script>
+    window.focus();
+    setTimeout(function(){
+      window.print();
+    }, 400);
+  </script>
+</body>
+</html>`
+
+      win.document.open()
+      win.document.write(html)
+      win.document.close()
+    } catch (e) {
+      console.error('Receipt error', e)
+    }
+  }
+
   if (!user) {
     return (
       <div className="card">
@@ -194,15 +389,48 @@ export default function MyBookings() {
   }
 
   const statusDot = (b) => {
-    if (b.status === 'approved_paid') return <span style={{ ...dot, background: '#4ade80', boxShadow: '0 0 8px #4ade80' }}/>
-    if (b.status === 'approved') return <span style={{ ...dot, background: '#22c55e', boxShadow: '0 0 8px #22c55e' }}/>
-    if (b.status === 'pending') return <span style={{ ...dot, background: '#facc15' }}/>
-    return <span style={{ ...dot, background: '#9ca3af' }}/>
+    if (b.status === 'approved' || b.status === 'approved_paid') {
+      return (
+        <span
+          style={{
+            ...dot,
+            background: '#22c55e',
+            boxShadow: '0 0 8px #22c55e'
+          }}
+        />
+      )
+    }
+    if (b.status === 'pending') {
+      return (
+        <span
+          style={{
+            ...dot,
+            background: '#facc15',
+            boxShadow: '0 0 6px rgba(250,204,21,0.8)'
+          }}
+        />
+      )
+    }
+    // отменённые
+    return (
+      <span
+        style={{
+          ...dot,
+          background: '#9ca3af'
+        }}
+      />
+    )
   }
 
   const statusText = (b) => {
-    if (b.status === 'approved_paid') return '🟢 Оплачена и подтверждена'
-    if (b.status === 'approved') return '🟢 Бронирование подтверждено'
+    const paid = isPaid(b)
+
+    if (b.status === 'approved' || b.status === 'approved_paid') {
+      if (paid) {
+        return '🟢 Бронирование подтверждено • 💰 Оплачено'
+      }
+      return '🟢 Бронирование подтверждено • ⏳ Ожидает оплаты'
+    }
     if (b.status === 'pending') return '🟡 Ожидает подтверждения'
     if (b.status === 'canceled_client') return '❌ Отменена клиентом'
     if (b.status === 'canceled_admin') return '🔴 Отменена администратором'
@@ -217,21 +445,79 @@ export default function MyBookings() {
         <h3 style={{ margin: 0, padding: '10px 20px' }}>Профиль</h3>
         <div style={innerCard}>
           <div style={innerHeader} onClick={() => setShowProfile(!showProfile)}>
-            <span style={{ color:'#a855f7', transform: showProfile ? 'rotate(180deg)' : 'rotate(0deg)', transition:'0.3s' }}>▾</span>
+            <span
+              style={{
+                color: '#a855f7',
+                transform: showProfile ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: '0.3s'
+              }}
+            >
+              ▾
+            </span>
             <span style={{ fontWeight: 600 }}>Редактировать профиль</span>
           </div>
 
-          <div style={{ ...profileBody, maxHeight: showProfile ? '900px':'0', opacity: showProfile ? 1 : 0, padding: showProfile ? '20px':'0 20px' }}>
-            <form className="col" style={{ gap:12 }} onSubmit={saveProfile}>
-              <div><label>Имя</label><input value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></div>
-              <div><label>Instagram</label><input value={form.instagram} onChange={e=>setForm({...form,instagram:e.target.value})}/></div>
-              <div><label>Телефон</label><input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/></div>
-              <div><label>Email</label><input value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></div>
-              <div><label>Пароль</label><input type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></div>
+          <div
+            style={{
+              ...profileBody,
+              maxHeight: showProfile ? '900px' : '0',
+              opacity: showProfile ? 1 : 0,
+              padding: showProfile ? '20px' : '0 20px'
+            }}
+          >
+            <form className="col" style={{ gap: 12 }} onSubmit={saveProfile}>
+              <div>
+                <label>Имя</label>
+                <input
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label>Instagram</label>
+                <input
+                  value={form.instagram}
+                  onChange={e =>
+                    setForm({ ...form, instagram: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label>Телефон</label>
+                <input
+                  value={form.phone}
+                  onChange={e =>
+                    setForm({ ...form, phone: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label>Email</label>
+                <input
+                  value={form.email}
+                  onChange={e =>
+                    setForm({ ...form, email: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label>Пароль</label>
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={e =>
+                    setForm({ ...form, password: e.target.value })
+                  }
+                />
+              </div>
 
-              {errors.contact && <div style={{color:'#f87171'}}>{errors.contact}</div>}
+              {errors.contact && (
+                <div style={{ color: '#f87171' }}>{errors.contact}</div>
+              )}
 
-              <button type="submit" style={saveBtn}>💾 Сохранить</button>
+              <button type="submit" style={saveBtn}>
+                💾 Сохранить
+              </button>
             </form>
           </div>
         </div>
@@ -240,71 +526,137 @@ export default function MyBookings() {
       {/* === МОИ ЗАПИСИ === */}
       <div style={bookingsCard}>
         <div style={bookingsHeader}>
-          <h3 style={{ margin:0 }}>Мои записи</h3>
+          <h3 style={{ margin: 0 }}>Мои записи</h3>
 
           <div style={filterButtons}>
-            <button style={filterBtn(filter==='all')} onClick={()=>setFilter('all')}>Все</button>
-            <button style={filterBtn(filter==='active')} onClick={()=>setFilter('active')}>Активные</button>
-            <button style={filterBtn(filter==='canceled')} onClick={()=>setFilter('canceled')}>Отменённые</button>
+            <button
+              style={filterBtn(filter === 'all')}
+              onClick={() => setFilter('all')}
+            >
+              Все
+            </button>
+            <button
+              style={filterBtn(filter === 'active')}
+              onClick={() => setFilter('active')}
+            >
+              Активные
+            </button>
+            <button
+              style={filterBtn(filter === 'canceled')}
+              onClick={() => setFilter('canceled')}
+            >
+              Отменённые
+            </button>
           </div>
         </div>
 
         <div className="mobile-list">
-          {list.map(b=>{
+          {list.map(b => {
             const canCancel =
-              (b.status==='pending' || b.status==='approved') &&
+              (b.status === 'pending' || b.status === 'approved' || b.status === 'approved_paid') &&
               new Date(b.end) > new Date()
+            const paid = isPaid(b)
 
             return (
               <div key={b.id} style={cardItem}>
-                <div style={{display:'flex',alignItems:'center',gap:10}}>
-                  {statusDot(b)}
-                  <b>{fmtDate(b.start)}</b>
+                {/* HEADER: дата + статусная точка + кнопка квитанции справа */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 10
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {statusDot(b)}
+                    <b>{fmtDate(b.start)}</b>
+                  </div>
+
+                  {paid && (
+                    <button
+                      type="button"
+                      style={receiptBtn}
+                      onClick={() => downloadReceipt(b)}
+                    >
+                      🧾 Скачать квитанцию
+                    </button>
+                  )}
                 </div>
 
-                <div style={{opacity:.8,marginTop:4}}>
+                <div style={{ opacity: 0.8, marginTop: 4 }}>
                   {fmtTime(b.start)} – {fmtTime(b.end)}
                 </div>
 
-                <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}}>
-                  {b.services?.map(s=>(
-                    <span key={s} style={{
-                      padding:'4px 8px',
-                      borderRadius:8,
-                      background:'rgba(255,255,255,0.08)',
-                      border:`1px solid ${tagColors[s]||'#a855f7'}55`,
-                      color:tagColors[s]||'#e5e7eb',
-                      fontSize:13
-                    }}>{s}</span>
+                {/* Услуги */}
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 6,
+                    marginTop: 8
+                  }}
+                >
+                  {b.services?.map(s => (
+                    <span
+                      key={s}
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: 8,
+                        background: 'rgba(255,255,255,0.08)',
+                        border: `1px solid ${tagColors[s] || '#a855f7'}55`,
+                        color: tagColors[s] || '#e5e7eb',
+                        fontSize: 13
+                      }}
+                    >
+                      {s}
+                    </span>
                   ))}
                 </div>
 
                 {/* Аванс */}
                 {b.price && (
-                  <div style={{marginTop:8,fontSize:13}}>
-                    <span style={{opacity:.8}}>Avansas: </span><b>{b.price} €</b>
+                  <div style={{ marginTop: 8, fontSize: 13 }}>
+                    <span style={{ opacity: 0.8 }}>Avansas: </span>
+                    <b>{b.price} €</b>
                   </div>
                 )}
 
-                {/* Статус */}
-                <div style={{marginTop:6,fontSize:13}}>
-                  <span style={{fontWeight:600}}>Статус: </span>
+                {/* Статус + оплата */}
+                <div style={{ marginTop: 6, fontSize: 13 }}>
+                  <span style={{ fontWeight: 600 }}>Статус: </span>
                   <span>{statusText(b)}</span>
                 </div>
 
-                {/* Оплата */}
-                {(b.status==='pending' || b.status==='approved') && (
-                  <button style={payBtn} onClick={()=>openPaymentModal(b)}>💳 Apmokėti</button>
-                )}
+                {/* Оплата — кнопка показывается только если ещё не оплачено */}
+                {(b.status === 'pending' || b.status === 'approved' || b.status === 'approved_paid') &&
+                  !paid && (
+                    <button
+                      style={payBtn}
+                      onClick={() => openPaymentModal(b)}
+                    >
+                      💳 Apmokėti
+                    </button>
+                  )}
 
                 {/* Отмена */}
                 {canCancel && (
-                  <button style={cancelBtn} onClick={()=>cancel(b.id)}>Отменить</button>
+                  <button
+                    style={cancelBtn}
+                    onClick={() => cancel(b.id)}
+                  >
+                    Отменить
+                  </button>
                 )}
-
               </div>
             )
           })}
+
+          {!list.length && (
+            <small className="muted" style={{ opacity: 0.7 }}>
+              {t('no_records')}
+            </small>
+          )}
         </div>
       </div>
 
@@ -321,7 +673,7 @@ export default function MyBookings() {
       {approvedModal && (
         <div style={modalBackdrop}>
           <div style={modalBox}>
-            <h3 style={{color:'#4ade80'}}>✅ Ваша запись подтверждена!</h3>
+            <h3 style={{ color: '#4ade80' }}>✅ Ваша запись подтверждена!</h3>
           </div>
         </div>
       )}
@@ -331,8 +683,15 @@ export default function MyBookings() {
         <div style={modalBackdrop}>
           <div style={modalBox}>
             <h3>Отменить запись?</h3>
-            <button onClick={doCancel} style={cancelBtn}>Да</button>
-            <button onClick={()=>setConfirmId(null)} style={{...cancelBtn,background:'rgba(80,80,120,0.4)'}}>Нет</button>
+            <button onClick={doCancel} style={cancelBtn}>
+              Да
+            </button>
+            <button
+              onClick={() => setConfirmId(null)}
+              style={{ ...cancelBtn, background: 'rgba(80,80,120,0.4)' }}
+            >
+              Нет
+            </button>
           </div>
         </div>
       )}
@@ -343,37 +702,72 @@ export default function MyBookings() {
           <div style={modalBox}>
             <h3>Выберите способ оплаты</h3>
 
-            <p style={{ opacity:.9 }}>{fmtDate(paymentBooking.start)} • {fmtTime(paymentBooking.start)} – {fmtTime(paymentBooking.end)}</p>
+            <p style={{ opacity: 0.9 }}>
+              {fmtDate(paymentBooking.start)} • {fmtTime(paymentBooking.start)} –{' '}
+              {fmtTime(paymentBooking.end)}
+            </p>
 
             {paymentBooking.price && (
-              <p>Avansas: <b>{paymentBooking.price} €</b></p>
+              <p>
+                Avansas: <b>{paymentBooking.price} €</b>
+              </p>
             )}
 
             {paymentError && (
-              <div style={{
-                marginBottom:8,
-                padding:6,
-                borderRadius:8,
-                background:'rgba(127,29,29,0.6)',
-                color:'#fecaca'
-              }}>{paymentError}</div>
+              <div
+                style={{
+                  marginBottom: 8,
+                  padding: 6,
+                  borderRadius: 8,
+                  background: 'rgba(127,29,29,0.6)',
+                  color: '#fecaca'
+                }}
+              >
+                {paymentError}
+              </div>
             )}
 
-            <div style={{display:'flex',flexDirection:'column',gap:8}}>
-              <button disabled={paymentLoading} style={payOptionBtn} onClick={()=>startPayment('paypal')}>PayPal</button>
-              <button disabled={paymentLoading} style={payOptionBtn} onClick={()=>startPayment('paysera')}>Paysera</button>
-              <button disabled={paymentLoading} style={payOptionBtn} onClick={()=>startPayment('bank')}>Banko pavedimas</button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button
+                disabled={paymentLoading}
+                style={payOptionBtn}
+                onClick={() => startPayment('paypal')}
+              >
+                PayPal
+              </button>
+              <button
+                disabled={paymentLoading}
+                style={payOptionBtn}
+                onClick={() => startPayment('paysera')}
+              >
+                Paysera
+              </button>
+              <button
+                disabled={paymentLoading}
+                style={payOptionBtn}
+                onClick={() => startPayment('bank')}
+              >
+                Banko pavedimas
+              </button>
             </div>
 
             {/* Реквизиты */}
-            <div style={{marginTop:10,fontSize:12,opacity:.85}}>
-              <b>Banko duomenys:</b><br/>
-              Gavėjas: {BANK_DETAILS.receiver}<br/>
-              IBAN: {BANK_DETAILS.iban}<br/>
-              Paskirtis: {BANK_DETAILS.descriptionPrefix} #{paymentBooking.id.slice(0,6)}
+            <div style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>
+              <b>Banko duomenys:</b>
+              <br />
+              Gavėjas: {BANK_DETAILS.receiver}
+              <br />
+              IBAN: {BANK_DETAILS.iban}
+              <br />
+              Paskirtis: {BANK_DETAILS.descriptionPrefix} #{paymentBooking.id.slice(0, 6)}
             </div>
 
-            <button onClick={closePaymentModal} style={{...cancelBtn,marginTop:14}}>Закрыть</button>
+            <button
+              onClick={closePaymentModal}
+              style={{ ...cancelBtn, marginTop: 14 }}
+            >
+              Закрыть
+            </button>
           </div>
         </div>
       )}
@@ -384,116 +778,127 @@ export default function MyBookings() {
 
 /* ==== СТИЛИ ==== */
 
-const container = { paddingBottom:'40px' }
-const dot = { width:12, height:12, borderRadius:'50%', display:'inline-block' }
+const container = { paddingBottom: '40px' }
+const dot = { width: 12, height: 12, borderRadius: '50%', display: 'inline-block' }
 
 const outerCard = {
-  background:'rgba(15,10,25,0.9)',
-  border:'1px solid rgba(168,85,247,0.3)',
-  borderRadius:14,
-  color:'#fff',
-  marginBottom:24
+  background: 'rgba(15,10,25,0.9)',
+  border: '1px solid rgba(168,85,247,0.3)',
+  borderRadius: 14,
+  color: '#fff',
+  marginBottom: 24
 }
 
 const innerCard = {
-  margin:'0 20px 20px',
-  border:'1px solid rgba(168,85,247,0.2)',
-  borderRadius:12,
-  background:'rgba(20,10,35,0.8)'
+  margin: '0 20px 20px',
+  border: '1px solid rgba(168,85,247,0.2)',
+  borderRadius: 12,
+  background: 'rgba(20,10,35,0.8)'
 }
 
 const innerHeader = {
-  display:'flex',
-  alignItems:'center',
-  gap:8,
-  padding:'12px 16px',
-  cursor:'pointer',
-  background:'rgba(25,15,45,0.8)',
-  borderBottom:'1px solid rgba(168,85,247,0.25)'
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  padding: '12px 16px',
+  cursor: 'pointer',
+  background: 'rgba(25,15,45,0.8)',
+  borderBottom: '1px solid rgba(168,85,247,0.25)'
 }
 
-const profileBody = { overflow:'hidden', transition:'all 0.45s ease' }
+const profileBody = { overflow: 'hidden', transition: 'all 0.45s ease' }
 
 const saveBtn = {
-  marginTop:10,
-  width:'100%',
-  padding:'10px 20px',
-  borderRadius:10,
-  background:'linear-gradient(180deg,#9333ea,#4c1d95)',
-  color:'#fff',
-  cursor:'pointer'
+  marginTop: 10,
+  width: '100%',
+  padding: '10px 20px',
+  borderRadius: 10,
+  background: 'linear-gradient(180deg,#9333ea,#4c1d95)',
+  color: '#fff',
+  cursor: 'pointer'
 }
 
-const bookingsCard = { ...outerCard, padding:'18px' }
-const bookingsHeader = { display:'flex', justifyContent:'space-between', marginBottom:10 }
-const filterButtons = { display:'flex', gap:8 }
+const bookingsCard = { ...outerCard, padding: '18px' }
+const bookingsHeader = { display: 'flex', justifyContent: 'space-between', marginBottom: 10 }
+const filterButtons = { display: 'flex', gap: 8 }
 
-const filterBtn = (active)=>({
-  padding:'8px 18px',
-  borderRadius:10,
+const filterBtn = (active) => ({
+  padding: '8px 18px',
+  borderRadius: 10,
   background: active ? 'rgba(130,60,255,0.25)' : 'rgba(30,20,40,0.6)',
-  border:'1px solid rgba(168,85,247,0.5)',
-  color:'#fff',
-  cursor:'pointer'
+  border: '1px solid rgba(168,85,247,0.5)',
+  color: '#fff',
+  cursor: 'pointer'
 })
 
 const cardItem = {
-  border:'1px solid rgba(168,85,247,0.25)',
-  background:'rgba(20,10,30,0.55)',
-  padding:14,
-  borderRadius:14,
-  marginBottom:12
+  border: '1px solid rgba(168,85,247,0.25)',
+  background: 'rgba(20,10,30,0.55)',
+  padding: 14,
+  borderRadius: 14,
+  marginBottom: 12
 }
 
 const payBtn = {
-  marginTop:10,
-  width:'100%',
-  padding:'8px 10px',
-  borderRadius:10,
-  background:'rgba(50,180,80,0.25)',
-  border:'1px solid #4ade80',
-  color:'#4ade80',
-  cursor:'pointer'
+  marginTop: 10,
+  width: '100%',
+  padding: '8px 10px',
+  borderRadius: 10,
+  background: 'rgba(50,180,80,0.25)',
+  border: '1px solid #4ade80',
+  color: '#4ade80',
+  cursor: 'pointer'
+}
+
+const receiptBtn = {
+  padding: '6px 10px',
+  borderRadius: 8,
+  border: '1px solid rgba(148,163,184,0.7)',
+  background: 'rgba(15,23,42,0.9)',
+  color: '#e5e7eb',
+  fontSize: 12,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap'
 }
 
 const payOptionBtn = {
-  width:'100%',
-  padding:'8px 10px',
-  borderRadius:10,
-  border:'1px solid rgba(148,163,184,0.7)',
-  background:'rgba(15,23,42,0.9)',
-  color:'#e5e7eb',
-  cursor:'pointer',
-  fontSize:14
+  width: '100%',
+  padding: '8px 10px',
+  borderRadius: 10,
+  border: '1px solid rgba(148,163,184,0.7)',
+  background: 'rgba(15,23,42,0.9)',
+  color: '#e5e7eb',
+  cursor: 'pointer',
+  fontSize: 14
 }
 
 const cancelBtn = {
-  marginTop:10,
-  padding:'8px 12px',
-  borderRadius:10,
-  background:'rgba(120,30,60,0.4)',
-  border:'1px solid rgba(200,80,120,0.6)',
-  color:'#fff',
-  cursor:'pointer'
+  marginTop: 10,
+  padding: '8px 12px',
+  borderRadius: 10,
+  background: 'rgba(120,30,60,0.4)',
+  border: '1px solid rgba(200,80,120,0.6)',
+  color: '#fff',
+  cursor: 'pointer'
 }
 
 const modalBackdrop = {
-  position:'fixed',
-  inset:0,
-  background:'rgba(0,0,0,0.6)',
-  display:'flex',
-  justifyContent:'center',
-  alignItems:'center',
-  zIndex:3000
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(0,0,0,0.6)',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 3000
 }
 
 const modalBox = {
-  background:'rgba(20,15,35,0.85)',
-  borderRadius:14,
-  padding:'24px 32px',
-  border:'1px solid rgba(168,85,247,0.3)',
-  color:'#fff',
-  textAlign:'center',
-  maxWidth:420,
-  width:'90%'
+  background: 'rgba(20,15,35,0.85)',
+  borderRadius: 14,
+  padding: '24px 32px',
+  border: '1px solid rgba(168,85,247,0.3)',
+  color: '#fff',
+  textAlign: 'center',
+  maxWidth: 420,
+  width: '90%'
 }
