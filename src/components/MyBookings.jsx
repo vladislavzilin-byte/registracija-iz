@@ -55,39 +55,39 @@ export default function MyBookings() {
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [paymentError, setPaymentError] = useState('')
 
-  // читаем брони при каждом рендере (обновление через version)
-  const bookingsAll = getBookings()
-  const all = bookingsAll
-    .filter(b => user && b.userPhone === user.phone)
-    .sort((a, b) => new Date(a.start) - new Date(b.start))
+// читаем брони при каждом рендере (обновление через version)
+const bookingsAll = getBookings()
+const all = bookingsAll
+  .filter(b => user && b.userPhone === user.phone)
+  .sort((a, b) => new Date(a.start) - new Date(b.start))
 
-  // === ФИЛЬТРЫ: Все / Активные / История ===
-  const list = useMemo(() => {
-    const now = new Date()
+// === ФИЛЬТРЫ: Все / Активные / История ===
+const list = useMemo(() => {
+  const now = new Date()
 
-    if (filter === 'active') {
-      // только будущие записи и не отменённые
-      return all.filter(b => {
-        const end = new Date(b.end)
-        const canceled =
-          b.status === 'canceled_client' || b.status === 'canceled_admin'
-        return end >= now && !canceled
-      })
-    }
+  // АКТИВНЫЕ — только будущие и не отменённые
+  if (filter === 'active') {
+    return all.filter(b => {
+      const end = new Date(b.end)
+      const canceled =
+        b.status === 'canceled_client' || b.status === 'canceled_admin'
+      return end > now && !canceled
+    })
+  }
 
-    if (filter === 'history') {
-      // всё, что уже прошло, или отменено
-      return all.filter(b => {
-        const end = new Date(b.end)
-        const canceled =
-          b.status === 'canceled_client' || b.status === 'canceled_admin'
-        return end < now || canceled
-      })
-    }
+  // ИСТОРИЯ — только прошедшие записи (без отменённых)
+  if (filter === 'history') {
+    return all.filter(b => {
+      const end = new Date(b.end)
+      const canceled =
+        b.status === 'canceled_client' || b.status === 'canceled_admin'
+      return end < now && !canceled
+    })
+  }
 
-    // "Все" — без фильтра
-    return all
-  }, [filter, version, bookingsAll.length])
+  // ВСЕ
+  return all
+}, [filter, version, bookingsAll.length])
 
   // пуш-уведомление когда бронь подтверждена админом
   useEffect(() => {
