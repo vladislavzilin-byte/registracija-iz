@@ -151,3 +151,168 @@ export default function FinancePanel() {
               padding: 6px 8px;
               text-align: left;
             }
+            th {
+              background: #f3f4f6;
+            }
+          </style>
+        </head>
+        <body>
+          ${printContents}
+        </body>
+      </html>
+    `);
+
+    win.document.close();
+    win.focus();
+    win.print();
+    win.close();
+  };
+
+  // Годы для селекта (например, текущий -1, текущий, +1)
+  const years = [
+    now.getFullYear() - 1,
+    now.getFullYear(),
+    now.getFullYear() + 1
+  ];
+
+  return (
+    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6 text-white">
+      {/* Заголовок + фильтры */}
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold">Finansų panelė</h1>
+          <p className="text-sm text-zinc-400 mt-1">
+            Profesionali pajamų / išlaidų suvestinė su PDF ataskaita.
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          <select
+            className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+          >
+            {monthNames.map((m, idx) => (
+              <option key={m} value={idx}>
+                {m}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Карточки сумм */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border border-emerald-500/40 p-4">
+          <p className="text-xs uppercase tracking-wide text-emerald-300">
+            Pajamos
+          </p>
+          <p className="text-2xl font-semibold mt-1">
+            €{totalIncome.toFixed(2)}
+          </p>
+          <p className="text-xs text-zinc-400 mt-1">
+            Visos mėnesio uždirbtos lėšos
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-gradient-to-br from-rose-500/20 to-rose-500/5 border border-rose-500/40 p-4">
+          <p className="text-xs uppercase tracking-wide text-rose-300">
+            Išlaidos (30%)
+          </p>
+          <p className="text-2xl font-semibold mt-1">
+            €{totalExpense.toFixed(2)}
+          </p>
+          <p className="text-xs text-zinc-400 mt-1">
+            Automatiškai skaičiuojama 30% nuo pajamų
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-gradient-to-br from-indigo-500/20 to-indigo-500/5 border border-indigo-500/40 p-4">
+          <p className="text-xs uppercase tracking-wide text-indigo-300">
+            Balansas
+          </p>
+          <p className="text-2xl font-semibold mt-1">
+            €{balance.toFixed(2)}
+          </p>
+          <p className="text-xs text-zinc-400 mt-1">
+            Pajamos minus 30% išlaidų
+          </p>
+        </div>
+      </div>
+
+      {/* Форма добавления */}
+      <div className="rounded-2xl bg-zinc-900/70 border border-zinc-800 p-4 md:p-5 space-y-4">
+        <h2 className="text-xl font-semibold">Pridėti įrašą</h2>
+        <div className="grid md:grid-cols-4 gap-3">
+          <input
+            type="date"
+            className="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
+            value={formDate}
+            onChange={(e) => setFormDate(e.target.value)}
+          />
+
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            className="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
+            placeholder="Suma €"
+            value={formAmount}
+            onChange={(e) => setFormAmount(e.target.value)}
+          />
+
+          <input
+            type="text"
+            className="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
+            placeholder="Aprašymas"
+            value={formDescription}
+            onChange={(e) => setFormDescription(e.target.value)}
+          />
+
+          <button
+            onClick={handleAdd}
+            className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:brightness-110 transition rounded-xl px-4 py-2 text-sm font-semibold"
+          >
+            Pridėti
+          </button>
+        </div>
+        <p className="text-xs text-zinc-500">
+          Išlaidos šio mėnesio suvestinėje visuomet bus 30% nuo visų pajamų.
+        </p>
+      </div>
+
+      {/* Отчёт для PDF + таблица + мини-график */}
+      <div className="rounded-2xl bg-zinc-900/70 border border-zinc-800 p-4 md:p-5 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold">Istorija</h2>
+          <button
+            onClick={handleExportPDF}
+            className="bg-gradient-to-r from-fuchsia-500 to-indigo-500 hover:brightness-110 transition rounded-xl px-4 py-2 text-sm font-semibold flex items-center gap-2"
+          >
+            📄 Eksportuoti PDF
+          </button>
+        </div>
+
+        {/* Этот блок попадёт в PDF */}
+        <div id="finance-report">
+          <h1>
+            Finansų ataskaita – {monthNames[selectedMonth]} {selectedYear}
+          </h1>
+
+          <div className="summary mt-2 mb-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-black md:text-inherit">
+            <div className="card bg-white md:bg-white/95 rounded-xl p-3 md:p-4 border border-zinc-200">
+              <div className="card-title">Pajamos</div>
+              <div className="card-value">
+                €{totalIncome.toFixed(
