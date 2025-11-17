@@ -418,4 +418,351 @@ export default function FinancePanel() {
       {/* Шапка + фильтры */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div>
-          <h1 class
+          <h1 className="text-3xl md:text-4xl font-bold">Finansų panelė</h1>
+          <p className="text-sm text-zinc-400 mt-1">
+            Pajamos iš sistemos + rankiniai įrašai, automatinės išlaidos (30%) ir PDF ataskaita.
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          <select
+            className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
+            value={month}
+            onChange={(e) => setMonth(Number(e.target.value))}
+          >
+            {MONTHS.map((m, idx) => (
+              <option key={m} value={idx}>
+                {m}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Карточки сумм */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="rounded-2xl bg-zinc-900 border border-emerald-500/40 p-4">
+          <p className="text-xs uppercase text-emerald-300">Sistema</p>
+          <p className="text-2xl font-semibold mt-1">
+            €{systemIncomeTotal.toFixed(2)}
+          </p>
+          <p className="text-xs text-zinc-400 mt-1">
+            Pajamos iš užbaigtų ir apmokėtų įrašų
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-zinc-900 border border-sky-500/40 p-4">
+          <p className="text-xs uppercase text-sky-300">Rankiniai įrašai</p>
+          <p className="text-2xl font-semibold mt-1">
+            €{manualIncomeTotal.toFixed(2)}
+          </p>
+          <p className="text-xs text-zinc-400 mt-1">
+            Papildomos pajamos, pridėtos ranka
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-zinc-900 border border-amber-500/40 p-4">
+          <p className="text-xs uppercase text-amber-300">Išlaidos (30%)</p>
+          <p className="text-2xl font-semibold mt-1">
+            €{totalExpense.toFixed(2)}
+          </p>
+          <p className="text-xs text-zinc-400 mt-1">
+            Automatiškai skaičiuojama nuo visų pajamų
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-zinc-900 border border-indigo-500/40 p-4">
+          <p className="text-xs uppercase text-indigo-300">Balansas</p>
+          <p className="text-2xl font-semibold mt-1">
+            €{balance.toFixed(2)}
+          </p>
+          <p className="text-xs text-zinc-400 mt-1">
+            Pajamos minus 30% išlaidų
+          </p>
+        </div>
+      </div>
+
+      {/* Блок добавления ручных записей */}
+      <div className="rounded-2xl bg-zinc-900 border border-zinc-800 p-4 md:p-5 space-y-4">
+        <h2 className="text-xl font-semibold">Pridėti rankinį įrašą</h2>
+
+        <div className="grid md:grid-cols-4 gap-3">
+          <input
+            type="date"
+            className="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
+            value={formDate}
+            onChange={(e) => setFormDate(e.target.value)}
+          />
+          <input
+            type="number"
+            className="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
+            placeholder="Suma €"
+            value={formAmount}
+            onChange={(e) => setFormAmount(e.target.value)}
+          />
+          <input
+            type="text"
+            className="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
+            placeholder="Aprašymas"
+            value={formDesc}
+            onChange={(e) => setFormDesc(e.target.value)}
+          />
+          <button
+            onClick={addManual}
+            className="bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl px-4 py-2 text-sm font-semibold hover:brightness-110"
+          >
+            Pridėti
+          </button>
+        </div>
+
+        <p className="text-xs text-zinc-500">
+          Sistemos pajamos skaičiuojamos automatiškai iš užbaigtų ir apmokėtų įrašų.
+          Čia galite pridėti papildomų pajamų rankiniu būdu.
+        </p>
+      </div>
+
+      {/* История + PDF отчёт */}
+      <div className="rounded-2xl bg-zinc-900 border border-zinc-800 p-4 md:p-5 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold">Istorija</h2>
+          <button
+            onClick={exportPDF}
+            className="bg-gradient-to-r from-fuchsia-500 to-indigo-500 rounded-xl px-4 py-2 text-sm font-semibold hover:brightness-110"
+          >
+            📄 Eksportuoti PDF
+          </button>
+        </div>
+
+        {/* Блок, который уходит в PDF */}
+        <div
+          id="finance-report"
+          className="bg-zinc-900/80 text-white p-4 rounded-xl border border-zinc-700"
+        >
+          <h1>
+            Finansų ataskaita — {MONTHS[month]} {year}
+          </h1>
+
+          <div className="summary mt-2 mb-3 grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+            <div className="card bg-zinc-900 border border-emerald-400/40 rounded-xl p-3">
+              <div className="card-title text-xs uppercase text-emerald-300">
+                Sistema
+              </div>
+              <div className="card-value text-lg font-semibold">
+                €{systemIncomeTotal.toFixed(2)}
+              </div>
+            </div>
+            <div className="card bg-zinc-900 border border-sky-400/40 rounded-xl p-3">
+              <div className="card-title text-xs uppercase text-sky-300">
+                Rankiniai
+              </div>
+              <div className="card-value text-lg font-semibold">
+                €{manualIncomeTotal.toFixed(2)}
+              </div>
+            </div>
+            <div className="card bg-zinc-900 border border-amber-400/40 rounded-xl p-3">
+              <div className="card-title text-xs uppercase text-amber-300">
+                Išlaidos (30%)
+              </div>
+              <div className="card-value text-lg font-semibold">
+                €{totalExpense.toFixed(2)}
+              </div>
+            </div>
+            <div className="card bg-zinc-900 border border-indigo-400/40 rounded-xl p-3">
+              <div className="card-title text-xs uppercase text-indigo-300">
+                Balansas
+              </div>
+              <div className="card-value text-lg font-semibold">
+                €{balance.toFixed(2)}
+              </div>
+            </div>
+          </div>
+
+          <h2 className="mt-4 mb-2 text-base font-semibold">Įrašų sąrašas</h2>
+
+          {/* Таблица для десктопа (PDF тоже её использует) */}
+          <div className="hidden md:block">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr>
+                  <th className="border border-zinc-700 px-2 py-1 text-left">
+                    Data
+                  </th>
+                  <th className="border border-zinc-700 px-2 py-1 text-left">
+                    Suma (€)
+                  </th>
+                  <th className="border border-zinc-700 px-2 py-1 text-left">
+                    Aprašymas
+                  </th>
+                  <th className="border border-zinc-700 px-2 py-1 text-left">
+                    Šaltinis
+                  </th>
+                  <th className="border border-zinc-700 px-2 py-1 text-left">
+                    Kvitas
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {combinedItems.map((item) => (
+                  <tr key={item.id}>
+                    <td className="border border-zinc-800 px-2 py-1">
+                      {item.date}
+                    </td>
+                    <td className="border border-zinc-800 px-2 py-1">
+                      €{item.amount.toFixed(2)}
+                    </td>
+                    <td className="border border-zinc-800 px-2 py-1">
+                      {item.description}
+                    </td>
+                    <td className="border border-zinc-800 px-2 py-1">
+                      {renderTag(item)}
+                    </td>
+                    <td className="border border-zinc-800 px-2 py-1 text-xs">
+                      {item.type === 'system'
+                        ? `Kvitas #${item.receiptNumber || ''}`
+                        : '—'}
+                    </td>
+                  </tr>
+                ))}
+                {!combinedItems.length && (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="border border-zinc-800 px-2 py-3 text-center text-zinc-400"
+                    >
+                      Nėra įrašų šiam laikotarpiui
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Карточки для мобильных */}
+          <div className="md:hidden flex flex-col gap-2 mt-2">
+            {combinedItems.map((item) => (
+              <div
+                key={item.id}
+                className="border border-zinc-800 rounded-xl px-3 py-2 text-sm space-y-1"
+              >
+                <div className="flex justify-between">
+                  <span className="text-xs text-zinc-400">{item.date}</span>
+                  {renderTag(item)}
+                </div>
+                <div className="font-semibold">
+                  €{item.amount.toFixed(2)}
+                </div>
+                <div className="text-xs text-zinc-300">
+                  {item.description}
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs text-zinc-400">
+                    {item.type === 'system'
+                      ? `Kvitas #${item.receiptNumber || ''}`
+                      : 'Kvito nėra'}
+                  </span>
+                  {item.type === 'system' && (
+                    <button
+                      className="text-xs px-2 py-1 rounded-lg bg-zinc-800 border border-zinc-600"
+                      onClick={() => downloadReceipt(item)}
+                    >
+                      🧾 Kvitas
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {!combinedItems.length && (
+              <div className="text-xs text-center text-zinc-400 py-2">
+                Nėra įrašų šiam laikotarpiui
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Блок редактируемых ручных записей (интерактив, под отчётом) */}
+        {manualItemsForPeriod.length > 0 && (
+          <div className="mt-4">
+            <h3 className="text-sm font-semibold mb-2">
+              Rankiniai įrašai (redaguojami)
+            </h3>
+            <div className="space-y-2">
+              {manualItemsForPeriod.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex flex-col md:flex-row md:items-center justify-between gap-2 border border-zinc-800 rounded-xl px-3 py-2"
+                >
+                  <div>
+                    <div className="text-xs text-zinc-400">{item.date}</div>
+                    {editingId === item.id ? (
+                      <input
+                        className="mt-1 bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-sm w-full md:w-64"
+                        value={editDesc}
+                        onChange={(e) => setEditDesc(e.target.value)}
+                      />
+                    ) : (
+                      <div className="text-sm">{item.description}</div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {editingId === item.id ? (
+                      <>
+                        <input
+                          type="number"
+                          className="bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-sm w-24"
+                          value={editAmount}
+                          onChange={(e) => setEditAmount(e.target.value)}
+                        />
+                        <button
+                          className="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1 text-xs font-semibold"
+                          onClick={saveEdit}
+                        >
+                          Сохранить
+                        </button>
+                        <button
+                          className="bg-zinc-700 hover:bg-zinc-600 rounded px-3 py-1 text-xs"
+                          onClick={() => setEditingId(null)}
+                        >
+                          Отмена
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-sm font-semibold">
+                          €{item.amount.toFixed(2)}
+                        </div>
+                        <button
+                          className="bg-zinc-800 hover:bg-zinc-700 rounded px-3 py-1 text-xs"
+                          onClick={() => startEdit(item)}
+                        >
+                          Ред.
+                        </button>
+                        <button
+                          className="bg-rose-700 hover:bg-rose-600 rounded px-3 py-1 text-xs"
+                          onClick={() => deleteManual(item.id)}
+                        >
+                          ✕
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
