@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download } from "lucide-react";
+
 
 export default function FinancePanel() {
   const [transactions, setTransactions] = useState([]);
@@ -109,7 +109,7 @@ export default function FinancePanel() {
             onClick={exportJSON}
             className="border px-4 py-2 rounded-xl flex items-center hover:bg-gray-100"
           >
-            <Download className="w-4 h-4 mr-2" /> Eksportuoti
+            📥 Eksportuoti (JSON)
           </button>
         </div>
 
