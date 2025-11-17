@@ -9,6 +9,7 @@ import {
   getCurrentUser,
 } from "../lib/storage";
 import { useI18n } from "../lib/i18n";
+import FinancePanel from "./FinancePanel";
 
 const ADMINS = ["irina.abramova7@gmail.com", "vladislavzilin@gmail.com"];
 
@@ -43,6 +44,7 @@ const serviceStyles = {
   },
 };
 
+// оплачено — либо новое поле paid, либо старый статус approved_paid
 const isPaid = (b) => !!(b?.paid || b?.status === "approved_paid");
 
 const pad2 = (n) => String(n).padStart(2, "0");
@@ -74,6 +76,7 @@ export default function Admin() {
 
   const { t } = useI18n();
 
+  // === НАСТРОЙКИ И СОСТОЯНИЯ ===
   const [settings, setSettings] = useState(() => {
     const s = getSettings();
     if (!Array.isArray(s.serviceList) || !s.serviceList.length) {
@@ -85,8 +88,9 @@ export default function Admin() {
 
   const [bookings, setBookings] = useState(getBookings());
   const [showSettings, setShowSettings] = useState(false);
+  const [showFinance, setShowFinance] = useState(false);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all"); // all | active | finished | canceled
   const [toast, setToast] = useState(null);
 
   const updateSettings = (patch) => {
@@ -95,26 +99,29 @@ export default function Admin() {
     saveSettings(next);
   };
 
+  // синк записей при обновлении профиля
   useEffect(() => {
     const handler = () => setBookings(getBookings());
     window.addEventListener("profileUpdated", handler);
     return () => window.removeEventListener("profileUpdated", handler);
   }, []);
 
+  // === СТАТИСТИКА ===
   const stats = useMemo(() => {
     const total = bookings.length;
     const active = bookings.filter(
       (b) => b.status === "approved" || b.status === "pending"
     ).length;
     const canceled = bookings.filter(
-      (b) =>
-        b.status === "canceled_client" || b.status === "canceled_admin"
+      (b) => b.status === "canceled_client" || b.status === "canceled_admin"
     ).length;
     return { total, active, canceled };
   }, [bookings]);
 
+  // === ФИЛЬТР СПИСКА ===
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
+    const now = new Date();
 
     return bookings
       .filter((b) => {
@@ -125,7 +132,6 @@ export default function Admin() {
           b.userInstagram?.toLowerCase().includes(q);
 
         let matchStatus = true;
-        const now = new Date();
 
         if (statusFilter === "active") {
           matchStatus =
@@ -134,11 +140,14 @@ export default function Admin() {
         } else if (statusFilter === "finished") {
           matchStatus =
             ["approved", "approved_paid"].includes(b.status) &&
-            new Date(b.end) < now;
+            new Date(b.end || b.start) < now;
         } else if (statusFilter === "canceled") {
           matchStatus = ["canceled_client", "canceled_admin"].includes(
             b.status
           );
+        } else {
+          // all — ничего не ограничиваем
+          matchStatus = true;
         }
 
         return matchQ && matchStatus;
@@ -146,6 +155,7 @@ export default function Admin() {
       .sort((a, b) => new Date(a.start) - new Date(b.start));
   }, [bookings, search, statusFilter]);
 
+  // === helper для обновления одной записи ===
   const updateBooking = (id, updater) => {
     const all = getBookings();
     const next = all.map((b) => (b.id === id ? updater(b) : b));
@@ -153,6 +163,7 @@ export default function Admin() {
     setBookings(next);
   };
 
+  // === ДЕЙСТВИЯ С ЗАПИСЯМИ ===
   const cancelByAdmin = (id) => {
     if (!confirm("Отменить эту запись?")) return;
     updateBooking(id, (b) => ({
@@ -172,7 +183,9 @@ export default function Admin() {
   const togglePaid = (id) =>
     updateBooking(id, (b) => ({ ...b, paid: !b.paid }));
 
+  // === НАСТРОЙКИ УСЛУГ ===
   const services = settings.serviceList || [];
+
   const updateServiceField = (index, field, value) => {
     const next = [...services];
     next[index] = {
@@ -203,7 +216,7 @@ export default function Admin() {
 
   return (
     <div className="col" style={{ gap: 16 }}>
-      {/* НАСТРОЙКИ */}
+      {/* === НАСТРОЙКИ (ГАРМОШКА) === */}
       <div style={{ width: "100%" }}>
         <div style={cardAurora}>
           <button
@@ -212,9 +225,7 @@ export default function Admin() {
           >
             <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <Chevron open={showSettings} />
-              <span style={{ fontWeight: 700 }}>
-                Редактировать настройки
-              </span>
+              <span style={{ fontWeight: 700 }}>Редактировать настройки</span>
             </span>
           </button>
 
@@ -346,8 +357,7 @@ export default function Admin() {
                       key={idx}
                       style={{
                         display: "grid",
-                        gridTemplateColumns:
-                          "1.4fr .7fr .7fr auto",
+                        gridTemplateColumns: "1.4fr .7fr .7fr auto",
                         gap: 8,
                         alignItems: "center",
                       }}
@@ -396,7 +406,38 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* ВСЕ ЗАПИСИ */}
+      {/* === FINANSAI (ГАРМОШКА) === */}
+      <div style={{ width: "100%" }}>
+        <div style={cardAurora}>
+          <button
+            onClick={() => setShowFinance(!showFinance)}
+            style={headerToggle}
+          >
+            <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <Chevron open={showFinance} />
+              <span style={{ fontWeight: 700 }}>Finansai</span>
+            </span>
+          </button>
+
+          <div
+            style={{
+              maxHeight: showFinance ? 2000 : 0,
+              overflow: "hidden",
+              transition: "max-height .4s ease",
+            }}
+          >
+            <div style={{ paddingTop: 10 }}>
+              <FinancePanel
+                bookings={bookings}
+                serviceStyles={serviceStyles}
+                onDownloadReceipt={downloadReceipt}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* === ВСЕ ЗАПИСИ (НЕ ГАРМОШКА) === */}
       <div style={{ width: "100%" }}>
         <div style={cardAurora}>
           <div style={topBar}>
@@ -421,7 +462,7 @@ export default function Admin() {
               onChange={(e) => setSearch(e.target.value)}
             />
 
-            {/* НОВАЯ ПАНЕЛЬ ФИЛЬТРОВ */}
+            {/* ПАНЕЛЬ ФИЛЬТРОВ */}
             <div style={segmented}>
               {[
                 { v: "all", label: "Все" },
@@ -462,9 +503,7 @@ export default function Admin() {
               const inFuture = new Date(b.start) > new Date();
               const startDate = new Date(b.start);
               const endDate = new Date(b.end || b.start);
-              const servicesArr = Array.isArray(b.services)
-                ? b.services
-                : [];
+              const servicesArr = Array.isArray(b.services) ? b.services : [];
 
               const serviceTagStyle = (name) => ({
                 padding: "4px 12px",
@@ -480,7 +519,6 @@ export default function Admin() {
 
               const paid = isPaid(b);
 
-              /* === РЕНДЕР КАРТОЧКИ === */
               return (
                 <div
                   key={b.id}
@@ -495,9 +533,7 @@ export default function Admin() {
                     gap: 10,
                   }}
                 >
-                  {/* ===================== */}
                   {/* ВЕРХНЯЯ СТРОКА */}
-                  {/* ===================== */}
                   <div
                     style={{
                       display: "flex",
@@ -525,11 +561,13 @@ export default function Admin() {
                           const [y, m, d] = val.split("-").map(Number);
                           updateBooking(b.id, (orig) => {
                             const st = new Date(orig.start);
-                            const en = new Date(orig.end);
+                            const en = new Date(orig.end || orig.start);
                             const duration = en - st;
                             const ns = new Date(orig.start);
                             ns.setFullYear(y, m - 1, d);
-                            const ne = new Date(ns.getTime() + duration);
+                            const ne = new Date(
+                              ns.getTime() + Math.max(duration, 15 * 60000)
+                            );
                             return { ...orig, start: ns, end: ne };
                           });
                         }}
@@ -554,7 +592,7 @@ export default function Admin() {
                           updateBooking(b.id, (orig) => {
                             const ns = new Date(orig.start);
                             ns.setHours(hh, mm);
-                            const ne = new Date(orig.end);
+                            const ne = new Date(orig.end || orig.start);
                             if (ne <= ns) {
                               ne.setTime(ns.getTime() + 15 * 60000);
                             }
@@ -591,7 +629,7 @@ export default function Admin() {
                       />
                     </div>
 
-                    {/* Правый блок: время + кнопка квитанции */}
+                    {/* Правый блок: время + квитанция */}
                     <div
                       style={{
                         marginLeft: "auto",
@@ -622,8 +660,7 @@ export default function Admin() {
                           marginTop: 4,
                         }}
                       >
-                        Nr. kvitancii:{" "}
-                        <b>#{b.id.slice(0, 6)}</b>
+                        Nr. kvitancii: <b>#{b.id.slice(0, 6)}</b>
                       </div>
                     </div>
                   </div>
@@ -649,9 +686,7 @@ export default function Admin() {
                     <b>{b.userName}</b>
                     <div style={{ opacity: 0.8 }}>{b.userPhone}</div>
                     {b.userInstagram && (
-                      <div style={{ opacity: 0.8 }}>
-                        @{b.userInstagram}
-                      </div>
+                      <div style={{ opacity: 0.8 }}>@{b.userInstagram}</div>
                     )}
                   </div>
 
@@ -858,11 +893,13 @@ function generateTimes(start, end) {
 
 /* === СТИЛИ === */
 const cardAurora = {
-  background: "linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))",
+  background:
+    "linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))",
   border: "1px solid rgba(168,85,247,0.18)",
   borderRadius: 16,
   padding: 14,
-  boxShadow: "0 8px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.03)",
+  boxShadow:
+    "0 8px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.03)",
 };
 
 const headerToggle = {
@@ -961,37 +998,36 @@ const statusDot = (b) => {
 };
 
 /* === ГЕНЕРАЦИЯ КВИТАНЦИИ === */
-// квитанция — тот же шаблон, что в MyBookings.jsx
 const downloadReceipt = (b) => {
   try {
-    const win = window.open('', '_blank', 'width=700,height=900')
-    if (!win) return
+    const win = window.open("", "_blank", "width=700,height=900");
+    if (!win) return;
 
-    const dateStr = fmtDate(b.start)
-    const timeStr = `${fmtTime(b.start)} – ${fmtTime(b.end)}`
+    const dateStr = fmtDate(b.start);
+    const timeStr = `${fmtTime(b.start)} – ${fmtTime(b.end)}`;
     const createdStr = b.createdAt
-      ? new Date(b.createdAt).toLocaleString('lt-LT')
-      : new Date(b.start).toLocaleString('lt-LT')
-    const servicesStr = (b.services || []).join(', ') || '—'
-    const paidLabel = isPaid(b) ? 'Оплачено' : 'Не оплачено'
+      ? new Date(b.createdAt).toLocaleString("lt-LT")
+      : new Date(b.start).toLocaleString("lt-LT");
+    const servicesStr = (b.services || []).join(", ") || "—";
+    const paidLabel = isPaid(b) ? "Оплачено" : "Не оплачено";
 
     const vcard = [
-      'BEGIN:VCARD',
-      'VERSION:3.0',
-      'N:Žilina;Irina;;;',
-      'FN:Irina Žilina',
-      'ORG:IZ HAIR TREND',
-      'TEL;TYPE=CELL,VOICE:+37060128458',
-      'EMAIL;TYPE=WORK:info@izhairtrend.lt',
-      'URL:https://izhairtrend.lt',
-      'ADR;TYPE=WORK:;;Sodo g. 2a;Klaipeda;;;LT',
-      'NOTE:Šukuosenų meistrė',
-      'END:VCARD',
-    ].join('\n')
+      "BEGIN:VCARD",
+      "VERSION:3.0",
+      "N:Žilina;Irina;;;",
+      "FN:Irina Žilina",
+      "ORG:IZ HAIR TREND",
+      "TEL;TYPE=CELL,VOICE:+37060128458",
+      "EMAIL;TYPE=WORK:info@izhairtrend.lt",
+      "URL:https://izhairtrend.lt",
+      "ADR;TYPE=WORK:;;Sodo g. 2a;Klaipeda;;;LT",
+      "NOTE:Šukuosenų meistrė",
+      "END:VCARD",
+    ].join("\n");
 
     const qrUrl =
-      'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' +
-      encodeURIComponent(vcard)
+      "https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=" +
+      encodeURIComponent(vcard);
 
     const html = `<!doctype html>
 <html>
@@ -1119,15 +1155,15 @@ const downloadReceipt = (b) => {
     <div class="section">
       <div class="row">
         <div class="label">Klientas:</div>
-        <div class="value">${b.userName || '-'}</div>
+        <div class="value">${b.userName || "-"}</div>
       </div>
       <div class="row">
         <div class="label">Telefonas:</div>
-        <div class="value">${b.userPhone || '-'}</div>
+        <div class="value">${b.userPhone || "-"}</div>
       </div>
       <div class="row">
         <div class="label">El. paštas:</div>
-        <div class="value">${b.userEmail || '-'}</div>
+        <div class="value">${b.userEmail || "-"}</div>
       </div>
     </div>
 
@@ -1145,14 +1181,18 @@ const downloadReceipt = (b) => {
         <div class="value">${servicesStr}</div>
       </div>
       <div class="services">
-        ${(b.services || []).map(s => `<span class="tag">${s}</span>`).join('')}
+        ${(b.services || [])
+          .map((s) => `<span class="tag">${s}</span>`)
+          .join("")}
       </div>
     </div>
 
     <div class="section">
       <div class="row">
         <div class="label">Avansas:</div>
-        <div class="value">${b.price ? `${b.price} €` : '—'}</div>
+        <div class="value">${
+          b.price ? `${b.price} €` : "—"
+        }</div>
       </div>
       <div class="row">
         <div class="label">Mokėjimo būsena:</div>
@@ -1162,7 +1202,7 @@ const downloadReceipt = (b) => {
 
     <div class="footer">
       Ši kvitancija sugeneruota internetu ir galioja be parašo.<br/>
-      Jei reikia, galite ją išsisaugoti kaip PDF: naršyklėje pasirinkite "Spausdinti" → "Save as PDF".
+      Jei reikia, galite ją išsisaugoti kaip PDF: naršyklėje pasirinkite \"Spausdinti\" → \"Save as PDF\".
     </div>
   </div>
 
@@ -1173,12 +1213,12 @@ const downloadReceipt = (b) => {
     }, 400);
   </script>
 </body>
-</html>`
+</html>`;
 
-    win.document.open()
-    win.document.write(html)
-    win.document.close()
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
   } catch (e) {
-    console.error('Receipt error', e)
+    console.error("Receipt error", e);
   }
-}
+};
