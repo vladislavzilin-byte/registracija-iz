@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { Download } from "lucide-react";
 
 export default function FinancePanel() {
@@ -50,13 +49,7 @@ export default function FinancePanel() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="shadow-lg rounded-2xl p-4 bg-white">
           <p className="text-lg font-semibold">Pajamos</p>
-          <motion.p
-            className="text-3xl font-bold"
-            animate={{ opacity: 1 }}
-            initial={{ opacity: 0 }}
-          >
-            €{totalIncome.toFixed(2)}
-          </motion.p>
+          <p className="text-3xl font-bold">€{totalIncome.toFixed(2)}</p>
         </div>
 
         <div className="shadow-lg rounded-2xl p-4 bg-white">
@@ -122,10 +115,8 @@ export default function FinancePanel() {
 
         <div className="grid gap-3">
           {transactions.map((t) => (
-            <motion.div
+            <div
               key={t.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
               className="p-3 rounded-xl border flex items-center justify-between"
             >
               <div>
@@ -138,7 +129,7 @@ export default function FinancePanel() {
                 <p className="font-bold">€{t.amount.toFixed(2)}</p>
                 <p className="text-xs opacity-60">{t.date}</p>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>
