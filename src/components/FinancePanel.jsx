@@ -1,138 +1,153 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 
+const STORAGE_KEY = "iz_finance_transactions_v1";
+
+const monthNames = [
+  "Sausis",
+  "Vasaris",
+  "Kovas",
+  "Balandis",
+  "Gegužė",
+  "Birželis",
+  "Liepa",
+  "Rugpjūtis",
+  "Rugsėjis",
+  "Spalis",
+  "Lapkritis",
+  "Gruodis"
+];
 
 export default function FinancePanel() {
+  const now = new Date();
   const [transactions, setTransactions] = useState([]);
-  const [amount, setAmount] = useState(0);
-  const [type, setType] = useState("income");
-  const [description, setDescription] = useState("");
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
 
-  const totalIncome = transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
+  const [formDate, setFormDate] = useState(
+    new Date().toISOString().slice(0, 10)
+  ); // yyyy-mm-dd
+  const [formAmount, setFormAmount] = useState("");
+  const [formDescription, setFormDescription] = useState("");
 
-  const totalExpense = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
+  // 🔄 Загружаем из localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setTransactions(parsed);
+      }
+    } catch (e) {
+      console.error("Failed to load finance data", e);
+    }
+  }, []);
 
+  // 💾 Сохраняем в localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+    } catch (e) {
+      console.error("Failed to save finance data", e);
+    }
+  }, [transactions]);
+
+  // 🔍 Фильтрация по месяцу и году
+  const filtered = useMemo(() => {
+    return transactions.filter((t) => {
+      const d = new Date(t.date);
+      return (
+        d.getFullYear() === Number(selectedYear) &&
+        d.getMonth() === Number(selectedMonth)
+      );
+    });
+  }, [transactions, selectedYear, selectedMonth]);
+
+  // 📊 Расчёты
+  const totalIncome = filtered.reduce((sum, t) => sum + t.amount, 0);
+  const totalExpense = totalIncome * 0.3; // 30% от дохода
   const balance = totalIncome - totalExpense;
 
-  const addTransaction = () => {
-    if (!amount || !description) return;
-    const newEntry = {
-      id: Date.now(),
-      type,
-      amount: Number(amount),
-      description,
-      date: new Date().toLocaleString(),
-    };
-    setTransactions([newEntry, ...transactions]);
-    setAmount(0);
-    setDescription("");
-  };
-
-  const exportJSON = () => {
-    const dataStr = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(transactions, null, 2)
-    )}`;
-    const dl = document.createElement("a");
-    dl.setAttribute("href", dataStr);
-    dl.setAttribute("download", "finance_data.json");
-    dl.click();
-  };
-
-  return (
-    <div className="p-6 grid gap-6 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold text-center">Finansų panelė</h1>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="shadow-lg rounded-2xl p-4 bg-white">
-          <p className="text-lg font-semibold">Pajamos</p>
-          <p className="text-3xl font-bold">€{totalIncome.toFixed(2)}</p>
-        </div>
-
-        <div className="shadow-lg rounded-2xl p-4 bg-white">
-          <p className="text-lg font-semibold">Išlaidos</p>
-          <p className="text-3xl font-bold">€{totalExpense.toFixed(2)}</p>
-        </div>
-
-        <div className="shadow-lg rounded-2xl p-4 bg-white">
-          <p className="text-lg font-semibold">Balansas</p>
-          <p className="text-3xl font-bold">€{balance.toFixed(2)}</p>
-        </div>
-      </div>
-
-      {/* Add Transaction */}
-      <div className="p-4 rounded-2xl shadow-md bg-white">
-        <h2 className="text-xl font-semibold mb-4">Pridėti įrašą</h2>
-        <div className="grid md:grid-cols-4 gap-4">
-          <select
-            className="border p-2 rounded-xl"
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-          >
-            <option value="income">Pajamos</option>
-            <option value="expense">Išlaidos</option>
-          </select>
-
-          <input
-            type="number"
-            className="border p-2 rounded-xl"
-            placeholder="Suma €"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-
-          <input
-            type="text"
-            className="border p-2 rounded-xl"
-            placeholder="Aprašymas"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-
-          <button
-            onClick={addTransaction}
-            className="bg-black text-white rounded-xl px-4 py-2 hover:bg-gray-800"
-          >
-            Pridėti
-          </button>
-        </div>
-      </div>
-
-      {/* Transaction List */}
-      <div className="p-4 rounded-2xl shadow-md bg-white">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Istorija</h2>
-          <button
-            onClick={exportJSON}
-            className="border px-4 py-2 rounded-xl flex items-center hover:bg-gray-100"
-          >
-            📥 Eksportuoti (JSON)
-          </button>
-        </div>
-
-        <div className="grid gap-3">
-          {transactions.map((t) => (
-            <div
-              key={t.id}
-              className="p-3 rounded-xl border flex items-center justify-between"
-            >
-              <div>
-                <p className="font-semibold">
-                  {t.type === "income" ? "➕ Pajamos" : "➖ Išlaidos"}
-                </p>
-                <p className="text-sm opacity-70">{t.description}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-bold">€{t.amount.toFixed(2)}</p>
-                <p className="text-xs opacity-60">{t.date}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+  // Для графика
+  const maxAmount = filtered.reduce(
+    (max, t) => (t.amount > max ? t.amount : max),
+    0
   );
-}
+
+  // ➕ Добавить доход
+  const handleAdd = () => {
+    const amt = Number(formAmount);
+    if (!amt || amt <= 0) return;
+    if (!formDate) return;
+
+    const newTx = {
+      id: Date.now(),
+      date: formDate,
+      amount: amt,
+      description: formDescription || "Be aprašymo"
+    };
+
+    setTransactions((prev) => [newTx, ...prev]);
+    setFormAmount("");
+    setFormDescription("");
+  };
+
+  // 🧾 Экспорт в PDF (через окно печати)
+  const handleExportPDF = () => {
+    const reportElement = document.getElementById("finance-report");
+    if (!reportElement) return;
+
+    const printContents = reportElement.innerHTML;
+    const win = window.open("", "", "width=900,height=650");
+
+    if (!win) return;
+
+    win.document.write(`
+      <html>
+        <head>
+          <title>Finansų ataskaita</title>
+          <style>
+            body {
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+              padding: 24px;
+              color: #111827;
+            }
+            h1 {
+              font-size: 24px;
+              margin-bottom: 4px;
+            }
+            h2 {
+              font-size: 18px;
+              margin: 16px 0 8px;
+            }
+            .summary {
+              display: flex;
+              gap: 16px;
+              margin-bottom: 16px;
+            }
+            .card {
+              padding: 12px 16px;
+              border-radius: 12px;
+              border: 1px solid #e5e7eb;
+              flex: 1;
+            }
+            .card-title {
+              font-size: 12px;
+              text-transform: uppercase;
+              color: #6b7280;
+              margin-bottom: 4px;
+            }
+            .card-value {
+              font-size: 18px;
+              font-weight: 600;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 8px;
+              font-size: 12px;
+            }
+            th, td {
+              border: 1px solid #e5e7eb;
+              padding: 6px 8px;
+              text-align: left;
+            }
