@@ -961,70 +961,225 @@ const statusDot = (b) => {
 };
 
 /* === ГЕНЕРАЦИЯ КВИТАНЦИИ === */
+// квитанция — тот же шаблон, что в MyBookings.jsx
 const downloadReceipt = (b) => {
   try {
-    const w = window.open("", "_blank", "width=720,height=900");
-    if (!w) return;
+    const win = window.open('', '_blank', 'width=700,height=900')
+    if (!win) return
 
-    const date = fmtDate(b.start);
-    const time = `${fmtTime(b.start)} – ${fmtTime(b.end)}`;
-    const created = b.createdAt
-      ? new Date(b.createdAt).toLocaleString("lt-LT")
-      : new Date(b.start).toLocaleString("lt-LT");
+    const dateStr = fmtDate(b.start)
+    const timeStr = `${fmtTime(b.start)} – ${fmtTime(b.end)}`
+    const createdStr = b.createdAt
+      ? new Date(b.createdAt).toLocaleString('lt-LT')
+      : new Date(b.start).toLocaleString('lt-LT')
+    const servicesStr = (b.services || []).join(', ') || '—'
+    const paidLabel = isPaid(b) ? 'Оплачено' : 'Не оплачено'
 
-    const services = (b.services || []).join(", ") || "—";
-    const paidLabel = isPaid(b) ? "Оплачено" : "Не оплачено";
+    const vcard = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      'N:Žilina;Irina;;;',
+      'FN:Irina Žilina',
+      'ORG:IZ HAIR TREND',
+      'TEL;TYPE=CELL,VOICE:+37060128458',
+      'EMAIL;TYPE=WORK:info@izhairtrend.lt',
+      'URL:https://izhairtrend.lt',
+      'ADR;TYPE=WORK:;;Sodo g. 2a;Klaipeda;;;LT',
+      'NOTE:Šukuosenų meistrė',
+      'END:VCARD',
+    ].join('\n')
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8" />
-        <title>Квитанция</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            background: #fff;
-            color: #111;
-          }
-          .card {
-            border: 1px solid #aaa;
-            padding: 20px;
-            border-radius: 10px;
-          }
-          h2 { margin-top: 0; }
-          .row { margin-bottom: 6px; }
-        </style>
-      </head>
-      <body>
-        <div class="card">
-          <h2>Квитанция об оплате</h2>
-          <div class="row"><b>Номер:</b> #${b.id.slice(0, 6)}</div>
-          <div class="row"><b>Дата:</b> ${date}</div>
-          <div class="row"><b>Время:</b> ${time}</div>
-          <div class="row"><b>Создано:</b> ${created}</div>
-          <div class="row"><b>Услуги:</b> ${services}</div>
-          <div class="row"><b>Аванс (€):</b> ${b.price ?? "—"}</div>
-          <div class="row"><b>Статус оплаты:</b> ${paidLabel}</div>
+    const qrUrl =
+      'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' +
+      encodeURIComponent(vcard)
 
-          <hr />
-          <div><b>Клиент:</b> ${b.userName} (${b.userPhone})</div>
-          ${
-            b.userInstagram
-              ? `<div><b>Instagram:</b> @${b.userInstagram}</div>`
-              : ""
-          }
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charSet="utf-8" />
+  <title>Квитанция #${b.id.slice(0, 6)}</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0b0217;
+      color: #f9fafb;
+      margin: 0;
+      padding: 24px;
+    }
+    .wrap {
+      max-width: 640px;
+      margin: 0 auto;
+      border-radius: 16px;
+      border: 1px solid rgba(168,85,247,0.5);
+      background: radial-gradient(circle at top left, rgba(168,85,247,0.2), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(56,189,248,0.15), transparent 60%),
+                  rgba(15,23,42,0.95);
+      padding: 24px 28px 28px;
+    }
+    .sub {
+      font-size: 13px;
+      opacity: 0.75;
+    }
+    .title {
+      margin-top: 16px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .top-left {
+      text-align: left;
+    }
+    .top-right {
+      text-align: right;
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    .section {
+      margin-top: 16px;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(148,163,184,0.5);
+      font-size: 14px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 4px 0;
+    }
+    .label {
+      opacity: 0.8;
+    }
+    .value {
+      font-weight: 500;
+      text-align: right;
+    }
+    .services {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tag {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(168,85,247,0.7);
+      background: rgba(30,64,175,0.35);
+      font-size: 12px;
+    }
+    .footer {
+      margin-top: 18px;
+      font-size: 11px;
+      opacity: 0.75;
+      line-height: 1.5;
+    }
+    .qr-label {
+      font-size: 11px;
+      margin-top: 4px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="top-row">
+      <div class="top-left">
+        <img src="/logo2.svg" style="height:100px; margin-bottom:6px;" />
+        <div class="sub">Kvitancija už rezervaciją</div>
+      </div>
+
+      <div class="top-right">
+        Nr.: <b>#${b.id.slice(0, 6)}</b><br/>
+        Sukurta: ${createdStr}<br/>
+
+        <img src="${qrUrl}" alt="IZ HAIR TREND vCard"
+             style="
+               margin-top:10px;
+               border-radius:10px;
+               border:1px solid rgba(148,163,184,0.6);
+               padding:6px;
+               background:rgba(15,23,42,0.9);
+               width:90px;
+               height:90px;
+             "/>
+
+        <div class="qr-label">
+          Skenuokite ir išsaugokite kontaktą
         </div>
+      </div>
+    </div>
 
-        <script>window.print()</script>
-      </body>
-      </html>
-    `;
+    <div class="title">Kvitancija</div>
 
-    w.document.write(html);
-    w.document.close();
-  } catch (err) {
-    console.error("Receipt error", err);
+    <div class="section">
+      <div class="row">
+        <div class="label">Klientas:</div>
+        <div class="value">${b.userName || '-'}</div>
+      </div>
+      <div class="row">
+        <div class="label">Telefonas:</div>
+        <div class="value">${b.userPhone || '-'}</div>
+      </div>
+      <div class="row">
+        <div class="label">El. paštas:</div>
+        <div class="value">${b.userEmail || '-'}</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="row">
+        <div class="label">Data:</div>
+        <div class="value">${dateStr}</div>
+      </div>
+      <div class="row">
+        <div class="label">Laikas:</div>
+        <div class="value">${timeStr}</div>
+      </div>
+      <div class="row">
+        <div class="label">Paslaugos:</div>
+        <div class="value">${servicesStr}</div>
+      </div>
+      <div class="services">
+        ${(b.services || []).map(s => `<span class="tag">${s}</span>`).join('')}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="row">
+        <div class="label">Avansas:</div>
+        <div class="value">${b.price ? `${b.price} €` : '—'}</div>
+      </div>
+      <div class="row">
+        <div class="label">Mokėjimo būsena:</div>
+        <div class="value">${paidLabel}</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Ši kvitancija sugeneruota internetu ir galioja be parašo.<br/>
+      Jei reikia, galite ją išsisaugoti kaip PDF: naršyklėje pasirinkite "Spausdinti" → "Save as PDF".
+    </div>
+  </div>
+
+  <script>
+    window.focus();
+    setTimeout(function(){
+      window.print();
+    }, 400);
+  </script>
+</body>
+</html>`
+
+    win.document.open()
+    win.document.write(html)
+    win.document.close()
+  } catch (e) {
+    console.error('Receipt error', e)
   }
+}
 };
