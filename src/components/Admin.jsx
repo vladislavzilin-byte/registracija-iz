@@ -1182,4 +1182,3 @@ const downloadReceipt = (b) => {
     console.error('Receipt error', e)
   }
 }
-};
