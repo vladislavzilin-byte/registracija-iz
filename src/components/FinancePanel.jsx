@@ -728,9 +728,11 @@ export default function FinancePanel() {
         className={`
           flex-1 py-2 rounded-xl text-sm font-medium transition
           border border-purple-700/40 
-          ${mode === btn.id 
-            ? "bg-gradient-to-r from-purple-700 to-purple-900 text-white border-purple-400/70" 
-            : "bg-[rgba(40,20,70,0.6)] text-purple-200 hover:border-purple-500/50"}
+          ${
+            mode === btn.id
+              ? "bg-gradient-to-r from-purple-700 to-purple-900 text-white border-purple-400/70"
+              : "bg-[rgba(40,20,70,0.6)] text-purple-200 hover:border-purple-500/50"
+          }
         `}
       >
         {btn.label}
@@ -741,12 +743,10 @@ export default function FinancePanel() {
   {/* --- MONTH MODE --- */}
   {mode === "month" && (
     <div className="flex gap-3 w-full">
-
-      {/* Месяц */}
       <select
         className="w-1/2 px-3 py-2 text-sm rounded-xl 
                    border border-purple-700/40 
-                   bg-[rgba(40,20,70,0.6)] 
+                   bg-[rgba(40,20,70,0.6)]
                    text-white outline-none 
                    focus:border-purple-400/70 transition"
         value={month}
@@ -759,11 +759,10 @@ export default function FinancePanel() {
         ))}
       </select>
 
-      {/* Год */}
       <select
         className="w-1/2 px-3 py-2 text-sm rounded-xl 
                    border border-purple-700/40 
-                   bg-[rgba(40,20,70,0.6)] 
+                   bg-[rgba(40,20,70,0.6)]
                    text-white outline-none 
                    focus:border-purple-400/70 transition"
         value={year}
@@ -775,7 +774,6 @@ export default function FinancePanel() {
           </option>
         ))}
       </select>
-
     </div>
   )}
 
@@ -785,7 +783,7 @@ export default function FinancePanel() {
       <select
         className="w-full px-3 py-2 text-sm rounded-xl 
                    border border-purple-700/40 
-                   bg-[rgba(40,20,70,0.6)] 
+                   bg-[rgba(40,20,70,0.6)]
                    text-white outline-none 
                    focus:border-purple-400/70 transition"
         value={year}
@@ -803,31 +801,27 @@ export default function FinancePanel() {
   {/* --- RANGE MODE --- */}
   {mode === "range" && (
     <div className="flex gap-3 w-full">
-
-      {/* От */}
       <input
         type="date"
         className="w-1/2 px-3 py-2 text-sm rounded-xl 
                    border border-purple-700/40 
-                   bg-[rgba(40,20,70,0.6)] 
+                   bg-[rgba(40,20,70,0.6)]
                    text-white outline-none 
                    focus:border-purple-400/70 transition"
         value={rangeFrom}
         onChange={(e) => setRangeFrom(e.target.value)}
       />
 
-      {/* До */}
       <input
         type="date"
         className="w-1/2 px-3 py-2 text-sm rounded-xl 
                    border border-purple-700/40 
-                   bg-[rgba(40,20,70,0.6)] 
+                   bg-[rgba(40,20,70,0.6)]
                    text-white outline-none 
                    focus:border-purple-400/70 transition"
         value={rangeTo}
         onChange={(e) => setRangeTo(e.target.value)}
       />
-
     </div>
   )}
 
