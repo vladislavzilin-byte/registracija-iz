@@ -712,68 +712,106 @@ export default function FinancePanel() {
           </div>
 
           {/* контролы диапазона */}
-          {mode === 'month' && (
-            <div className="flex gap-2">
-              <select
-                className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
-                value={month}
-                onChange={(e) => setMonth(Number(e.target.value))}
-              >
-                {MONTHS.map((m, idx) => (
-                  <option key={m} value={idx}>
-                    {m}
-                  </option>
-                ))}
-              </select>
+{/* --- RANGE CONTROLS (MONTH / YEAR / RANGE) --- */}
+<div className="mt-4 w-full">
 
-              <select
-                className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
-                value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
-              >
-                {years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+  {/* --- MONTH MODE --- */}
+  {mode === "month" && (
+    <div className="flex gap-3 w-full">
 
-          {mode === 'year' && (
-            <div className="flex gap-2">
-              <select
-                className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
-                value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
-              >
-                {years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+      {/* Месяц */}
+      <select
+        className="w-1/2 px-3 py-2 text-sm rounded-xl 
+                   border border-purple-700/40 
+                   bg-[rgba(40,20,70,0.6)] 
+                   text-white outline-none 
+                   focus:border-purple-400/70 
+                   transition"
+        value={month}
+        onChange={(e) => setMonth(Number(e.target.value))}
+      >
+        {MONTHS.map((m, idx) => (
+          <option key={m} value={idx} className="bg-[#140c1b] text-white">
+            {m}
+          </option>
+        ))}
+      </select>
 
-          {mode === 'range' && (
-            <div className="flex gap-2">
-              <input
-                type="date"
-                className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs"
-                value={rangeFrom}
-                onChange={(e) => setRangeFrom(e.target.value)}
-              />
-              <input
-                type="date"
-                className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs"
-                value={rangeTo}
-                onChange={(e) => setRangeTo(e.target.value)}
-              />
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Год */}
+      <select
+        className="w-1/2 px-3 py-2 text-sm rounded-xl 
+                   border border-purple-700/40 
+                   bg-[rgba(40,20,70,0.6)] 
+                   text-white outline-none 
+                   focus:border-purple-400/70 
+                   transition"
+        value={year}
+        onChange={(e) => setYear(Number(e.target.value))}
+      >
+        {years.map((y) => (
+          <option key={y} value={y} className="bg-[#140c1b] text-white">
+            {y}
+          </option>
+        ))}
+      </select>
+
+    </div>
+  )}
+
+  {/* --- YEAR MODE --- */}
+  {mode === "year" && (
+    <div className="flex w-full">
+      <select
+        className="w-full px-3 py-2 text-sm rounded-xl 
+                   border border-purple-700/40 
+                   bg-[rgba(40,20,70,0.6)] 
+                   text-white outline-none 
+                   focus:border-purple-400/70 
+                   transition"
+        value={year}
+        onChange={(e) => setYear(Number(e.target.value))}
+      >
+        {years.map((y) => (
+          <option key={y} value={y} className="bg-[#140c1b] text-white">
+            {y}
+          </option>
+        ))}
+      </select>
+    </div>
+  )}
+
+  {/* --- RANGE MODE --- */}
+  {mode === "range" && (
+    <div className="flex gap-3 w-full">
+
+      {/* От */}
+      <input
+        type="date"
+        className="w-1/2 px-3 py-2 text-sm rounded-xl 
+                   border border-purple-700/40 
+                   bg-[rgba(40,20,70,0.6)] 
+                   text-white outline-none 
+                   focus:border-purple-400/70 
+                   transition"
+        value={rangeFrom}
+        onChange={(e) => setRangeFrom(e.target.value)}
+      />
+
+      {/* До */}
+      <input
+        type="date"
+        className="w-1/2 px-3 py-2 text-sm rounded-xl 
+                   border border-purple-700/40 
+                   bg-[rgba(40,20,70,0.6)] 
+                   text-white outline-none 
+                   focus:border-purple-400/70 
+                   transition"
+        value={rangeTo}
+        onChange={(e) => setRangeTo(e.target.value)}
+      />
+    </div>
+  )}
+</div>
 
       {/* Карточки сумм */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
