@@ -150,10 +150,9 @@ export default function FinancePanel() {
         return true
       })
       .map((b) => {
-        const start = new Date(b.start)
         const end = new Date(b.end)
-
         const dateISO = end.toISOString().slice(0, 10)
+
         const dateDisplay = fmtDate(b.start)
         const timeDisplay = `${fmtTime(b.start)} – ${fmtTime(b.end)}`
         const amount = Number(b.price) || 0
@@ -167,7 +166,7 @@ export default function FinancePanel() {
           bookingId: b.id,
           booking: b,
           receiptNumber: String(b.id).slice(0, 6),
-          date: dateISO, // для сортировки
+          date: dateISO,
           dateDisplay,
           timeDisplay,
           amount,
@@ -187,17 +186,14 @@ export default function FinancePanel() {
   const manualItemsForPeriod = useMemo(
     () =>
       manualEntries
-        .map((e) => {
-          const d = new Date(e.date)
-          return {
-            ...e,
-            date: e.date,
-            dateDisplay: e.date,
-            timeDisplay: '—',
-            tags: ['ranka'],
-            type: 'manual'
-          }
-        })
+        .map((e) => ({
+          ...e,
+          date: e.date,
+          dateDisplay: e.date,
+          timeDisplay: '—',
+          tags: ['ranka'],
+          type: 'manual'
+        }))
         .filter((e) => isInRange(new Date(e.date))),
     [manualEntries, rangeStart, rangeEnd]
   )
@@ -211,6 +207,43 @@ export default function FinancePanel() {
   const totalIncome = systemIncomeTotal + manualIncomeTotal
   const totalExpense = totalIncome * 0.3
   const balance = totalIncome - totalExpense
+
+  // ===== объединённый список для UI / PDF / CSV =====
+  const combinedItems = useMemo(() => {
+    const manualMapped = manualItemsForPeriod.map((e) => ({
+      id: `man-${e.id}`,
+      type: 'manual',
+      bookingId: null,
+      booking: null,
+      receiptNumber: null,
+      date: e.date,
+      dateDisplay: e.dateDisplay,
+      timeDisplay: e.timeDisplay,
+      amount: e.amount,
+      description: e.description,
+      tags: e.tags
+    }))
+
+    const all = [...systemIncomeItems, ...manualMapped]
+    return all.sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0))
+  }, [systemIncomeItems, manualItemsForPeriod])
+
+  // ===== группировка по дате для красивого UI =====
+  const groupedByDate = useMemo(() => {
+    const map = {}
+    combinedItems.forEach((item) => {
+      const key = item.date
+      if (!map[key]) {
+        map[key] = {
+          date: key,
+          dateDisplay: item.dateDisplay,
+          items: []
+        }
+      }
+      map[key].items.push(item)
+    })
+    return Object.values(map).sort((a, b) => a.date.localeCompare(b.date))
+  }, [combinedItems])
 
   // ===== добавить ручную запись =====
   const addManual = () => {
@@ -253,7 +286,9 @@ export default function FinancePanel() {
 
   const deleteItem = (item) => {
     if (
-      !window.confirm('Ištrinti šį įrašą iš finansų suvestinės? (rezervacija neliečiama)')
+      !window.confirm(
+        'Ištrinti šį įrašą iš finansų suvestinės? (rezervacija neliečiama)'
+      )
     )
       return
 
@@ -265,26 +300,6 @@ export default function FinancePanel() {
       deleteManual(item.id)
     }
   }
-
-  // ===== объединённый список для UI / PDF / CSV =====
-  const combinedItems = useMemo(() => {
-    const manualMapped = manualItemsForPeriod.map((e) => ({
-      id: `man-${e.id}`,
-      type: 'manual',
-      bookingId: null,
-      booking: null,
-      receiptNumber: null,
-      date: e.date,
-      dateDisplay: e.dateDisplay,
-      timeDisplay: e.timeDisplay,
-      amount: e.amount,
-      description: e.description,
-      tags: e.tags
-    }))
-
-    const all = [...systemIncomeItems, ...manualMapped]
-    return all.sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0))
-  }, [systemIncomeItems, manualItemsForPeriod])
 
   // ===== красивые теги (для UI) =====
   const renderTags = (tags, type) => {
@@ -440,9 +455,6 @@ export default function FinancePanel() {
 
   // ===== экспорт в PDF (описание + таблица) =====
   const exportPDF = () => {
-    const report = document.getElementById('finance-report')
-    if (!report) return
-
     const win = window.open('', 'PRINT', 'width=900,height=650')
     if (!win) return
 
@@ -584,7 +596,8 @@ export default function FinancePanel() {
                 ${combinedItems
                   .map((item) => {
                     const tagsStr = (item.tags || []).join(', ')
-                    const kv = item.type === 'system' ? item.receiptNumber || '' : ''
+                    const kv =
+                      item.type === 'system' ? item.receiptNumber || '' : ''
                     return `<tr>
                       <td>${item.dateDisplay}</td>
                       <td>${item.timeDisplay}</td>
@@ -687,6 +700,9 @@ export default function FinancePanel() {
             Pajamos iš sistemos ir rankinių įrašų, automatinės išlaidos (30%) ir
             profesionali PDF / CSV ataskaita.
           </p>
+          <p className="text-xs text-zinc-500 mt-1">
+            Laikotarpis: <span className="text-zinc-200">{rangeLabel}</span>
+          </p>
         </div>
 
         <div className="flex flex-col items-stretch gap-2 md:items-end">
@@ -712,120 +728,68 @@ export default function FinancePanel() {
           </div>
 
           {/* контролы диапазона */}
-{/* --- RANGE CONTROLS WRAPPER --- */}
-<div className="mt-4 w-full flex flex-col gap-4">
+          {mode === 'month' && (
+            <div className="flex gap-2">
+              <select
+                className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
+                value={month}
+                onChange={(e) => setMonth(Number(e.target.value))}
+              >
+                {MONTHS.map((m, idx) => (
+                  <option key={m} value={idx}>
+                    {m}
+                  </option>
+                ))}
+              </select>
 
-  {/* --- SWITCH BUTTONS (3 in row) --- */}
-  <div className="flex w-full gap-3">
-    {[
-      { id: "month", label: "Mėnuo" },
-      { id: "year", label: "Metai" },
-      { id: "range", label: "Laikotarpis" },
-    ].map((btn) => (
-      <button
-        key={btn.id}
-        onClick={() => setMode(btn.id)}
-        className={`
-          flex-1 py-2 rounded-xl text-sm font-medium transition
-          border border-purple-700/40 
-          ${
-            mode === btn.id
-              ? "bg-gradient-to-r from-purple-700 to-purple-900 text-white border-purple-400/70"
-              : "bg-[rgba(40,20,70,0.6)] text-purple-200 hover:border-purple-500/50"
-          }
-        `}
-      >
-        {btn.label}
-      </button>
-    ))}
-  </div>
+              <select
+                className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+              >
+                {years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-  {/* --- MONTH MODE --- */}
-  {mode === "month" && (
-    <div className="flex gap-3 w-full">
-      <select
-        className="w-1/2 px-3 py-2 text-sm rounded-xl 
-                   border border-purple-700/40 
-                   bg-[rgba(40,20,70,0.6)]
-                   text-white outline-none 
-                   focus:border-purple-400/70 transition"
-        value={month}
-        onChange={(e) => setMonth(Number(e.target.value))}
-      >
-        {MONTHS.map((m, idx) => (
-          <option key={m} value={idx} className="bg-[#140c1b] text-white">
-            {m}
-          </option>
-        ))}
-      </select>
+          {mode === 'year' && (
+            <div className="flex gap-2">
+              <select
+                className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+              >
+                {years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-      <select
-        className="w-1/2 px-3 py-2 text-sm rounded-xl 
-                   border border-purple-700/40 
-                   bg-[rgba(40,20,70,0.6)]
-                   text-white outline-none 
-                   focus:border-purple-400/70 transition"
-        value={year}
-        onChange={(e) => setYear(Number(e.target.value))}
-      >
-        {years.map((y) => (
-          <option key={y} value={y} className="bg-[#140c1b] text-white">
-            {y}
-          </option>
-        ))}
-      </select>
-    </div>
-  )}
-
-  {/* --- YEAR MODE --- */}
-  {mode === "year" && (
-    <div className="flex w-full">
-      <select
-        className="w-full px-3 py-2 text-sm rounded-xl 
-                   border border-purple-700/40 
-                   bg-[rgba(40,20,70,0.6)]
-                   text-white outline-none 
-                   focus:border-purple-400/70 transition"
-        value={year}
-        onChange={(e) => setYear(Number(e.target.value))}
-      >
-        {years.map((y) => (
-          <option key={y} value={y} className="bg-[#140c1b] text-white">
-            {y}
-          </option>
-        ))}
-      </select>
-    </div>
-  )}
-
-  {/* --- RANGE MODE --- */}
-  {mode === "range" && (
-    <div className="flex gap-3 w-full">
-      <input
-        type="date"
-        className="w-1/2 px-3 py-2 text-sm rounded-xl 
-                   border border-purple-700/40 
-                   bg-[rgba(40,20,70,0.6)]
-                   text-white outline-none 
-                   focus:border-purple-400/70 transition"
-        value={rangeFrom}
-        onChange={(e) => setRangeFrom(e.target.value)}
-      />
-
-      <input
-        type="date"
-        className="w-1/2 px-3 py-2 text-sm rounded-xl 
-                   border border-purple-700/40 
-                   bg-[rgba(40,20,70,0.6)]
-                   text-white outline-none 
-                   focus:border-purple-400/70 transition"
-        value={rangeTo}
-        onChange={(e) => setRangeTo(e.target.value)}
-      />
-    </div>
-  )}
-
-</div>
+          {mode === 'range' && (
+            <div className="flex gap-2">
+              <input
+                type="date"
+                className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs"
+                value={rangeFrom}
+                onChange={(e) => setRangeFrom(e.target.value)}
+              />
+              <input
+                type="date"
+                className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs"
+                value={rangeTo}
+                onChange={(e) => setRangeTo(e.target.value)}
+              />
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Карточки сумм */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -910,7 +874,12 @@ export default function FinancePanel() {
       {/* История + экспорт */}
       <div className="rounded-2xl bg-zinc-900/80 border border-zinc-800 p-4 md:p-5 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <h2 className="text-xl font-semibold">Istorija</h2>
+          <div>
+            <h2 className="text-xl font-semibold">Istorija</h2>
+            <p className="text-xs text-zinc-400">
+              VISI įrašai pagal pasirinktą laikotarpį: sistemos + rankiniai.
+            </p>
+          </div>
           <div className="flex gap-2">
             <button onClick={exportCSV} className={primaryBtn}>
               📊 Eksportuoti CSV
@@ -921,7 +890,7 @@ export default function FinancePanel() {
           </div>
         </div>
 
-        {/* Блок, который уходит в PDF (без карточек!) */}
+        {/* Блок, который уходит в PDF (резюме + таблица) */}
         <div
           id="finance-report"
           className="bg-zinc-900/90 text-white p-4 rounded-xl border border-zinc-700"
@@ -963,7 +932,7 @@ export default function FinancePanel() {
             </div>
           </div>
 
-          {/* таблица только для PDF / десктопа */}
+          {/* таблица для PDF / десктопа */}
           <div className="hidden md:block">
             <table className="w-full text-sm border-collapse">
               <thead>
@@ -1028,71 +997,79 @@ export default function FinancePanel() {
           </div>
         </div>
 
-        {/* Живые карточки (UI) с крестиком и Kvitas */}
-        <div className="flex flex-col gap-2 mt-2">
-          {combinedItems.map((item) => (
-            <div
-              key={item.id}
-              className="relative border border-zinc-800 rounded-xl px-3 py-2 text-sm space-y-1 bg-zinc-950/70"
-            >
-              {/* крестик удаления */}
-              <button
-                className="absolute top-1 right-2 text-xs text-rose-300 hover:text-rose-400"
-                onClick={() => deleteItem(item)}
-                title="Ištrinti įrašą iš suvestinės"
-              >
-                ✕
-              </button>
-
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs text-zinc-400">
-                  {item.dateDisplay}
-                </span>
-                <span className="text-xs text-zinc-400">
-                  {item.timeDisplay}
-                </span>
+        {/* Живые карточки (UI) сгруппированы по датам */}
+        <div className="flex flex-col gap-3 mt-3">
+          {groupedByDate.map((group) => (
+            <div key={group.date} className="space-y-1">
+              <div className="flex items-center gap-2 text-xs text-zinc-400">
+                <div className="w-2 h-2 rounded-full bg-purple-500" />
+                <span>{group.dateDisplay}</span>
               </div>
 
-              <div className="font-semibold mt-1">
-                €{item.amount.toFixed(2)}
-              </div>
-
-              {item.tags && item.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {renderTags(item.tags, item.type)}
-                  {item.type === 'manual' && (!item.tags || !item.tags.length) && (
-                    <span className="inline-flex items-center rounded-full border border-pink-400/70 bg-pink-500/15 px-3 py-0.5 text-xs text-pink-100">
-                      ranka
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {item.description && (
-                <div className="text-xs text-zinc-300 mt-1">
-                  {item.description}
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-xs text-zinc-400">
-                  {item.type === 'system' && item.receiptNumber
-                    ? `Kvitas #${item.receiptNumber}`
-                    : 'Kvito nėra'}
-                </span>
-                {item.type === 'system' && (
-                  <button
-                    className="text-xs px-2 py-1 rounded-lg bg-zinc-900 border border-purple-500/60 hover:bg-zinc-800"
-                    onClick={() => downloadReceipt(item)}
+              <div className="flex flex-col gap-2">
+                {group.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="relative border border-zinc-800 rounded-xl px-3 py-2 text-sm space-y-1 bg-zinc-950/70"
                   >
-                    🧾 Kvitas
-                  </button>
-                )}
+                    {/* крестик удаления */}
+                    <button
+                      className="absolute top-1 right-2 text-xs text-rose-300 hover:text-rose-400"
+                      onClick={() => deleteItem(item)}
+                      title="Ištrinti įrašą iš suvestinės"
+                    >
+                      ✕
+                    </button>
+
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-zinc-400">
+                        {item.timeDisplay}
+                      </span>
+                      <span className="text-sm font-semibold">
+                        €{item.amount.toFixed(2)}
+                      </span>
+                    </div>
+
+                    {item.tags && item.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {renderTags(item.tags, item.type)}
+                        {item.type === 'manual' &&
+                          (!item.tags || !item.tags.length) && (
+                            <span className="inline-flex items-center rounded-full border border-pink-400/70 bg-pink-500/15 px-3 py-0.5 text-xs text-pink-100">
+                              ranka
+                            </span>
+                          )}
+                      </div>
+                    )}
+
+                    {item.description && (
+                      <div className="text-xs text-zinc-300 mt-1">
+                        {item.description}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-xs text-zinc-400">
+                        {item.type === 'system' && item.receiptNumber
+                          ? `Kvitas #${item.receiptNumber}`
+                          : 'Kvito nėra'}
+                      </span>
+                      {item.type === 'system' && (
+                        <button
+                          className="text-xs px-2 py-1 rounded-lg bg-zinc-900 border border-purple-500/60 hover:bg-zinc-800"
+                          onClick={() => downloadReceipt(item)}
+                        >
+                          🧾 Kvitas
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
 
-          {!combinedItems.length && (
+          {!groupedByDate.length && (
             <div className="text-xs text-center text-zinc-400 py-2">
               Nėra įrašų šiam laikotarpiui
             </div>
