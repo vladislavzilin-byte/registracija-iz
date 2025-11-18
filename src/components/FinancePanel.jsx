@@ -712,8 +712,31 @@ export default function FinancePanel() {
           </div>
 
           {/* контролы диапазона */}
-{/* --- RANGE CONTROLS (MONTH / YEAR / RANGE) --- */}
-<div className="mt-4 w-full">
+{/* --- RANGE CONTROLS WRAPPER --- */}
+<div className="mt-4 w-full flex flex-col gap-4">
+
+  {/* --- SWITCH BUTTONS (3 in row) --- */}
+  <div className="flex w-full gap-3">
+    {[
+      { id: "month", label: "Mėnuo" },
+      { id: "year", label: "Metai" },
+      { id: "range", label: "Laikotarpis" },
+    ].map((btn) => (
+      <button
+        key={btn.id}
+        onClick={() => setMode(btn.id)}
+        className={`
+          flex-1 py-2 rounded-xl text-sm font-medium transition
+          border border-purple-700/40 
+          ${mode === btn.id 
+            ? "bg-gradient-to-r from-purple-700 to-purple-900 text-white border-purple-400/70" 
+            : "bg-[rgba(40,20,70,0.6)] text-purple-200 hover:border-purple-500/50"}
+        `}
+      >
+        {btn.label}
+      </button>
+    ))}
+  </div>
 
   {/* --- MONTH MODE --- */}
   {mode === "month" && (
@@ -725,8 +748,7 @@ export default function FinancePanel() {
                    border border-purple-700/40 
                    bg-[rgba(40,20,70,0.6)] 
                    text-white outline-none 
-                   focus:border-purple-400/70 
-                   transition"
+                   focus:border-purple-400/70 transition"
         value={month}
         onChange={(e) => setMonth(Number(e.target.value))}
       >
@@ -743,8 +765,7 @@ export default function FinancePanel() {
                    border border-purple-700/40 
                    bg-[rgba(40,20,70,0.6)] 
                    text-white outline-none 
-                   focus:border-purple-400/70 
-                   transition"
+                   focus:border-purple-400/70 transition"
         value={year}
         onChange={(e) => setYear(Number(e.target.value))}
       >
@@ -766,8 +787,7 @@ export default function FinancePanel() {
                    border border-purple-700/40 
                    bg-[rgba(40,20,70,0.6)] 
                    text-white outline-none 
-                   focus:border-purple-400/70 
-                   transition"
+                   focus:border-purple-400/70 transition"
         value={year}
         onChange={(e) => setYear(Number(e.target.value))}
       >
@@ -791,8 +811,7 @@ export default function FinancePanel() {
                    border border-purple-700/40 
                    bg-[rgba(40,20,70,0.6)] 
                    text-white outline-none 
-                   focus:border-purple-400/70 
-                   transition"
+                   focus:border-purple-400/70 transition"
         value={rangeFrom}
         onChange={(e) => setRangeFrom(e.target.value)}
       />
@@ -804,13 +823,14 @@ export default function FinancePanel() {
                    border border-purple-700/40 
                    bg-[rgba(40,20,70,0.6)] 
                    text-white outline-none 
-                   focus:border-purple-400/70 
-                   transition"
+                   focus:border-purple-400/70 transition"
         value={rangeTo}
         onChange={(e) => setRangeTo(e.target.value)}
       />
+
     </div>
   )}
+
 </div>
 
       {/* Карточки сумм */}
