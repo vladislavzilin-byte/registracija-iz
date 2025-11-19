@@ -140,9 +140,7 @@ export default function FinancePanel() {
       .filter((b) => {
         const end = new Date(b.end)
 
-        // БОЛЬШЕ НЕ ОГРАНИЧИВАЕМ ПО ТЕКУЩЕЙ ДАТЕ:
-        // if (end > new Date()) return false
-
+        // ВАЖНО: учитываем и будущие оплаченные (avansai)
         if (isCanceled(b)) return false
         if (!isPaid(b)) return false
         if (excludedIds.includes(b.id)) return false
@@ -658,23 +656,16 @@ export default function FinancePanel() {
 
   const years = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1]
 
-  // ===== UI helpers =====
   const primaryBtn =
     'bg-gradient-to-r from-[#6d28d9] to-[#4c1d95] text-white rounded-xl px-4 py-2 text-xs md:text-sm font-semibold hover:brightness-110'
 
   const smallPdfBtn =
     'inline-flex items-center gap-1 rounded-lg border border-purple-500/60 bg-zinc-900 px-3 py-1 text-[10px] md:text-xs text-purple-100 hover:bg-zinc-800'
 
-  const modeBtn = (active) =>
-    'px-4 py-2 text-xs md:text-sm rounded-lg border transition min-w-[100px] text-center ' +
-    (active
-      ? 'bg-gradient-to-r from-[#6d28d9] to-[#4c1d95] border-purple-400 text-white shadow-sm'
-      : 'bg-transparent border-purple-500/40 text-zinc-300 hover:bg-zinc-900')
-
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6 text-white">
       {/* Шапка + фильтры */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold">Finansų panelė</h1>
           <p className="text-sm text-zinc-400 mt-1">
@@ -687,31 +678,70 @@ export default function FinancePanel() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 md:items-end w-full md:w-auto">
-          <div className="flex gap-2 self-end rounded-xl bg-zinc-900 border border-purple-500/40 p-1 text-xs">
-            <button
-              className={modeBtn(mode === 'month')}
-              onClick={() => setMode('month')}
-            >
-              Mėnuo
-            </button>
-            <button
-              className={modeBtn(mode === 'year')}
-              onClick={() => setMode('year')}
-            >
-              Metai
-            </button>
-            <button
-              className={modeBtn(mode === 'range')}
-              onClick={() => setMode('range')}
-            >
-              Laikotarpis
-            </button>
+        <div className="flex flex-col gap-3 md:items-end w-full md:w-auto">
+          {/* iOS style segmented control */}
+          <div className="w-full md:w-[360px]">
+            <div className="relative bg-zinc-900/80 border border-purple-500/60 rounded-2xl p-1 shadow-[0_0_25px_rgba(88,28,135,0.6)] overflow-hidden">
+              {/* moving slider */}
+              <div
+                className="absolute top-1 bottom-1 w-1/3 rounded-xl bg-gradient-to-r from-purple-500 via-fuchsia-500 to-indigo-500 shadow-[0_0_18px_rgba(168,85,247,0.9)] transition-transform duration-300 ease-out"
+                style={{
+                  transform:
+                    mode === 'month'
+                      ? 'translateX(0%)'
+                      : mode === 'year'
+                      ? 'translateX(100%)'
+                      : 'translateX(200%)'
+                }}
+              />
+              {/* buttons */}
+              <div className="relative z-10 grid grid-cols-3 text-[11px] md:text-xs font-medium">
+                <button
+                  type="button"
+                  onClick={() => setMode('month')}
+                  className={`flex flex-col items-center justify-center gap-0.5 px-2 py-2 md:py-2.5 transition-colors ${
+                    mode === 'month'
+                      ? 'text-white'
+                      : 'text-zinc-400 hover:text-zinc-100'
+                  }`}
+                >
+                  <span className="text-base md:text-lg">📅</span>
+                  <span>Mėnuo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('year')}
+                  className={`flex flex-col items-center justify-center gap-0.5 px-2 py-2 md:py-2.5 transition-colors ${
+                    mode === 'year'
+                      ? 'text-white'
+                      : 'text-zinc-400 hover:text-zinc-100'
+                  }`}
+                >
+                  <span className="text-base md:text-lg">🕓</span>
+                  <span>Metai</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('range')}
+                  className={`flex flex-col items-center justify-center gap-0.5 px-2 py-2 md:py-2.5 transition-colors ${
+                    mode === 'range'
+                      ? 'text-white'
+                      : 'text-zinc-400 hover:text-zinc-100'
+                  }`}
+                >
+                  <span className="text-base md:text-lg">📆↔️</span>
+                  <span>Laikotarpis</span>
+                </button>
+              </div>
+
+              {/* subtle outer glow / border shine */}
+              <div className="pointer-events-none absolute inset-0 rounded-2xl border border-white/5 opacity-70" />
+            </div>
           </div>
 
           {/* контролы диапазона */}
           {mode === 'month' && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 self-end">
               <select
                 className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
                 value={month}
@@ -739,7 +769,7 @@ export default function FinancePanel() {
           )}
 
           {mode === 'year' && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 self-end">
               <select
                 className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm"
                 value={year}
@@ -755,7 +785,7 @@ export default function FinancePanel() {
           )}
 
           {mode === 'range' && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 self-end">
               <input
                 type="date"
                 className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs"
@@ -774,7 +804,7 @@ export default function FinancePanel() {
       </div>
 
       {/* Блок ручных записей */}
-      <div className="rounded-2xl bg-gradient-to-br from-purple-950/70 to-slate-950/70 border border-purple-500/30 p-4 md:p-5 space-y-4">
+      <div className="rounded-2xl bg-gradient-to-br from-purple-950/70 to-slate-950/70 border border-purple-500/30 p-4 md:p-5 space-y-4 shadow-[0_18px_50px_rgba(15,23,42,0.85)]">
         <h2 className="text-xl font-semibold">Pridėti rankinį įrašą</h2>
 
         <div className="grid md:grid-cols-5 gap-3">
@@ -828,7 +858,7 @@ export default function FinancePanel() {
       </div>
 
       {/* История + экспорт + главная таблица */}
-      <div className="rounded-2xl bg-zinc-900/80 border border-zinc-800 p-4 md:p-5 space-y-4">
+      <div className="rounded-2xl bg-zinc-900/80 border border-zinc-800 p-4 md:p-5 space-y-4 shadow-[0_22px_60px_rgba(15,23,42,0.9)]">
         {/* заголовок + маленькая PDF кнопка */}
         <div className="flex items-center justify-between gap-2">
           <div>
@@ -856,60 +886,79 @@ export default function FinancePanel() {
             rankinių įrašų, automatinės išlaidos (30%) ir balansas.
           </p>
 
+          {/* mini premium cards (Sistema / Rankiniai / Išlaidos / Balansas) */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm mt-2 mb-1">
-            <div className="bg-zinc-900 border border-emerald-400/40 rounded-xl p-3">
-              <div className="text-xs uppercase text-emerald-300">Sistema</div>
-              <div className="text-lg font-semibold">
+            <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-400/50 rounded-xl p-3 shadow-inner shadow-emerald-900/40">
+              <div className="text-[10px] uppercase text-emerald-300 tracking-wide">
+                Sistema
+              </div>
+              <div className="text-lg font-semibold mt-0.5">
                 €{systemIncomeTotal.toFixed(2)}
               </div>
+              <div className="text-[11px] text-emerald-100/80 mt-1">
+                Užbaigtos ir apmokėtos rezervacijos
+              </div>
             </div>
-            <div className="bg-zinc-900 border border-sky-400/40 rounded-xl p-3">
-              <div className="text-xs uppercase text-sky-300">Rankiniai</div>
-              <div className="text-lg font-semibold">
+            <div className="bg-gradient-to-br from-sky-500/10 to-sky-500/5 border border-sky-400/50 rounded-xl p-3 shadow-inner shadow-sky-900/40">
+              <div className="text-[10px] uppercase text-sky-300 tracking-wide">
+                Rankiniai
+              </div>
+              <div className="text-lg font-semibold mt-0.5">
                 €{manualIncomeTotal.toFixed(2)}
               </div>
+              <div className="text-[11px] text-sky-100/80 mt-1">
+                Papildomi rankiniai įrašai
+              </div>
             </div>
-            <div className="bg-zinc-900 border border-amber-400/40 rounded-xl p-3">
-              <div className="text-xs uppercase text-amber-300">
+            <div className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-400/50 rounded-xl p-3 shadow-inner shadow-amber-900/40">
+              <div className="text-[10px] uppercase text-amber-300 tracking-wide">
                 Išlaidos (30%)
               </div>
-              <div className="text-lg font-semibold">
+              <div className="text-lg font-semibold mt-0.5">
                 €{totalExpense.toFixed(2)}
               </div>
+              <div className="text-[11px] text-amber-100/80 mt-1">
+                Automatinės išlaidos nuo pajamų
+              </div>
             </div>
-            <div className="bg-zinc-900 border border-indigo-400/40 rounded-xl p-3">
-              <div className="text-xs uppercase text-indigo-300">Balansas</div>
-              <div className="text-lg font-semibold">
+            <div className="bg-gradient-to-br from-indigo-500/10 to-indigo-500/5 border border-indigo-400/50 rounded-xl p-3 shadow-inner shadow-indigo-900/40">
+              <div className="text-[10px] uppercase text-indigo-300 tracking-wide">
+                Balansas
+              </div>
+              <div className="text-lg font-semibold mt-0.5">
                 €{balance.toFixed(2)}
+              </div>
+              <div className="text-[11px] text-indigo-100/80 mt-1">
+                Pajamos minus 30% išlaidų
               </div>
             </div>
           </div>
         </div>
 
-        {/* ГЛАВНАЯ ЖИВАЯ ТАБЛИЦА */}
+        {/* ГЛАВНАЯ ЖИВАЯ ТАБЛИЦА — variant A (card-like rows) */}
         <div className="mt-4">
           <h3 className="text-sm font-semibold mb-2">Visi įrašai (lentelė)</h3>
           {groupedByDate.length ? (
-            <div className="overflow-x-auto rounded-xl border border-purple-600/40 bg-zinc-950/60 shadow-lg">
-              <table className="w-full text-xs md:text-sm border-collapse table-fixed">
+            <div className="overflow-x-auto rounded-2xl border border-purple-600/40 bg-zinc-950/80 shadow-[0_18px_55px_rgba(15,23,42,0.9)]">
+              <table className="w-full text-xs md:text-sm border-separate border-spacing-y-2 border-spacing-x-0">
                 <thead>
-                  <tr className="bg-zinc-900 text-zinc-300">
-                    <th className="border-b border-zinc-700 px-3 py-2 text-left w-[18%]">
+                  <tr className="text-zinc-300">
+                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80 first:rounded-l-xl last:rounded-r-xl">
                       Data
                     </th>
-                    <th className="border-b border-zinc-700 px-3 py-2 text-left w-[16%]">
+                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
                       Laikas
                     </th>
-                    <th className="border-b border-zinc-700 px-3 py-2 text-left w-[32%]">
+                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
                       Paslauga
                     </th>
-                    <th className="border-b border-zinc-700 px-3 py-2 text-left w-[14%]">
+                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
                       Suma (€)
                     </th>
-                    <th className="border-b border-zinc-700 px-3 py-2 text-left w-[12%]">
+                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
                       Kvito Nr.
                     </th>
-                    <th className="border-b border-zinc-700 px-3 py-2 text-center w-[8%]">
+                    <th className="px-3 py-2 text-center text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80 first:rounded-l-xl last:rounded-r-xl">
                       Veiksmai
                     </th>
                   </tr>
@@ -919,32 +968,44 @@ export default function FinancePanel() {
                     group.items.map((item, idx) => (
                       <tr
                         key={item.id}
-                        className="border-t border-zinc-800 hover:bg-zinc-900/70"
+                        className="transition-transform duration-150 hover:-translate-y-[1px]"
                       >
-                        <td className="px-3 py-2 align-top">
-                          {idx === 0 ? group.dateDisplay : ''}
+                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 first:rounded-l-xl">
+                          {idx === 0 ? (
+                            <span className="text-[11px] font-medium text-zinc-200">
+                              {group.dateDisplay}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-zinc-500">
+                              {/* пусто, чтобы дата была один раз */}
+                            </span>
+                          )}
                         </td>
-                        <td className="px-3 py-2 align-top whitespace-nowrap">
+                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 text-[11px] md:text-xs whitespace-nowrap">
                           {item.timeDisplay}
                         </td>
-                        <td className="px-3 py-2 align-top">
+                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70">
                           {item.type === 'system' ? (
                             <div className="flex flex-wrap gap-1">
                               {renderTags(item.tags, item.type)}
                             </div>
                           ) : (
-                            item.description || '—'
+                            <span className="text-xs text-zinc-100">
+                              {item.description || '—'}
+                            </span>
                           )}
                         </td>
-                        <td className="px-3 py-2 align-top font-semibold">
-                          €{item.amount.toFixed(2)}
+                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70">
+                          <span className="text-xs font-semibold text-emerald-300">
+                            €{item.amount.toFixed(2)}
+                          </span>
                         </td>
-                        <td className="px-3 py-2 align-top text-xs">
+                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 text-[11px] text-zinc-300">
                           {item.type === 'system' && item.receiptNumber
                             ? `#${item.receiptNumber}`
                             : '—'}
                         </td>
-                        <td className="px-3 py-2 align-top">
+                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 last:rounded-r-xl">
                           <div className="flex items-center justify-center gap-2">
                             {item.type === 'system' && (
                               <button
@@ -1008,7 +1069,7 @@ export default function FinancePanel() {
                     <tr>
                       <td
                         colSpan={6}
-                        className="px-3 py-3 text-center text-zinc-400 border-t border-zinc-800 bg-zinc-950"
+                        className="px-3 py-3 text-center text-zinc-400 bg-zinc-900/90 border border-zinc-700/80 rounded-xl"
                       >
                         Nėra įrašų šiam laikotarpiui
                       </td>
