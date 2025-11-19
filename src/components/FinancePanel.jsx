@@ -229,7 +229,7 @@ export default function FinancePanel() {
     return all.sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0))
   }, [systemIncomeItems, manualItemsForPeriod])
 
-  // ===== группировка по дате для UI =====
+  // ===== группировка по дате для UI / PDF =====
   const groupedByDate = useMemo(() => {
     const map = {}
     combinedItems.forEach((item) => {
@@ -302,7 +302,7 @@ export default function FinancePanel() {
     }
   }
 
-  // редактирование из таблицы
+  // редактирование из главной таблицы
   const editFromTable = (item) => {
     if (item.type !== 'manual') return
     const manualId = item.manualId
@@ -311,42 +311,6 @@ export default function FinancePanel() {
     setEditingId(entry.id)
     setEditAmount(String(entry.amount))
     setEditDesc(entry.description)
-  }
-
-  // ===== красивые теги (для UI) =====
-  const renderTags = (tags, type) => {
-    if (!tags || !tags.length) {
-      if (type === 'manual') {
-        return (
-          <span className="inline-flex items-center rounded-full border border-pink-400/70 bg-pink-500/15 px-3 py-0.5 text-xs text-pink-100">
-            ranka
-          </span>
-        )
-      }
-      return null
-    }
-
-    const colorMap = {
-      Atvykimas: 'border-rose-400/80 text-rose-100 bg-rose-500/15',
-      'Papuošalų nuoma': 'border-amber-400/80 text-amber-100 bg-amber-500/15',
-      'Tresų nuoma': 'border-sky-400/80 text-sky-100 bg-sky-500/15',
-      Šukuosena: 'border-indigo-400/80 text-indigo-100 bg-indigo-500/15',
-      Konsultacija: 'border-emerald-400/80 text-emerald-100 bg-emerald-500/15'
-    }
-
-    return tags.map((t) => {
-      const base =
-        colorMap[t] ||
-        'border-purple-400/80 text-purple-100 bg-purple-500/15'
-      return (
-        <span
-          key={t}
-          className={`inline-flex items-center rounded-full px-3 py-0.5 text-xs ${base}`}
-        >
-          {t}
-        </span>
-      )
-    })
   }
 
   // ===== Kvitas по брони =====
@@ -676,7 +640,8 @@ export default function FinancePanel() {
         </div>
 
         <div className="flex flex-col gap-2 md:items-end w-full md:w-auto">
-          <div className="inline-flex rounded-xl bg-zinc-900 border border-purple-500/40 p-1 text-xs gap-1 self-end">
+          {/* фильтры диапазона */}
+          <div className="flex gap-2 self-end rounded-xl bg-zinc-900 border border-purple-500/40 p-1 text-xs">
             <button
               className={modeBtn(mode === 'month')}
               onClick={() => setMode('month')}
@@ -900,7 +865,7 @@ export default function FinancePanel() {
           </div>
         </div>
 
-        {/* Блок, который уходит в PDF (резюме + таблица) */}
+        {/* Блок-описание для PDF (только заголовок и карточки, без таблицы) */}
         <div
           id="finance-report"
           className="bg-zinc-900/90 text-white p-4 rounded-xl border border-zinc-700"
@@ -913,7 +878,7 @@ export default function FinancePanel() {
             rankinių įrašų, automatinės išlaidos (30%) ir balansas.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm mt-2 mb-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm mt-2 mb-1">
             <div className="bg-zinc-900 border border-emerald-400/40 rounded-xl p-3">
               <div className="text-xs uppercase text-emerald-300">Sistema</div>
               <div className="text-lg font-semibold">
@@ -941,81 +906,10 @@ export default function FinancePanel() {
               </div>
             </div>
           </div>
-
-          {/* таблица для PDF / десктопа */}
-          <div className="hidden md:block">
-            <div className="overflow-hidden rounded-xl border border-zinc-700 bg-zinc-950/60">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="bg-zinc-900">
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
-                      Data
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
-                      Laikas
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
-                      Paslauga
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
-                      Suma (€)
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
-                      Kvito Nr.
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
-                      Žymos
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {groupedByDate.map((group) =>
-                    group.items.map((item, idx) => (
-                      <tr
-                        key={item.id}
-                        className="border-t border-zinc-800 bg-zinc-950/70"
-                      >
-                        <td className="px-3 py-2 align-top">
-                          {idx === 0 ? group.dateDisplay : ''}
-                        </td>
-                        <td className="px-3 py-2 align-top">
-                          {item.timeDisplay}
-                        </td>
-                        <td className="px-3 py-2 align-top">
-                          {item.description}
-                        </td>
-                        <td className="px-3 py-2 align-top">
-                          €{item.amount.toFixed(2)}
-                        </td>
-                        <td className="px-3 py-2 align-top text-xs">
-                          {item.type === 'system' && item.receiptNumber
-                            ? `#${item.receiptNumber}`
-                            : ''}
-                        </td>
-                        <td className="px-3 py-2 align-top">
-                          {(item.tags || []).join(', ')}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                  {!combinedItems.length && (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="px-3 py-3 text-center text-zinc-400 border-t border-zinc-800 bg-zinc-950"
-                      >
-                        Nėra įrašų šiam laikotarpiui
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
         </div>
 
-        {/* ГЛАВНАЯ ЖИВАЯ ТАБЛИЦА (вариант B) */}
-        <div className="mt-6">
+        {/* ГЛАВНАЯ ЖИВАЯ ТАБЛИЦА (вариант B, без Žymos) */}
+        <div className="mt-4">
           <h3 className="text-sm font-semibold mb-2">Visi įrašai (lentelė)</h3>
           {groupedByDate.length ? (
             <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950/60">
@@ -1036,9 +930,6 @@ export default function FinancePanel() {
                     </th>
                     <th className="border-b border-zinc-700 px-3 py-2 text-left">
                       Kvito Nr.
-                    </th>
-                    <th className="border-b border-zinc-700 px-3 py-2 text-left">
-                      Žymos
                     </th>
                     <th className="border-b border-zinc-700 px-3 py-2 text-center">
                       Veiksmai
@@ -1068,11 +959,6 @@ export default function FinancePanel() {
                           {item.type === 'system' && item.receiptNumber
                             ? `#${item.receiptNumber}`
                             : '—'}
-                        </td>
-                        <td className="px-3 py-2 align-top">
-                          <div className="flex flex-wrap gap-1">
-                            {renderTags(item.tags, item.type)}
-                          </div>
                         </td>
                         <td className="px-3 py-2 align-top">
                           <div className="flex items-center justify-center gap-2">
@@ -1134,6 +1020,16 @@ export default function FinancePanel() {
                       </tr>
                     ))
                   )}
+                  {!combinedItems.length && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-3 py-3 text-center text-zinc-400 border-t border-zinc-800 bg-zinc-950"
+                      >
+                        Nėra įrašų šiam laikotarpiui
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1143,80 +1039,6 @@ export default function FinancePanel() {
             </div>
           )}
         </div>
-
-        {/* Редактируемые ручные (осталось как отдельный блок) */}
-        {manualItemsForPeriod.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-sm font-semibold mb-2">
-              Rankiniai įrašai (redaguojami)
-            </h3>
-            <div className="space-y-2">
-              {manualItemsForPeriod.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex flex-col md:flex-row md:items-center justify-between gap-2 border border-zinc-800 rounded-xl px-3 py-2 bg-zinc-950/60"
-                >
-                  <div>
-                    <div className="text-xs text-zinc-400">
-                      {item.dateDisplay}
-                    </div>
-                    {editingId === item.id ? (
-                      <input
-                        className="mt-1 bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-sm w-full md:w-64"
-                        value={editDesc}
-                        onChange={(e) => setEditDesc(e.target.value)}
-                      />
-                    ) : (
-                      <div className="text-sm">{item.description}</div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {editingId === item.id ? (
-                      <>
-                        <input
-                          type="number"
-                          className="bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-sm w-24"
-                          value={editAmount}
-                          onChange={(e) => setEditAmount(e.target.value)}
-                        />
-                        <button
-                          className="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1 text-xs font-semibold"
-                          onClick={saveEdit}
-                        >
-                          Сохранить
-                        </button>
-                        <button
-                          className="bg-zinc-700 hover:bg-zinc-600 rounded px-3 py-1 text-xs"
-                          onClick={() => setEditingId(null)}
-                        >
-                          Отмена
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-sm font-semibold">
-                          €{item.amount.toFixed(2)}
-                        </div>
-                        <button
-                          className="bg-zinc-800 hover:bg-zinc-700 rounded px-3 py-1 text-xs"
-                          onClick={() => startEdit(item)}
-                        >
-                          Ред.
-                        </button>
-                        <button
-                          className="bg-rose-700 hover:bg-rose-600 rounded px-3 py-1 text-xs"
-                          onClick={() => deleteManual(item.id)}
-                        >
-                          ✕
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
