@@ -37,7 +37,7 @@ export default function FinancePanel() {
   const [rangeTo, setRangeTo] = useState(now.toISOString().slice(0, 10))
 
   const [manualEntries, setManualEntries] = useState([])
-  const [excludedIds, setExcludedIds] = useState([]) // id броней, исключённых из фин.расчёта
+  const [excludedIds, setExcludedIds] = useState([])
 
   // форма ручного ввода
   const [formDate, setFormDate] = useState(now.toISOString().slice(0, 10))
@@ -139,7 +139,10 @@ export default function FinancePanel() {
     return allBookings
       .filter((b) => {
         const end = new Date(b.end)
-        if (end > new Date()) return false // учитывать только завершённые
+
+        // БОЛЬШЕ НЕ ОГРАНИЧИВАЕМ ПО ТЕКУЩЕЙ ДАТЕ:
+        // if (end > new Date()) return false
+
         if (isCanceled(b)) return false
         if (!isPaid(b)) return false
         if (excludedIds.includes(b.id)) return false
@@ -250,7 +253,7 @@ export default function FinancePanel() {
 
     const time =
       formTimeFrom && formTimeTo
-        ? `${formTimeFrom}–${formTimeTo}`
+        ? `${formTimeFrom} – ${formTimeTo}`
         : formTimeFrom || formTimeTo || ''
 
     const entry = {
@@ -260,6 +263,7 @@ export default function FinancePanel() {
       description: formDesc || 'Rankinė pajamų įmoka',
       time
     }
+
     setManualEntries((prev) => [entry, ...prev])
     setFormAmount('')
     setFormDesc('')
@@ -304,7 +308,7 @@ export default function FinancePanel() {
     if (!newAmount || newAmount <= 0) return
 
     const newTime = window.prompt(
-      'Laikas (pvz. 04:00–13:00):',
+      'Laikas (pvz. 04:00 – 13:00):',
       entry.time || ''
     )
     if (newTime === null) return
@@ -654,13 +658,12 @@ export default function FinancePanel() {
 
   const years = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1]
 
-  // ===== UI =====
-
+  // ===== UI helpers =====
   const primaryBtn =
     'bg-gradient-to-r from-[#6d28d9] to-[#4c1d95] text-white rounded-xl px-4 py-2 text-xs md:text-sm font-semibold hover:brightness-110'
 
   const smallPdfBtn =
-    'inline-flex items-center gap-1 rounded-lg border border-purple-500/60 bg-zinc-900 px-2.5 py-1 text-[10px] md:text-xs text-purple-100 hover:bg-zinc-800'
+    'inline-flex items-center gap-1 rounded-lg border border-purple-500/60 bg-zinc-900 px-3 py-1 text-[10px] md:text-xs text-purple-100 hover:bg-zinc-800'
 
   const modeBtn = (active) =>
     'px-4 py-2 text-xs md:text-sm rounded-lg border transition min-w-[100px] text-center ' +
@@ -685,7 +688,6 @@ export default function FinancePanel() {
         </div>
 
         <div className="flex flex-col gap-2 md:items-end w-full md:w-auto">
-          {/* фильтры диапазона */}
           <div className="flex gap-2 self-end rounded-xl bg-zinc-900 border border-purple-500/40 p-1 text-xs">
             <button
               className={modeBtn(mode === 'month')}
@@ -771,49 +773,6 @@ export default function FinancePanel() {
         </div>
       </div>
 
-      {/* Карточки сумм */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="rounded-2xl bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 border border-emerald-400/40 p-4">
-          <p className="text-xs uppercase text-emerald-300">Sistema</p>
-          <p className="text-2xl font-semibold mt-1">
-            €{systemIncomeTotal.toFixed(2)}
-          </p>
-          <p className="text-xs text-zinc-300 mt-1">
-            Pajamos iš užbaigtų ir apmokėtų rezervacijų
-          </p>
-        </div>
-
-        <div className="rounded-2xl bg-gradient-to-br from-sky-500/15 to-sky-500/5 border border-sky-400/40 p-4">
-          <p className="text-xs uppercase text-sky-300">Rankiniai įrašai</p>
-          <p className="text-2xl font-semibold mt-1">
-            €{manualIncomeTotal.toFixed(2)}
-          </p>
-          <p className="text-xs text-zinc-300 mt-1">
-            Papildomos pajamos, pridėtos ranka
-          </p>
-        </div>
-
-        <div className="rounded-2xl bg-gradient-to-br from-amber-500/15 to-amber-500/5 border border-amber-400/40 p-4">
-          <p className="text-xs uppercase text-amber-300">Išlaidos (30%)</p>
-          <p className="text-2xl font-semibold mt-1">
-            €{totalExpense.toFixed(2)}
-          </p>
-          <p className="text-xs text-zinc-300 mt-1">
-            Automatiškai skaičiuojama nuo visų pajamų
-          </p>
-        </div>
-
-        <div className="rounded-2xl bg-gradient-to-br from-indigo-500/15 to-indigo-500/5 border border-indigo-400/40 p-4">
-          <p className="text-xs uppercase text-indigo-300">Balansas</p>
-          <p className="text-2xl font-semibold mt-1">
-            €{balance.toFixed(2)}
-          </p>
-          <p className="text-xs text-zinc-300 mt-1">
-            Pajamos minus 30% išlaidų
-          </p>
-        </div>
-      </div>
-
       {/* Блок ручных записей */}
       <div className="rounded-2xl bg-gradient-to-br from-purple-950/70 to-slate-950/70 border border-purple-500/30 p-4 md:p-5 space-y-4">
         <h2 className="text-xl font-semibold">Pridėti rankinį įrašą</h2>
@@ -870,17 +829,18 @@ export default function FinancePanel() {
 
       {/* История + экспорт + главная таблица */}
       <div className="rounded-2xl bg-zinc-900/80 border border-zinc-800 p-4 md:p-5 space-y-4">
-        <div>
-          <h2 className="text-xl font-semibold">Istorija</h2>
-          <div className="mt-1 flex items-center gap-2 flex-wrap">
+        {/* заголовок + маленькая PDF кнопка */}
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-xl font-semibold">Istorija</h2>
             <p className="text-xs text-zinc-400">
               VISI įrašai pagal pasirinktą laikotarpį: sistemos + rankiniai.
             </p>
-            <button onClick={exportPDF} className={smallPdfBtn}>
-              <span className="text-xs">📄</span>
-              <span>PDF</span>
-            </button>
           </div>
+          <button onClick={exportPDF} className={smallPdfBtn}>
+            <span>📄</span>
+            <span>PDF</span>
+          </button>
         </div>
 
         {/* Блок, который идёт в PDF (без таблицы на экране) */}
@@ -926,30 +886,30 @@ export default function FinancePanel() {
           </div>
         </div>
 
-        {/* ГЛАВНАЯ ЖИВАЯ ТАБЛИЦА (variant B, без Žymos, с цветными тегами) */}
+        {/* ГЛАВНАЯ ЖИВАЯ ТАБЛИЦА */}
         <div className="mt-4">
           <h3 className="text-sm font-semibold mb-2">Visi įrašai (lentelė)</h3>
           {groupedByDate.length ? (
-            <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950/60">
-              <table className="w-full text-xs md:text-sm border-collapse">
+            <div className="overflow-x-auto rounded-xl border border-purple-600/40 bg-zinc-950/60 shadow-lg">
+              <table className="w-full text-xs md:text-sm border-collapse table-fixed">
                 <thead>
                   <tr className="bg-zinc-900 text-zinc-300">
-                    <th className="border-b border-zinc-700 px-3 py-2 text-left">
+                    <th className="border-b border-zinc-700 px-3 py-2 text-left w-[18%]">
                       Data
                     </th>
-                    <th className="border-b border-zinc-700 px-3 py-2 text-left">
+                    <th className="border-b border-zinc-700 px-3 py-2 text-left w-[16%]">
                       Laikas
                     </th>
-                    <th className="border-b border-zinc-700 px-3 py-2 text-left">
+                    <th className="border-b border-zinc-700 px-3 py-2 text-left w-[32%]">
                       Paslauga
                     </th>
-                    <th className="border-b border-zinc-700 px-3 py-2 text-left">
+                    <th className="border-b border-zinc-700 px-3 py-2 text-left w-[14%]">
                       Suma (€)
                     </th>
-                    <th className="border-b border-zinc-700 px-3 py-2 text-left">
+                    <th className="border-b border-zinc-700 px-3 py-2 text-left w-[12%]">
                       Kvito Nr.
                     </th>
-                    <th className="border-b border-zinc-700 px-3 py-2 text-center">
+                    <th className="border-b border-zinc-700 px-3 py-2 text-center w-[8%]">
                       Veiksmai
                     </th>
                   </tr>
@@ -964,7 +924,7 @@ export default function FinancePanel() {
                         <td className="px-3 py-2 align-top">
                           {idx === 0 ? group.dateDisplay : ''}
                         </td>
-                        <td className="px-3 py-2 align-top">
+                        <td className="px-3 py-2 align-top whitespace-nowrap">
                           {item.timeDisplay}
                         </td>
                         <td className="px-3 py-2 align-top">
