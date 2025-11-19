@@ -208,7 +208,7 @@ export default function FinancePanel() {
   const totalExpense = totalIncome * 0.3
   const balance = totalIncome - totalExpense
 
-  // ===== объединённый список для UI / PDF / CSV =====
+  // ===== объединённый список для UI / PDF =====
   const combinedItems = useMemo(() => {
     const manualMapped = manualItemsForPeriod.map((e) => ({
       id: `man-${e.id}`,
@@ -453,7 +453,7 @@ export default function FinancePanel() {
     win.document.close()
   }
 
-  // ===== экспорт в PDF (описание + таблица) =====
+  // ===== eksport в PDF (описание + таблица) =====
   const exportPDF = () => {
     const win = window.open('', 'PRINT', 'width=900,height=650')
     if (!win) return
@@ -541,6 +541,9 @@ export default function FinancePanel() {
             background: #eef2ff;
             text-align: left;
           }
+          tbody tr:nth-child(even) {
+            background: #f3f4ff;
+          }
         </style>
       </head>
       <body>
@@ -627,56 +630,6 @@ export default function FinancePanel() {
     win.close()
   }
 
-  // ===== экспорт в CSV (структура как в PDF) =====
-  const exportCSV = () => {
-    if (!combinedItems.length) return
-
-    const header = [
-      'Data',
-      'Laikas',
-      'Suma (€)',
-      'Žymos',
-      'Aprašymas',
-      'Kvito nr.'
-    ]
-
-    const rows = combinedItems.map((item) => {
-      const tagsStr = (item.tags || []).join(', ')
-      const kv = item.type === 'system' ? item.receiptNumber || '' : ''
-      return [
-        item.dateDisplay,
-        item.timeDisplay,
-        item.amount.toFixed(2),
-        tagsStr,
-        item.description,
-        kv ? `#${kv}` : ''
-      ]
-    })
-
-    const all = [header, ...rows]
-    const csv = all
-      .map((row) =>
-        row
-          .map((cell) => {
-            const s = String(cell ?? '')
-            if (s.includes(';') || s.includes('"')) {
-              return `"${s.replace(/"/g, '""')}"`
-            }
-            return s
-          })
-          .join(';')
-      )
-      .join('\n')
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'finansu-ataskaita.csv'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
   const years = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1]
 
   // ===== UI =====
@@ -685,10 +638,10 @@ export default function FinancePanel() {
     'bg-gradient-to-r from-[#6d28d9] to-[#4c1d95] text-white rounded-xl px-4 py-2 text-xs md:text-sm font-semibold hover:brightness-110'
 
   const modeBtn = (active) =>
-    'px-3 py-1 text-xs md:text-sm rounded-lg border ' +
+    'px-3 py-2 text-xs md:text-sm rounded-lg border transition ' +
     (active
-      ? 'bg-gradient-to-r from-[#6d28d9] to-[#4c1d95] border-purple-400 text-white'
-      : 'bg-transparent border-purple-500/40 text-zinc-300')
+      ? 'bg-gradient-to-r from-[#6d28d9] to-[#4c1d95] border-purple-400 text-white shadow-sm'
+      : 'bg-transparent border-purple-500/40 text-zinc-300 hover:bg-zinc-900')
 
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6 text-white">
@@ -698,29 +651,29 @@ export default function FinancePanel() {
           <h1 className="text-3xl md:text-4xl font-bold">Finansų panelė</h1>
           <p className="text-sm text-zinc-400 mt-1">
             Pajamos iš sistemos ir rankinių įrašų, automatinės išlaidos (30%) ir
-            profesionali PDF / CSV ataskaita.
+            profesionali PDF ataskaita.
           </p>
           <p className="text-xs text-zinc-500 mt-1">
             Laikotarpis: <span className="text-zinc-200">{rangeLabel}</span>
           </p>
         </div>
 
-        <div className="flex flex-col items-stretch gap-2 md:items-end">
-          <div className="flex rounded-xl bg-zinc-900 border border-purple-500/40 p-1 text-xs gap-1">
+        <div className="flex flex-col items-stretch gap-2 md:items-end w-full md:w-auto">
+          <div className="flex w-full md:w-auto rounded-xl bg-zinc-900 border border-purple-500/40 p-1 text-xs gap-1">
             <button
-              className={modeBtn(mode === 'month')}
+              className={modeBtn(mode === 'month') + ' flex-1 text-center'}
               onClick={() => setMode('month')}
             >
               Mėnuo
             </button>
             <button
-              className={modeBtn(mode === 'year')}
+              className={modeBtn(mode === 'year') + ' flex-1 text-center'}
               onClick={() => setMode('year')}
             >
               Metai
             </button>
             <button
-              className={modeBtn(mode === 'range')}
+              className={modeBtn(mode === 'range') + ' flex-1 text-center'}
               onClick={() => setMode('range')}
             >
               Laikotarpis
@@ -880,10 +833,7 @@ export default function FinancePanel() {
               VISI įrašai pagal pasirinktą laikotarpį: sistemos + rankiniai.
             </p>
           </div>
-          <div className="flex gap-2">
-            <button onClick={exportCSV} className={primaryBtn}>
-              📊 Eksportuoti CSV
-            </button>
+          <div className="flex gap-2 justify-end">
             <button onClick={exportPDF} className={primaryBtn}>
               📄 Eksportuoti PDF
             </button>
@@ -934,66 +884,71 @@ export default function FinancePanel() {
 
           {/* таблица для PDF / десктопа */}
           <div className="hidden md:block">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr>
-                  <th className="border border-zinc-700 px-2 py-1 text-left">
-                    Data
-                  </th>
-                  <th className="border border-zinc-700 px-2 py-1 text-left">
-                    Laikas
-                  </th>
-                  <th className="border border-zinc-700 px-2 py-1 text-left">
-                    Suma (€)
-                  </th>
-                  <th className="border border-zinc-700 px-2 py-1 text-left">
-                    Žymos
-                  </th>
-                  <th className="border border-zinc-700 px-2 py-1 text-left">
-                    Aprašymas
-                  </th>
-                  <th className="border border-zinc-700 px-2 py-1 text-left">
-                    Kvito Nr.
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {combinedItems.map((item) => (
-                  <tr key={item.id}>
-                    <td className="border border-zinc-800 px-2 py-1">
-                      {item.dateDisplay}
-                    </td>
-                    <td className="border border-zinc-800 px-2 py-1">
-                      {item.timeDisplay}
-                    </td>
-                    <td className="border border-zinc-800 px-2 py-1">
-                      €{item.amount.toFixed(2)}
-                    </td>
-                    <td className="border border-zinc-800 px-2 py-1">
-                      {(item.tags || []).join(', ')}
-                    </td>
-                    <td className="border border-zinc-800 px-2 py-1">
-                      {item.description}
-                    </td>
-                    <td className="border border-zinc-800 px-2 py-1 text-xs">
-                      {item.type === 'system' && item.receiptNumber
-                        ? `#${item.receiptNumber}`
-                        : ''}
-                    </td>
+            <div className="overflow-hidden rounded-xl border border-zinc-700 bg-zinc-950/60">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-zinc-900">
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
+                      Data
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
+                      Laikas
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
+                      Suma (€)
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
+                      Žymos
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
+                      Aprašymas
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
+                      Kvito Nr.
+                    </th>
                   </tr>
-                ))}
-                {!combinedItems.length && (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="border border-zinc-800 px-2 py-3 text-center text-zinc-400"
+                </thead>
+                <tbody>
+                  {combinedItems.map((item, idx) => (
+                    <tr
+                      key={item.id}
+                      className={idx % 2 === 0 ? 'bg-zinc-950' : 'bg-zinc-900/60'}
                     >
-                      Nėra įrašų šiam laikotarpiui
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                      <td className="px-3 py-2 border-t border-zinc-800">
+                        {item.dateDisplay}
+                      </td>
+                      <td className="px-3 py-2 border-t border-zinc-800">
+                        {item.timeDisplay}
+                      </td>
+                      <td className="px-3 py-2 border-t border-zinc-800">
+                        €{item.amount.toFixed(2)}
+                      </td>
+                      <td className="px-3 py-2 border-t border-zinc-800">
+                        {(item.tags || []).join(', ')}
+                      </td>
+                      <td className="px-3 py-2 border-t border-zinc-800">
+                        {item.description}
+                      </td>
+                      <td className="px-3 py-2 border-t border-zinc-800 text-xs">
+                        {item.type === 'system' && item.receiptNumber
+                          ? `#${item.receiptNumber}`
+                          : ''}
+                      </td>
+                    </tr>
+                  ))}
+                  {!combinedItems.length && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-3 py-3 text-center text-zinc-400 border-t border-zinc-800 bg-zinc-950"
+                      >
+                        Nėra įrašų šiam laikotarpiui
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
