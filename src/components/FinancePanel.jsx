@@ -19,7 +19,7 @@ const MONTHS = [
   'Gruodis'
 ]
 
-// такие же условия, как в MyBookings
+// те же условия, что в Admin / MyBookings
 const isPaid = (b) => !!(b?.paid || b?.status === 'approved_paid')
 const isCanceled = (b) =>
   b.status === 'canceled_client' || b.status === 'canceled_admin'
@@ -91,7 +91,7 @@ export default function FinancePanel() {
     }
   }, [excludedIds])
 
-  // слушаем изменения в localStorage
+  // слушаем изменения в localStorage (обновления из Admin / MyBookings)
   useEffect(() => {
     const onStorage = (e) => {
       if (!e.key || e.key === 'iz.bookings.v7') {
@@ -135,14 +135,14 @@ export default function FinancePanel() {
 
   const isInRange = (d) => d >= rangeStart && d < rangeEnd
 
-  // ===== доходы из бронирований =====
+  // ===== доходы из бронирований (системные) =====
   const systemIncomeItems = useMemo(() => {
     const allBookings = getBookings()
 
     return allBookings
       .filter((b) => {
         const end = new Date(b.end)
-        if (end > new Date()) return false
+        if (end > new Date()) return false // учитывать только завершённые
         if (isCanceled(b)) return false
         if (!isPaid(b)) return false
         if (excludedIds.includes(b.id)) return false
@@ -212,6 +212,7 @@ export default function FinancePanel() {
   const combinedItems = useMemo(() => {
     const manualMapped = manualItemsForPeriod.map((e) => ({
       id: `man-${e.id}`,
+      manualId: e.id,
       type: 'manual',
       bookingId: null,
       booking: null,
@@ -228,7 +229,7 @@ export default function FinancePanel() {
     return all.sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0))
   }, [systemIncomeItems, manualItemsForPeriod])
 
-  // ===== группировка по дате для красивого UI =====
+  // ===== группировка по дате для UI =====
   const groupedByDate = useMemo(() => {
     const map = {}
     combinedItems.forEach((item) => {
@@ -297,8 +298,19 @@ export default function FinancePanel() {
         prev.includes(item.bookingId) ? prev : [...prev, item.bookingId]
       )
     } else {
-      deleteManual(item.id)
+      deleteManual(item.manualId || item.id)
     }
+  }
+
+  // редактирование из таблицы
+  const editFromTable = (item) => {
+    if (item.type !== 'manual') return
+    const manualId = item.manualId
+    const entry = manualEntries.find((e) => e.id === manualId)
+    if (!entry) return
+    setEditingId(entry.id)
+    setEditAmount(String(entry.amount))
+    setEditDesc(entry.description)
   }
 
   // ===== красивые теги (для UI) =====
@@ -453,7 +465,7 @@ export default function FinancePanel() {
     win.document.close()
   }
 
-  // ===== eksport в PDF (описание + таблица) =====
+  // ===== экспорт в PDF (описание + таблица) =====
   const exportPDF = () => {
     const win = window.open('', 'PRINT', 'width=900,height=650')
     if (!win) return
@@ -589,27 +601,32 @@ export default function FinancePanel() {
                 <tr>
                   <th>Data</th>
                   <th>Laikas</th>
+                  <th>Paslauga</th>
                   <th>Suma (€)</th>
-                  <th>Žymos</th>
-                  <th>Aprašymas</th>
                   <th>Kvito Nr.</th>
+                  <th>Žymos</th>
                 </tr>
               </thead>
               <tbody>
-                ${combinedItems
-                  .map((item) => {
-                    const tagsStr = (item.tags || []).join(', ')
-                    const kv =
-                      item.type === 'system' ? item.receiptNumber || '' : ''
-                    return `<tr>
-                      <td>${item.dateDisplay}</td>
-                      <td>${item.timeDisplay}</td>
-                      <td>€${item.amount.toFixed(2)}</td>
-                      <td>${tagsStr}</td>
-                      <td>${item.description}</td>
-                      <td>${kv ? '#' + kv : ''}</td>
-                    </tr>`
-                  })
+                ${groupedByDate
+                  .map((group) =>
+                    group.items
+                      .map((item, idx) => {
+                        const tagsStr = (item.tags || []).join(', ')
+                        const kv =
+                          item.type === 'system' ? item.receiptNumber || '' : ''
+                        const dateCell = idx === 0 ? group.dateDisplay : ''
+                        return `<tr>
+                          <td>${dateCell}</td>
+                          <td>${item.timeDisplay}</td>
+                          <td>${item.description || ''}</td>
+                          <td>€${item.amount.toFixed(2)}</td>
+                          <td>${kv ? '#' + kv : ''}</td>
+                          <td>${tagsStr}</td>
+                        </tr>`
+                      })
+                      .join('')
+                  )
                   .join('')}
                 ${
                   !combinedItems.length
@@ -638,7 +655,7 @@ export default function FinancePanel() {
     'bg-gradient-to-r from-[#6d28d9] to-[#4c1d95] text-white rounded-xl px-4 py-2 text-xs md:text-sm font-semibold hover:brightness-110'
 
   const modeBtn = (active) =>
-    'px-3 py-2 text-xs md:text-sm rounded-lg border transition ' +
+    'px-4 py-2 text-xs md:text-sm rounded-lg border transition min-w-[100px] text-center ' +
     (active
       ? 'bg-gradient-to-r from-[#6d28d9] to-[#4c1d95] border-purple-400 text-white shadow-sm'
       : 'bg-transparent border-purple-500/40 text-zinc-300 hover:bg-zinc-900')
@@ -658,22 +675,22 @@ export default function FinancePanel() {
           </p>
         </div>
 
-        <div className="flex flex-col items-stretch gap-2 md:items-end w-full md:w-auto">
-          <div className="flex w-full md:w-auto rounded-xl bg-zinc-900 border border-purple-500/40 p-1 text-xs gap-1">
+        <div className="flex flex-col gap-2 md:items-end w-full md:w-auto">
+          <div className="inline-flex rounded-xl bg-zinc-900 border border-purple-500/40 p-1 text-xs gap-1 self-end">
             <button
-              className={modeBtn(mode === 'month') + ' flex-1 text-center'}
+              className={modeBtn(mode === 'month')}
               onClick={() => setMode('month')}
             >
               Mėnuo
             </button>
             <button
-              className={modeBtn(mode === 'year') + ' flex-1 text-center'}
+              className={modeBtn(mode === 'year')}
               onClick={() => setMode('year')}
             >
               Metai
             </button>
             <button
-              className={modeBtn(mode === 'range') + ' flex-1 text-center'}
+              className={modeBtn(mode === 'range')}
               onClick={() => setMode('range')}
             >
               Laikotarpis
@@ -787,6 +804,49 @@ export default function FinancePanel() {
         </div>
       </div>
 
+      {/* Таблица-сводка Sistema | Suma | Išlaidos (30%) | Uždarbis */}
+      <div className="rounded-2xl bg-zinc-900/80 border border-zinc-800 p-4">
+        <h3 className="text-sm font-semibold mb-2">
+          Santrauka pagal pasirinktą laikotarpį
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs md:text-sm border-collapse">
+            <thead>
+              <tr className="text-zinc-300">
+                <th className="border border-zinc-700 px-3 py-2 text-left">
+                  Sistema
+                </th>
+                <th className="border border-zinc-700 px-3 py-2 text-left">
+                  Suma
+                </th>
+                <th className="border border-zinc-700 px-3 py-2 text-left">
+                  Išlaidos (30%)
+                </th>
+                <th className="border border-zinc-700 px-3 py-2 text-left">
+                  Uždarbis
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="border border-zinc-800 px-3 py-2">
+                  Sistema + rankiniai
+                </td>
+                <td className="border border-zinc-800 px-3 py-2">
+                  €{totalIncome.toFixed(2)}
+                </td>
+                <td className="border border-zinc-800 px-3 py-2">
+                  €{totalExpense.toFixed(2)}
+                </td>
+                <td className="border border-zinc-800 px-3 py-2">
+                  €{balance.toFixed(2)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Блок ручных записей */}
       <div className="rounded-2xl bg-gradient-to-br from-purple-950/70 to-slate-950/70 border border-purple-500/30 p-4 md:p-5 space-y-4">
         <h2 className="text-xl font-semibold">Pridėti rankinį įrašą</h2>
@@ -895,47 +955,49 @@ export default function FinancePanel() {
                       Laikas
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
+                      Paslauga
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
                       Suma (€)
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
-                      Žymos
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
-                      Aprašymas
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
                       Kvito Nr.
                     </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-300 border-b border-zinc-700">
+                      Žymos
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {combinedItems.map((item, idx) => (
-                    <tr
-                      key={item.id}
-                      className={idx % 2 === 0 ? 'bg-zinc-950' : 'bg-zinc-900/60'}
-                    >
-                      <td className="px-3 py-2 border-t border-zinc-800">
-                        {item.dateDisplay}
-                      </td>
-                      <td className="px-3 py-2 border-t border-zinc-800">
-                        {item.timeDisplay}
-                      </td>
-                      <td className="px-3 py-2 border-t border-zinc-800">
-                        €{item.amount.toFixed(2)}
-                      </td>
-                      <td className="px-3 py-2 border-t border-zinc-800">
-                        {(item.tags || []).join(', ')}
-                      </td>
-                      <td className="px-3 py-2 border-t border-zinc-800">
-                        {item.description}
-                      </td>
-                      <td className="px-3 py-2 border-t border-zinc-800 text-xs">
-                        {item.type === 'system' && item.receiptNumber
-                          ? `#${item.receiptNumber}`
-                          : ''}
-                      </td>
-                    </tr>
-                  ))}
+                  {groupedByDate.map((group) =>
+                    group.items.map((item, idx) => (
+                      <tr
+                        key={item.id}
+                        className="border-t border-zinc-800 bg-zinc-950/70"
+                      >
+                        <td className="px-3 py-2 align-top">
+                          {idx === 0 ? group.dateDisplay : ''}
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          {item.timeDisplay}
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          {item.description}
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          €{item.amount.toFixed(2)}
+                        </td>
+                        <td className="px-3 py-2 align-top text-xs">
+                          {item.type === 'system' && item.receiptNumber
+                            ? `#${item.receiptNumber}`
+                            : ''}
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          {(item.tags || []).join(', ')}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                   {!combinedItems.length && (
                     <tr>
                       <td
@@ -952,86 +1014,137 @@ export default function FinancePanel() {
           </div>
         </div>
 
-        {/* Живые карточки (UI) сгруппированы по датам */}
-        <div className="flex flex-col gap-3 mt-3">
-          {groupedByDate.map((group) => (
-            <div key={group.date} className="space-y-1">
-              <div className="flex items-center gap-2 text-xs text-zinc-400">
-                <div className="w-2 h-2 rounded-full bg-purple-500" />
-                <span>{group.dateDisplay}</span>
-              </div>
+        {/* ГЛАВНАЯ ЖИВАЯ ТАБЛИЦА (вариант B) */}
+        <div className="mt-6">
+          <h3 className="text-sm font-semibold mb-2">Visi įrašai (lentelė)</h3>
+          {groupedByDate.length ? (
+            <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950/60">
+              <table className="w-full text-xs md:text-sm border-collapse">
+                <thead>
+                  <tr className="bg-zinc-900 text-zinc-300">
+                    <th className="border-b border-zinc-700 px-3 py-2 text-left">
+                      Data
+                    </th>
+                    <th className="border-b border-zinc-700 px-3 py-2 text-left">
+                      Laikas
+                    </th>
+                    <th className="border-b border-zinc-700 px-3 py-2 text-left">
+                      Paslauga
+                    </th>
+                    <th className="border-b border-zinc-700 px-3 py-2 text-left">
+                      Suma (€)
+                    </th>
+                    <th className="border-b border-zinc-700 px-3 py-2 text-left">
+                      Kvito Nr.
+                    </th>
+                    <th className="border-b border-zinc-700 px-3 py-2 text-left">
+                      Žymos
+                    </th>
+                    <th className="border-b border-zinc-700 px-3 py-2 text-center">
+                      Veiksmai
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groupedByDate.map((group) =>
+                    group.items.map((item, idx) => (
+                      <tr
+                        key={item.id}
+                        className="border-t border-zinc-800 hover:bg-zinc-900/70"
+                      >
+                        <td className="px-3 py-2 align-top">
+                          {idx === 0 ? group.dateDisplay : ''}
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          {item.timeDisplay}
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          {item.description || '—'}
+                        </td>
+                        <td className="px-3 py-2 align-top font-semibold">
+                          €{item.amount.toFixed(2)}
+                        </td>
+                        <td className="px-3 py-2 align-top text-xs">
+                          {item.type === 'system' && item.receiptNumber
+                            ? `#${item.receiptNumber}`
+                            : '—'}
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          <div className="flex flex-wrap gap-1">
+                            {renderTags(item.tags, item.type)}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          <div className="flex items-center justify-center gap-2">
+                            {item.type === 'system' && (
+                              <button
+                                className="text-indigo-300 hover:text-indigo-400"
+                                title="Kvitas"
+                                onClick={() => downloadReceipt(item)}
+                              >
+                                🧾
+                              </button>
+                            )}
 
-              <div className="flex flex-col gap-2">
-                {group.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="relative border border-zinc-800 rounded-xl px-3 py-2 text-sm space-y-1 bg-zinc-950/70"
-                  >
-                    {/* крестик удаления */}
-                    <button
-                      className="absolute top-1 right-2 text-xs text-rose-300 hover:text-rose-400"
-                      onClick={() => deleteItem(item)}
-                      title="Ištrinti įrašą iš suvestinės"
-                    >
-                      ✕
-                    </button>
+                            {item.type === 'manual' && (
+                              <button
+                                className="text-sky-300 hover:text-sky-400"
+                                title="Redaguoti"
+                                onClick={() => editFromTable(item)}
+                              >
+                                <svg
+                                  width="18"
+                                  height="18"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M12 20h9" />
+                                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                                </svg>
+                              </button>
+                            )}
 
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-zinc-400">
-                        {item.timeDisplay}
-                      </span>
-                      <span className="text-sm font-semibold">
-                        €{item.amount.toFixed(2)}
-                      </span>
-                    </div>
-
-                    {item.tags && item.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {renderTags(item.tags, item.type)}
-                        {item.type === 'manual' &&
-                          (!item.tags || !item.tags.length) && (
-                            <span className="inline-flex items-center rounded-full border border-pink-400/70 bg-pink-500/15 px-3 py-0.5 text-xs text-pink-100">
-                              ranka
-                            </span>
-                          )}
-                      </div>
-                    )}
-
-                    {item.description && (
-                      <div className="text-xs text-zinc-300 mt-1">
-                        {item.description}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-xs text-zinc-400">
-                        {item.type === 'system' && item.receiptNumber
-                          ? `Kvitas #${item.receiptNumber}`
-                          : 'Kvito nėra'}
-                      </span>
-                      {item.type === 'system' && (
-                        <button
-                          className="text-xs px-2 py-1 rounded-lg bg-zinc-900 border border-purple-500/60 hover:bg-zinc-800"
-                          onClick={() => downloadReceipt(item)}
-                        >
-                          🧾 Kvitas
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                            <button
+                              className="text-rose-300 hover:text-rose-400"
+                              title="Ištrinti"
+                              onClick={() => deleteItem(item)}
+                            >
+                              <svg
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m5 0V4a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2" />
+                                <line x1="10" y1="11" x2="10" y2="17" />
+                                <line x1="14" y1="11" x2="14" y2="17" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
-          ))}
-
-          {!groupedByDate.length && (
+          ) : (
             <div className="text-xs text-center text-zinc-400 py-2">
               Nėra įrašų šiam laikotarpiui
             </div>
           )}
         </div>
 
-        {/* Редактируемые ручные */}
+        {/* Редактируемые ручные (осталось как отдельный блок) */}
         {manualItemsForPeriod.length > 0 && (
           <div className="mt-4">
             <h3 className="text-sm font-semibold mb-2">
