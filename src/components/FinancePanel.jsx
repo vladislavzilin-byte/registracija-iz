@@ -1070,10 +1070,13 @@ export default function FinancePanel() {
     ✕
   </button>
 
-</div>
-            )}
-        </div>
-      </div>
+<        </div>
+      ))}
     </div>
+  </div>
+</div> {/* END LIST */}
+
+      </div> {/* istorija box */}
+    </div> {/* outer container */}
   )
 }
