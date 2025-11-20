@@ -140,8 +140,7 @@ export default function FinancePanel() {
       .filter((b) => {
         const end = new Date(b.end)
 
-        // ВАЖНО: теперь учитываем и будущие оплаченные даты (avansai),
-        // поэтому не отсекаем по "end > now"
+        // учитываем и будущие оплаченные даты (avansai)
         if (isCanceled(b)) return false
         if (!isPaid(b)) return false
         if (excludedIds.includes(b.id)) return false
@@ -228,7 +227,7 @@ export default function FinancePanel() {
     return all.sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0))
   }, [systemIncomeItems, manualItemsForPeriod])
 
-  // ===== группировка по дате для UI / PDF =====
+  // ===== группировка по дате для PDF =====
   const groupedByDate = useMemo(() => {
     const map = {}
     combinedItems.forEach((item) => {
@@ -277,7 +276,7 @@ export default function FinancePanel() {
   const deleteItem = (item) => {
     if (
       !window.confirm(
-        'Ištrinti šį įrašą iš finansų суvestinės? (rezervacija neliečiama)'
+        'Ištrinti šį įrašą iš finansų suvestinės? (rezervacija neliečiama)'
       )
     )
       return
@@ -291,7 +290,7 @@ export default function FinancePanel() {
     }
   }
 
-  // редактирование ручной записи из таблицы (через prompt — простой вариант)
+  // редактирование ручной записи из списка (через prompt — простой вариант)
   const editFromTable = (item) => {
     if (item.type !== 'manual') return
     const manualId = item.manualId
@@ -326,7 +325,7 @@ export default function FinancePanel() {
     if (!tags || !tags.length) {
       if (type === 'manual') {
         return (
-          <span className="inline-flex items-center rounded-full border border-pink-400/70 bg-pink-500/15 px-3 py-0.5 text-xs text-pink-100">
+          <span className="inline-flex items-center rounded-full border border-pink-400/70 bg-pink-500/15 px-2 py-0.5 text-[10px] text-pink-100">
             ranka
           </span>
         )
@@ -349,7 +348,7 @@ export default function FinancePanel() {
       return (
         <span
           key={t}
-          className={`inline-flex items-center rounded-full px-3 py-0.5 text-xs ${base}`}
+          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] ${base}`}
         >
           {t}
         </span>
@@ -575,13 +574,13 @@ export default function FinancePanel() {
             </div>
             <div class="logo">
               <b>IZ HAIR TREND</b>
-              <span>Finansų suvestinė</span>
+              <span>Finansų суvestinė</span>
             </div>
           </div>
           <div class="content">
             <div>
-              Suvestinė pagal pasirinktą laikotarpį: pajamos iš sistemos ir rankinių įrašų,
-              automatinės išlaidos (30%) ir balansas.
+              Suvestinė pagal pasirinktą laikotarpį: pajamos iš sistemos и rankinių įrašų,
+              automatinės išlaidos (30%) и balansas.
             </div>
 
             <div class="summary">
@@ -701,11 +700,12 @@ export default function FinancePanel() {
                 <button
                   type="button"
                   onClick={() => setMode('month')}
-                  className={`flex flex-col items-center justify-center gap-0.5 px-2 py-2 md:py-2.5 transition-colors ${
-                    mode === 'month'
+                  className={
+                    'flex flex-col items-center justify-center gap-0.5 px-2 py-2 md:py-2.5 transition-colors ' +
+                    (mode === 'month'
                       ? 'text-white'
-                      : 'text-zinc-400 hover:text-zinc-100'
-                  }`}
+                      : 'text-zinc-400 hover:text-zinc-100')
+                  }
                 >
                   <span className="text-base md:text-lg">📅</span>
                   <span>Mėnuo</span>
@@ -713,11 +713,12 @@ export default function FinancePanel() {
                 <button
                   type="button"
                   onClick={() => setMode('year')}
-                  className={`flex flex-col items-center justify-center gap-0.5 px-2 py-2 md:py-2.5 transition-colors ${
-                    mode === 'year'
+                  className={
+                    'flex flex-col items-center justify-center gap-0.5 px-2 py-2 md:py-2.5 transition-colors ' +
+                    (mode === 'year'
                       ? 'text-white'
-                      : 'text-zinc-400 hover:text-zinc-100'
-                  }`}
+                      : 'text-zinc-400 hover:text-zinc-100')
+                  }
                 >
                   <span className="text-base md:text-lg">🕓</span>
                   <span>Metai</span>
@@ -725,11 +726,12 @@ export default function FinancePanel() {
                 <button
                   type="button"
                   onClick={() => setMode('range')}
-                  className={`flex flex-col items-center justify-center gap-0.5 px-2 py-2 md:py-2.5 transition-colors ${
-                    mode === 'range'
+                  className={
+                    'flex flex-col items-center justify-center gap-0.5 px-2 py-2 md:py-2.5 transition-colors ' +
+                    (mode === 'range'
                       ? 'text-white'
-                      : 'text-zinc-400 hover:text-zinc-100'
-                  }`}
+                      : 'text-zinc-400 hover:text-zinc-100')
+                  }
                 >
                   <span className="text-base md:text-lg">📆↔️</span>
                   <span>Laikotarpis</span>
@@ -853,7 +855,7 @@ export default function FinancePanel() {
         </div>
 
         <p className="text-xs text-zinc-400">
-          Sistemos pajamos imamos automatiškai iš užbaigtų ir apmokėtų
+          Sistemos pajamos imamos automatiškai iš užbaigtų и apmokėtų
           rezervacijų. Čia galite pridėti papildomų pajamų rankiniu būdu
           (pvz. grynieji, papildomos paslaugos).
         </p>
@@ -875,7 +877,7 @@ export default function FinancePanel() {
           </button>
         </div>
 
-        {/* блок, который уходит в PDF — тут только верхняя сводка */}
+        {/* блок, который уходит в PDF — верхняя сводка */}
         <div
           id="finance-report"
           className="bg-zinc-900/90 text-white p-4 rounded-xl border border-zinc-700"
@@ -888,7 +890,6 @@ export default function FinancePanel() {
             rankinių įrašų, automatinės išlaidos (30%) ir balansas.
           </p>
 
-          {/* мини-карточки: Sistema / Rankiniai / Išlaidos / Balansas */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm mt-2 mb-1">
             <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-400/50 rounded-xl p-3 shadow-inner shadow-emerald-900/40">
               <div className="text-[10px] uppercase text-emerald-300 tracking-wide">
@@ -937,129 +938,103 @@ export default function FinancePanel() {
           </div>
         </div>
 
-       {/* Г L A V N A  T A B L I C A */}
-<div className="mt-6 w-full">
+        {/* ГЛАВНЫЙ СПИСОК — одна строка как в макете */}
+        <div className="mt-6 w-full">
+          <h3 className="text-sm font-semibold mb-3">Visi įrašai (lentelė)</h3>
 
-  <h3 className="text-sm font-semibold mb-3">Visi įrašai (lentelė)</h3>
-
-  {combinedItems.length === 0 && (
-    <div className="text-center text-zinc-500 text-sm py-3">
-      Nėra įrašų šiam laikotarpiui
-    </div>
-  )}
-
-  <div className="space-y-4">
-
-    {groupedByDate.map((group) => (
-      <div key={group.date} className="space-y-2">
-
-        {/* Data */}
-        <div className="text-xs text-zinc-400 font-medium ml-1 mb-1">
-          {group.dateDisplay}
-        </div>
-
-        {group.items.map((item) => (
-          <div
-            key={item.id}
-            className="
-              w-full flex items-center gap-3 px-3 py-3 rounded-xl
-              bg-zinc-900/80 border border-zinc-700/60
-              shadow-[0_0_15px_rgba(139,92,246,0.25)]
-              hover:bg-zinc-900/90 transition-all duration-150
-            "
-          >
-
-            {/* DATE */}
-            <div className="w-[10%]">
-              <div className="
-                px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
-                text-[12px] font-semibold text-zinc-200 text-center
-              ">
-                {group.dateDisplay}
-              </div>
+          {combinedItems.length === 0 && (
+            <div className="text-center text-zinc-500 text-sm py-3">
+              Nėra įrašų šiam laikotarpiui
             </div>
+          )}
 
-            {/* TIME */}
-            <div className="w-[12%]">
-              <div className="
-                px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
-                text-[12px] font-semibold text-zinc-200 text-center whitespace-nowrap
-              ">
-                {item.timeDisplay}
-              </div>
-            </div>
-
-            {/* TAGS / DESCRIPTION */}
-            <div className="w-[40%] flex flex-wrap gap-2">
-              {item.type === "system"
-                ? <div className="flex flex-wrap gap-2">{renderTags(item.tags)}</div>
-                : (
-                  <div className="
-                    px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
-                    text-[12px] text-zinc-200
-                  ">
-                    {item.description || "—"}
-                  </div>
-                )
-              }
-            </div>
-
-            {/* SUMA */}
-            <div className="w-[10%]">
-              <div className="
-                px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
-                text-[13px] font-bold text-emerald-300 text-center
-              ">
-                €{item.amount.toFixed(2)}
-              </div>
-            </div>
-
-            {/* KVITO NR */}
-            <div className="w-[8%]">
-              <div className="
-                px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
-                text-[11px] text-center text-zinc-300
-              ">
-                {item.type === "system" && item.receiptNumber ? `#${item.receiptNumber}` : "—"}
-              </div>
-            </div>
-
-            {/* ACTIONS */}
-            <div className="w-[10%] flex flex-col gap-2 items-center justify-center">
-
-              {/* EDIT manual only */}
-              {item.type === "manual" && (
-                <button
-                  onClick={() => editFromTable(item)}
-                  className="
-                    w-9 h-9 flex items-center justify-center rounded-lg
-                    bg-fuchsia-600/40 border border-fuchsia-400/60
-                    text-white hover:bg-fuchsia-500/50 transition
-                  "
-                >
-                  ✏️
-                </button>
-              )}
-
-              {/* DELETE */}
-              <button
-                onClick={() => deleteItem(item)}
-                className="
-                  w-9 h-9 flex items-center justify-center rounded-lg
-                  bg-rose-600/40 border border-rose-400/60
-                  text-white hover:bg-rose-500/50 transition
-                "
+          <div className="space-y-3">
+            {combinedItems.map((item) => (
+              <div
+                key={item.id}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-900/85 border border-zinc-700/70 shadow-[0_0_18px_rgba(139,92,246,0.25)] hover:bg-zinc-900/95 transition-all duration-150"
               >
-                ✕
-              </button>
+                {/* Data */}
+                <div className="w-[14%]">
+                  <div className="px-3 py-2 rounded-lg bg-zinc-950/80 border border-zinc-700/70 text-[11px] md:text-xs font-medium text-zinc-100 text-center truncate">
+                    {item.dateDisplay}
+                  </div>
+                </div>
 
-            </div>
+                {/* Laikas */}
+                <div className="w-[18%]">
+                  <div className="px-3 py-2 rounded-lg bg-zinc-950/80 border border-zinc-700/70 text-[11px] md:text-xs font-medium text-zinc-100 text-center whitespace-nowrap">
+                    {item.timeDisplay}
+                  </div>
+                </div>
 
+                {/* Paslaugos / Žymos */}
+                <div className="w-[34%]">
+                  {item.type === 'system' ? (
+                    <div className="px-3 py-2 rounded-lg bg-zinc-950/80 border border-zinc-700/70 flex flex-wrap gap-1">
+                      {renderTags(item.tags, item.type)}
+                    </div>
+                  ) : (
+                    <div className="px-3 py-2 rounded-lg bg-zinc-950/80 border border-zinc-700/70 text-[11px] md:text-xs text-zinc-100 truncate">
+                      {item.description || '—'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Suma */}
+                <div className="w-[12%]">
+                  <div className="px-3 py-2 rounded-lg bg-zinc-950/80 border border-zinc-700/70 text-[12px] md:text-sm font-bold text-emerald-300 text-center">
+                    €{item.amount.toFixed(2)}
+                  </div>
+                </div>
+
+                {/* Kvito Nr. */}
+                <div className="w-[10%]">
+                  <div className="px-3 py-2 rounded-lg bg-zinc-950/80 border border-zinc-700/70 text-[11px] md:text-xs text-zinc-200 text-center">
+                    {item.type === 'system' && item.receiptNumber
+                      ? `#${item.receiptNumber}`
+                      : '—'}
+                  </div>
+                </div>
+
+                {/* Veiksmai */}
+                <div className="w-[12%] flex items-center justify-center gap-2">
+                  {/* Kvitas (только system) */}
+                  {item.type === 'system' && (
+                    <button
+                      onClick={() => downloadReceipt(item)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-600/40 border border-indigo-400/70 text-white text-sm hover:bg-indigo-500/60 transition"
+                      title="Kvitas"
+                    >
+                      🧾
+                    </button>
+                  )}
+
+                  {/* Edit (только manual) */}
+                  {item.type === 'manual' && (
+                    <button
+                      onClick={() => editFromTable(item)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-fuchsia-600/40 border border-fuchsia-400/70 text-white text-sm hover:bg-fuchsia-500/60 transition"
+                      title="Redaguoti"
+                    >
+                      ✏️
+                    </button>
+                  )}
+
+                  {/* Delete */}
+                  <button
+                    onClick={() => deleteItem(item)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-rose-600/40 border border-rose-400/70 text-white text-sm hover:bg-rose-500/60 transition"
+                    title="Ištrinti"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-
+        </div>
       </div>
-    ))}
-
-  </div>
-</div>
+    </div>
+  )
+}
