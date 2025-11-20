@@ -1042,21 +1042,7 @@ export default function FinancePanel() {
         {/* ACTION BUTTONS — 10% (vertical stack) */}
 <div className="w-[10%] flex flex-col gap-2 items-center justify-center">
 
-               {/* EDIT BTN (MANUAL ONLY) */}
-              {item.type === "manual" && (
-                <button
-                  onClick={() => editFromTable(item)}
-                  className="
-                    w-9 h-9 flex items-center justify-center rounded-lg
-                    bg-fuchsia-600/40 border border-fuchsia-400/60
-                    text-white hover:bg-fuchsia-500/50 transition
-                  "
-                >
-                  ✏️
-                </button>
-              )}
-
-              {/* DELETE BTN */}
+                            {/* DELETE BTN */}
               <button
                 onClick={() => deleteItem(item)}
                 className="
@@ -1068,13 +1054,18 @@ export default function FinancePanel() {
                 ✕
               </button>
 
-            </div>
+            </div> {/* ← END action buttons */}
 
-          </div>
-        ))}   {/* ← UŽDARO group.items.map */}
-        
-      </div>
-    ))}       {/* ← UŽDARO groupedByDate.map */}
+          </div> {/* ← END one row */}
+        ))} {/* ← END group.items.map */}
 
-  </div>
-</div>
+      </div> {/* ← END one date group */}
+    ))} {/* ← END groupedByDate.map */}
+
+  </div> {/* ← END space-y-4 wrapper */}
+</div> {/* ← END main table block */}
+
+      </div> {/* ← END history section */}
+    </div> {/* ← END page wrapper */}
+  )
+} {/* ← END COMPONENT */}
