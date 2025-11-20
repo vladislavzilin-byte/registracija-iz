@@ -948,87 +948,96 @@ export default function FinancePanel() {
             </div>
           )}
 
-          <div className="space-y-3">
-            {combinedItems.map((item) => (
-              <div
-                key={item.id}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-900/85 border border-zinc-700/70 shadow-[0_0_18px_rgba(139,92,246,0.25)] hover:bg-zinc-900/95 transition-all duration-150"
-              >
-                {/* Data */}
-                <div className="w-[14%]">
-                  <div className="px-3 py-2 rounded-lg bg-zinc-950/80 border border-zinc-700/70 text-[11px] md:text-xs font-medium text-zinc-100 text-center truncate">
-                    {item.dateDisplay}
-                  </div>
-                </div>
+<div className="space-y-3">
+  {combinedItems.map((item) => (
+    <div
+      key={item.id}
+      className="
+        w-full flex items-center gap-2
+        px-2 py-2 rounded-xl
+        bg-zinc-900/85 border border-zinc-700/70
+        shadow-[0_0_14px_rgba(139,92,246,0.25)]
+        hover:bg-zinc-900/95 transition-all duration-150
+        overflow-x-auto
+      "
+    >
 
-                {/* Laikas */}
-                <div className="w-[18%]">
-                  <div className="px-3 py-2 rounded-lg bg-zinc-950/80 border border-zinc-700/70 text-[11px] md:text-xs font-medium text-zinc-100 text-center whitespace-nowrap">
-                    {item.timeDisplay}
-                  </div>
-                </div>
+      {/* DATE */}
+      <div className="px-3 py-2 rounded-lg
+                      bg-zinc-900/70 border border-zinc-700/50
+                      text-[12px] font-semibold text-zinc-200 whitespace-nowrap">
+        {item.dateDisplay}
+      </div>
 
-                {/* Paslaugos / Žymos */}
-                <div className="w-[34%]">
-                  {item.type === 'system' ? (
-                    <div className="px-3 py-2 rounded-lg bg-zinc-950/80 border border-zinc-700/70 flex flex-wrap gap-1">
-                      {renderTags(item.tags, item.type)}
-                    </div>
-                  ) : (
-                    <div className="px-3 py-2 rounded-lg bg-zinc-950/80 border border-zinc-700/70 text-[11px] md:text-xs text-zinc-100 truncate">
-                      {item.description || '—'}
-                    </div>
-                  )}
-                </div>
+      {/* TIME */}
+      <div className="px-3 py-2 rounded-lg
+                      bg-zinc-900/70 border border-zinc-700/50
+                      text-[12px] font-semibold text-zinc-200 whitespace-nowrap">
+        {item.timeDisplay}
+      </div>
 
-                {/* Suma */}
-                <div className="w-[12%]">
-                  <div className="px-3 py-2 rounded-lg bg-zinc-950/80 border border-zinc-700/70 text-[12px] md:text-sm font-bold text-emerald-300 text-center">
-                    €{item.amount.toFixed(2)}
-                  </div>
-                </div>
+      {/* TAGS */}
+      <div className="
+          flex flex-wrap gap-1 px-3 py-2 rounded-lg
+          bg-zinc-900/70 border border-zinc-700/50
+          min-w-[280px]
+        ">
+        {item.type === "system"
+          ? renderTags(item.tags, item.type)
+          : (
+            <span className="text-[12px] text-zinc-200">
+              {item.description || "—"}
+            </span>
+          )}
+      </div>
 
-                {/* Kvito Nr. */}
-                <div className="w-[10%]">
-                  <div className="px-3 py-2 rounded-lg bg-zinc-950/80 border border-zinc-700/70 text-[11px] md:text-xs text-zinc-200 text-center">
-                    {item.type === 'system' && item.receiptNumber
-                      ? `#${item.receiptNumber}`
-                      : '—'}
-                  </div>
-                </div>
+      {/* AMOUNT */}
+      <div className="px-3 py-2 rounded-lg
+                      bg-zinc-900/70 border border-zinc-700/50
+                      text-[13px] font-bold text-emerald-300 whitespace-nowrap">
+        €{item.amount.toFixed(2)}
+      </div>
 
-                {/* Veiksmai */}
-                <div className="w-[12%] flex items-center justify-center gap-2">
-                  {/* Kvitas (только system) */}
-                  {item.type === 'system' && (
-                    <button
-                      onClick={() => downloadReceipt(item)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-600/40 border border-indigo-400/70 text-white text-sm hover:bg-indigo-500/60 transition"
-                      title="Kvitas"
-                    >
-                      🧾
-                    </button>
-                  )}
+      {/* RECEIPT NUMBER */}
+      <div className="px-3 py-2 rounded-lg
+                      bg-zinc-900/70 border border-zinc-700/50
+                      text-[11px] text-zinc-200 whitespace-nowrap">
+        {item.type === "system" && item.receiptNumber ? `#${item.receiptNumber}` : "—"}
+      </div>
 
-                  {/* Edit (только manual) */}
-                  {item.type === 'manual' && (
-                    <button
-                      onClick={() => editFromTable(item)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-fuchsia-600/40 border border-fuchsia-400/70 text-white text-sm hover:bg-fuchsia-500/60 transition"
-                      title="Redaguoti"
-                    >
-                      ✏️
-                    </button>
-                  )}
+      {/* ACTION BUTTONS */}
+      <div className="flex items-center gap-2">
 
-                  {/* Delete */}
-                  <button
-                    onClick={() => deleteItem(item)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-rose-600/40 border border-rose-400/70 text-white text-sm hover:bg-rose-500/60 transition"
-                    title="Ištrinti"
-                  >
-                    ✕
-                  </button>
+        {/* RECEIPT */}
+        {item.type === "system" && (
+          <button
+            onClick={() => downloadReceipt(item)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg
+                       bg-indigo-600/40 border border-indigo-400/70
+                       text-white text-sm hover:bg-indigo-500/60 transition">
+            🧾
+          </button>
+        )}
+
+        {/* EDIT */}
+        {item.type === "manual" && (
+          <button
+            onClick={() => editFromTable(item)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg
+                       bg-fuchsia-600/40 border border-fuchsia-400/70
+                       text-white text-sm hover:bg-fuchsia-500/60 transition">
+            ✏️
+          </button>
+        )}
+
+        {/* DELETE */}
+        <button
+          onClick={() => deleteItem(item)}
+          className="w-8 h-8 flex items-center justify-center rounded-lg
+                     bg-rose-600/40 border border-rose-400/70
+                     text-white text-sm hover:bg-rose-500/60 transition">
+          ✕
+        </button>
                 </div>
               </div>
             ))}
