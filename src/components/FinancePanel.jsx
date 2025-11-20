@@ -4,6 +4,29 @@ import { getBookings, fmtDate, fmtTime } from '../lib/storage'
 const MANUAL_KEY = 'iz.finance.manual.v1'
 const EXCLUDE_KEY = 'iz.finance.exclude.v1'
 
+const serviceStyles = {
+  Šukuosena: {
+    bg: "rgba(99,102,241,0.16)",
+    border: "1px solid rgba(129,140,248,0.8)",
+  },
+  "Tresų nuoma": {
+    bg: "rgba(56,189,248,0.16)",
+    border: "1px solid rgba(56,189,248,0.8)",
+  },
+  "Papuošalų nuoma": {
+    bg: "rgba(245,158,11,0.14)",
+    border: "1px solid rgba(245,158,11,0.9)",
+  },
+  Atvykimas: {
+    bg: "rgba(248,113,113,0.14)",
+    border: "1px solid rgba(248,113,113,0.9)",
+  },
+  Konsultacija: {
+    bg: "rgba(34,197,94,0.14)",
+    border: "1px solid rgba(34,197,94,0.9)",
+  },
+};
+
 const MONTHS = [
   'Sausis',
   'Vasaris',
