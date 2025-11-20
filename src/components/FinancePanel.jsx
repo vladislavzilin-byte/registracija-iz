@@ -937,8 +937,8 @@ export default function FinancePanel() {
           </div>
         </div>
 
-        {/* ГЛАВНАЯ ЖИВАЯ ТАБЛИЦА — каждая запись в одной строке */}
-        <div className="mt-6 w-full">
+       {/* Г L A V N A  T A B L I C A */}
+<div className="mt-6 w-full">
 
   <h3 className="text-sm font-semibold mb-3">Visi įrašai (lentelė)</h3>
 
@@ -953,7 +953,7 @@ export default function FinancePanel() {
     {groupedByDate.map((group) => (
       <div key={group.date} className="space-y-2">
 
-        {/* Date label */}
+        {/* Data */}
         <div className="text-xs text-zinc-400 font-medium ml-1 mb-1">
           {group.dateDisplay}
         </div>
@@ -969,80 +969,79 @@ export default function FinancePanel() {
             "
           >
 
-            {/* DATE — 10% */}
+            {/* DATE */}
             <div className="w-[10%]">
-              <div
-                className="
-                  px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
-                  text-[12px] font-semibold text-zinc-200 text-center
-                "
-              >
+              <div className="
+                px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
+                text-[12px] font-semibold text-zinc-200 text-center
+              ">
                 {group.dateDisplay}
               </div>
             </div>
 
-            {/* TIME — 12% */}
+            {/* TIME */}
             <div className="w-[12%]">
-              <div
-                className="
-                  px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
-                  text-[12px] font-semibold text-zinc-200 text-center whitespace-nowrap
-                "
-              >
+              <div className="
+                px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
+                text-[12px] font-semibold text-zinc-200 text-center whitespace-nowrap
+              ">
                 {item.timeDisplay}
               </div>
             </div>
 
-            {/* TAGS / DESCRIPTION — 40% */}
+            {/* TAGS / DESCRIPTION */}
             <div className="w-[40%] flex flex-wrap gap-2">
-
-              {item.type === "system" ? (
-                <div className="flex flex-wrap gap-2">
-                  {renderTags(item.tags, item.type)}
-                </div>
-              ) : (
-                <div
-                  className="
+              {item.type === "system"
+                ? <div className="flex flex-wrap gap-2">{renderTags(item.tags)}</div>
+                : (
+                  <div className="
                     px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
                     text-[12px] text-zinc-200
-                  "
-                >
-                  {item.description || "—"}
-                </div>
-              )}
-
+                  ">
+                    {item.description || "—"}
+                  </div>
+                )
+              }
             </div>
 
-            {/* SUMA — 10% */}
+            {/* SUMA */}
             <div className="w-[10%]">
-              <div
-                className="
-                  px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
-                  text-[13px] font-bold text-emerald-300 text-center
-                "
-              >
+              <div className="
+                px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
+                text-[13px] font-bold text-emerald-300 text-center
+              ">
                 €{item.amount.toFixed(2)}
               </div>
             </div>
 
-            {/* KVITAS — 8% */}
+            {/* KVITO NR */}
             <div className="w-[8%]">
-              <div
-                className="
-                  px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
-                  text-[11px] text-center text-zinc-300
-                "
-              >
-                {item.type === "system" && item.receiptNumber
-                  ? `#${item.receiptNumber}`
-                  : "—"}
+              <div className="
+                px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
+                text-[11px] text-center text-zinc-300
+              ">
+                {item.type === "system" && item.receiptNumber ? `#${item.receiptNumber}` : "—"}
               </div>
             </div>
 
-        {/* ACTION BUTTONS — 10% (vertical stack) */}
-<div className="w-[10%] flex flex-col gap-2 items-center justify-center">
+            {/* ACTIONS */}
+            <div className="w-[10%] flex flex-col gap-2 items-center justify-center">
 
-                            {/* DELETE BTN */}
+              {/* EDIT manual only */}
+              {item.type === "manual" && (
+                <button
+                  onClick={() => editFromTable(item)}
+                  className="
+                    w-9 h-9 flex items-center justify-center rounded-lg
+                    bg-fuchsia-600/40 border border-fuchsia-400/60
+                    text-white hover:bg-fuchsia-500/50 transition
+                  "
+                >
+                  ✏️
+                </button>
+              )}
+
+              {/* DELETE */}
               <button
                 onClick={() => deleteItem(item)}
                 className="
@@ -1054,18 +1053,13 @@ export default function FinancePanel() {
                 ✕
               </button>
 
-            </div> {/* ← END action buttons */}
+            </div>
 
-          </div> {/* ← END one row */}
-        ))} {/* ← END group.items.map */}
+          </div>
+        ))}
 
-      </div> {/* ← END one date group */}
-    ))} {/* ← END groupedByDate.map */}
+      </div>
+    ))}
 
-  </div> {/* ← END space-y-4 wrapper */}
-</div> {/* ← END main table block */}
-
-      </div> {/* ← END history section */}
-    </div> {/* ← END page wrapper */}
-  )
-} {/* ← END COMPONENT */}
+  </div>
+</div>
