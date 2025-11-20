@@ -965,117 +965,129 @@ export default function FinancePanel() {
                     </th>
                   </tr>
                 </thead>
-                <tbody>
-                  {groupedByDate.map((group) =>
-                    group.items.map((item, idx) => (
-                      <tr
-                        key={item.id}
-                        className="transition-transform duration-150 hover:-translate-y-[1px]"
-                      >
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 first:rounded-l-xl">
-                          {idx === 0 ? (
-                            <span className="text-[11px] font-medium text-zinc-200">
-                              {group.dateDisplay}
-                            </span>
-                          ) : (
-                            <span className="text-[11px] text-zinc-500" />
-                          )}
-                        </td>
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 text-[11px] md:text-xs whitespace-nowrap">
-                          {item.timeDisplay}
-                        </td>
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70">
-                          {item.type === 'system' ? (
-                            <div className="flex flex-wrap gap-1">
-                              {renderTags(item.tags, item.type)}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-zinc-100">
-                              {item.description || '—'}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70">
-                          <span className="text-xs font-semibold text-emerald-300">
-                            €{item.amount.toFixed(2)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 text-[11px] text-zinc-300">
-                          {item.type === 'system' && item.receiptNumber
-                            ? `#${item.receiptNumber}`
-                            : '—'}
-                        </td>
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 last:rounded-r-xl">
-                          <div className="flex items-center justify-center gap-2">
-                            {item.type === 'system' && (
-                              <button
-                                className="text-violet-300 hover:text-violet-400"
-                                title="Kvitas"
-                                onClick={() => downloadReceipt(item)}
-                              >
-                                🧾
-                              </button>
-                            )}
+               <tbody className="space-y-3">
 
-                            {item.type === 'manual' && (
-                              <button
-                                className="text-sky-300 hover:text-sky-400"
-                                title="Redaguoti"
-                                onClick={() => editFromTable(item)}
-                              >
-                                <svg
-                                  width="18"
-                                  height="18"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <path d="M12 20h9" />
-                                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                                </svg>
-                              </button>
-                            )}
+  {groupedByDate.map(group =>
+    group.items.map(item => (
+      <tr key={item.id} className="!block">
 
-                            <button
-                              className="text-rose-300 hover:text-rose-400"
-                              title="Ištrinti"
-                              onClick={() => deleteItem(item)}
-                            >
-                              <svg
-                                width="18"
-                                height="18"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <polyline points="3 6 5 6 21 6" />
-                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m5 0V4a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2" />
-                                <line x1="10" y1="11" x2="10" y2="17" />
-                                <line x1="14" y1="11" x2="14" y2="17" />
-                              </svg>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                  {!combinedItems.length && (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="px-3 py-3 text-center text-zinc-400 bg-zinc-900/90 border border-zinc-700/80 rounded-xl"
-                      >
-                        Nėra įrašų šiam laikotarpiui
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
+        {/* ОДНА СТРОКА = ОДНА СТЕКЛЯННАЯ КАРТА */}
+        <div className="
+          w-full flex items-center gap-3 px-3 py-3
+          rounded-xl bg-[#0f0d16]/90 border border-violet-500/30
+          shadow-[0_0_15px_rgba(130,80,255,0.25)]
+        ">
+
+          {/* DATE */}
+          <div className="
+            min-w-[130px] px-4 py-2 rounded-lg
+            border border-violet-400/40 bg-[#1a1525]/70
+            text-[13px] font-semibold text-zinc-100 text-center
+          ">
+            {group.dateDisplay}
+          </div>
+
+          {/* TIME */}
+          <div className="
+            min-w-[130px] px-4 py-2 rounded-lg
+            border border-violet-400/40 bg-[#1a1525]/70
+            text-[13px] font-semibold text-zinc-100 text-center
+          ">
+            {item.timeDisplay}
+          </div>
+
+          {/* TAGS / PASLAUGA */}
+          <div className="flex-1 flex flex-wrap gap-2">
+            {item.type === "system"
+              ? renderTags(item.tags, item.type)
+              : (
+                <span className="text-sm text-zinc-200">
+                  {item.description || "—"}
+                </span>
+              )
+            }
+          </div>
+
+          {/* SUMA */}
+          <div className="
+            min-w-[110px] px-4 py-2 rounded-lg
+            border border-emerald-400/40 bg-[#102015]/70
+            text-[14px] font-bold text-emerald-300 text-center
+          ">
+            €{item.amount.toFixed(2)}
+          </div>
+
+          {/* KVITAS */}
+          <div className="
+            min-w-[95px] px-4 py-2 rounded-lg
+            border border-blue-400/40 bg-[#111a25]/70
+            text-[12px] text-blue-300 text-center
+          ">
+            {item.type === 'system' && item.receiptNumber
+              ? `#${item.receiptNumber}`
+              : "—"
+            }
+          </div>
+
+          {/* АКЦИИ (Вертикальный стек) */}
+          <div className="flex flex-col gap-2">
+
+            {item.type === "system" && (
+              <button
+                onClick={() => downloadReceipt(item)}
+                className="
+                  w-10 h-10 flex items-center justify-center
+                  rounded-lg bg-gradient-to-b from-violet-400/40 to-indigo-500/40
+                  border border-violet-300/40 text-white
+                  hover:scale-105 transition
+                ">
+                🧾
+              </button>
+            )}
+
+            {item.type === "manual" && (
+              <button
+                onClick={() => editFromTable(item)}
+                className="
+                  w-10 h-10 flex items-center justify-center
+                  rounded-lg bg-gradient-to-b from-sky-400/40 to-blue-500/40
+                  border border-sky-300/40 text-white
+                  hover:scale-105 transition
+                ">
+                ✏️
+              </button>
+            )}
+
+            <button
+              onClick={() => deleteItem(item)}
+              className="
+                w-10 h-10 flex items-center justify-center
+                rounded-lg bg-gradient-to-b from-rose-400/40 to-red-500/40
+                border border-rose-300/40 text-white
+                hover:scale-105 transition
+              ">
+              ✕
+            </button>
+          </div>
+
+        </div>
+
+      </tr>
+    ))
+  )}
+
+  {!combinedItems.length && (
+    <tr>
+      <td
+        colSpan={6}
+        className="px-3 py-3 text-center text-zinc-400 bg-zinc-900/90 border border-zinc-700/80 rounded-xl"
+      >
+        Nėra įrašų šiam laikotarpiui
+      </td>
+    </tr>
+  )}
+
+</tbody>
               </table>
             </div>
           ) : (
