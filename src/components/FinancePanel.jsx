@@ -344,7 +344,7 @@ export default function FinancePanel() {
     return tags.map((t) => {
       const base =
         colorMap[t] ||
-        'border-purple-400/80 text-purple-100 bg-purple-500/15'
+        'border-fuchsia-400/80 text-fuchsia-100 bg-fuchsia-500/15'
       return (
         <span
           key={t}
@@ -387,10 +387,10 @@ export default function FinancePanel() {
       max-width: 640px;
       margin: 0 auto;
       border-radius: 18px;
-      border: 1px solid rgba(168,85,247,0.7);
+      border: 1px solid rgba(236,72,153,0.7);
       background:
-        radial-gradient(circle at top left, rgba(168,85,247,0.25), transparent 55%),
-        radial-gradient(circle at bottom right, rgba(59,130,246,0.2), transparent 60%),
+        radial-gradient(circle at top left, rgba(236,72,153,0.25), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(139,92,246,0.2), transparent 60%),
         rgba(15,23,42,0.96);
       padding: 24px 28px 28px;
       box-shadow: 0 22px 60px rgba(15,23,42,0.9);
@@ -499,7 +499,7 @@ export default function FinancePanel() {
           }
           .header {
             padding: 18px 22px;
-            background: linear-gradient(135deg,#4c1d95,#6d28d9);
+            background: linear-gradient(135deg,#ec4899,#8b5cf6);
             color: white;
             display: flex;
             justify-content: space-between;
@@ -557,11 +557,11 @@ export default function FinancePanel() {
             padding: 6px 8px;
           }
           th {
-            background: #eef2ff;
+            background: #fdf2f8;
             text-align: left;
           }
           tbody tr:nth-child(even) {
-            background: #f3f4ff;
+            background: #fce7f3;
           }
         </style>
       </head>
@@ -657,10 +657,10 @@ export default function FinancePanel() {
   const years = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1]
 
   const primaryBtn =
-    'bg-gradient-to-r from-[#6d28d9] to-[#4c1d95] text-white rounded-xl px-4 py-2 text-xs md:text-sm font-semibold hover:brightness-110'
+    'bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] text-white rounded-xl px-4 py-2 text-xs md:text-sm font-semibold hover:brightness-110'
 
   const smallPdfBtn =
-    'inline-flex items-center gap-1 rounded-lg border border-purple-500/60 bg-zinc-900 px-3 py-1 text-[10px] md:text-xs text-purple-100 hover:bg-zinc-800'
+    'inline-flex items-center gap-1 rounded-lg border border-pink-500/60 bg-zinc-900 px-3 py-1 text-[10px] md:text-xs text-pink-100 hover:bg-zinc-800'
 
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6 text-white">
@@ -681,10 +681,10 @@ export default function FinancePanel() {
         <div className="flex flex-col gap-3 md:items-end w-full md:w-auto">
           {/* iOS style segmented control */}
           <div className="w-full md:w-[360px]">
-            <div className="relative bg-zinc-900/80 border border-purple-500/60 rounded-2xl p-1 shadow-[0_0_25px_rgba(88,28,135,0.6)] overflow-hidden">
+            <div className="relative bg-zinc-900/80 border border-pink-500/60 rounded-2xl p-1 shadow-[0_0_25px_rgba(236,72,153,0.35)] overflow-hidden">
               {/* moving slider */}
               <div
-                className="absolute top-1 bottom-1 w-1/3 rounded-xl bg-gradient-to-r from-purple-500 via-fuchsia-500 to-indigo-500 shadow-[0_0_18px_rgba(168,85,247,0.9)] transition-transform duration-300 ease-out"
+                className="absolute top-1 bottom-1 w-1/3 rounded-xl bg-gradient-to-r from-pink-500 via-fuchsia-500 to-violet-500 shadow-[0_0_18px_rgba(236,72,153,0.8)] transition-transform duration-300 ease-out"
                 style={{
                   transform:
                     mode === 'month'
@@ -804,7 +804,7 @@ export default function FinancePanel() {
       </div>
 
       {/* Блок ручных записей */}
-      <div className="rounded-2xl bg-gradient-to-br from-purple-950/70 to-slate-950/70 border border-purple-500/30 p-4 md:p-5 space-y-4 shadow-[0_18px_50px_rgba(15,23,42,0.85)]">
+      <div className="rounded-2xl bg-gradient-to-br from-fuchsia-950/70 to-slate-950/70 border border-pink-500/40 p-4 md:p-5 space-y-4 shadow-[0_18px_50px_rgba(15,23,42,0.85)]">
         <h2 className="text-xl font-semibold">Pridėti rankinį įrašą</h2>
 
         <div className="grid md:grid-cols-5 gap-3">
@@ -873,7 +873,7 @@ export default function FinancePanel() {
           </button>
         </div>
 
-        {/* Блок, который идёт в PDF (без таблицы на экране) */}
+        {/* Блок, который идёт в PDF (čia tik santrauka viršuje, be antros lentelės ekrane) */}
         <div
           id="finance-report"
           className="bg-zinc-900/90 text-white p-4 rounded-xl border border-zinc-700"
@@ -921,25 +921,25 @@ export default function FinancePanel() {
                 Automatinės išlaidos nuo pajamų
               </div>
             </div>
-            <div className="bg-gradient-to-br from-indigo-500/10 to-indigo-500/5 border border-indigo-400/50 rounded-xl p-3 shadow-inner shadow-indigo-900/40">
-              <div className="text-[10px] uppercase text-indigo-300 tracking-wide">
+            <div className="bg-gradient-to-br from-violet-500/10 to-violet-500/5 border border-violet-400/50 rounded-xl p-3 shadow-inner shadow-violet-900/40">
+              <div className="text-[10px] uppercase text-violet-300 tracking-wide">
                 Balansas
               </div>
               <div className="text-lg font-semibold mt-0.5">
                 €{balance.toFixed(2)}
               </div>
-              <div className="text-[11px] text-indigo-100/80 mt-1">
+              <div className="text-[11px] text-violet-100/80 mt-1">
                 Pajamos minus 30% išlaidų
               </div>
             </div>
           </div>
         </div>
 
-        {/* ГЛАВНАЯ ЖИВАЯ ТАБЛИЦА — variant A (card-like rows) */}
+        {/* ГЛАВНАЯ ЖИВАЯ ТАБЛИЦА — card-table */}
         <div className="mt-4">
           <h3 className="text-sm font-semibold mb-2">Visi įrašai (lentelė)</h3>
           {groupedByDate.length ? (
-            <div className="overflow-x-auto rounded-2xl border border-purple-600/40 bg-zinc-950/80 shadow-[0_18px_55px_rgba(15,23,42,0.9)]">
+            <div className="overflow-x-auto rounded-2xl border border-pink-500/40 bg-zinc-950/80 shadow-[0_18px_55px_rgba(15,23,42,0.9)]">
               <table className="w-full text-xs md:text-sm border-separate border-spacing-y-2 border-spacing-x-0">
                 <thead>
                   <tr className="text-zinc-300">
@@ -976,9 +976,7 @@ export default function FinancePanel() {
                               {group.dateDisplay}
                             </span>
                           ) : (
-                            <span className="text-[11px] text-zinc-500">
-                              {/* пусто, чтобы дата была один раз */}
-                            </span>
+                            <span className="text-[11px] text-zinc-500" />
                           )}
                         </td>
                         <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 text-[11px] md:text-xs whitespace-nowrap">
@@ -1009,7 +1007,7 @@ export default function FinancePanel() {
                           <div className="flex items-center justify-center gap-2">
                             {item.type === 'system' && (
                               <button
-                                className="text-indigo-300 hover:text-indigo-400"
+                                className="text-violet-300 hover:text-violet-400"
                                 title="Kvitas"
                                 onClick={() => downloadReceipt(item)}
                               >
