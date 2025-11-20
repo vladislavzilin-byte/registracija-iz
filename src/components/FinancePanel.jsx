@@ -1042,41 +1042,39 @@ export default function FinancePanel() {
         {/* ACTION BUTTONS — 10% (vertical stack) */}
 <div className="w-[10%] flex flex-col gap-2 items-center justify-center">
 
-  {/* EDIT BUTTON — MANUAL ONLY */}
-  {item.type === "manual" && (
-    <button
-      onClick={() => editFromTable(item)}
-      className="
-        w-9 h-9 flex items-center justify-center rounded-lg
-        bg-fuchsia-600/40 border border-fuchsia-400/60
-        text-white hover:bg-fuchsia-500/50 transition
-      "
-      title="Redaguoti"
-    >
-      ✏️
-    </button>
-  )}
+               {/* EDIT BTN (MANUAL ONLY) */}
+              {item.type === "manual" && (
+                <button
+                  onClick={() => editFromTable(item)}
+                  className="
+                    w-9 h-9 flex items-center justify-center rounded-lg
+                    bg-fuchsia-600/40 border border-fuchsia-400/60
+                    text-white hover:bg-fuchsia-500/50 transition
+                  "
+                >
+                  ✏️
+                </button>
+              )}
 
-  {/* DELETE BUTTON */}
-  <button
-    onClick={() => deleteItem(item)}
-    className="
-      w-9 h-9 flex items-center justify-center rounded-lg
-      bg-rose-600/40 border border-rose-400/60
-      text-white hover:bg-rose-500/50 transition
-    "
-    title="Ištrinti"
-  >
-    ✕
-  </button>
+              {/* DELETE BTN */}
+              <button
+                onClick={() => deleteItem(item)}
+                className="
+                  w-9 h-9 flex items-center justify-center rounded-lg
+                  bg-rose-600/40 border border-rose-400/60
+                  text-white hover:bg-rose-500/50 transition
+                "
+              >
+                ✕
+              </button>
 
-<        </div>
-      ))}
-    </div>
+            </div>
+
+          </div>
+        ))}   {/* ← UŽDARO group.items.map */}
+        
+      </div>
+    ))}       {/* ← UŽDARO groupedByDate.map */}
+
   </div>
-</div> {/* END LIST */}
-
-      </div> {/* istorija box */}
-    </div> {/* outer container */}
-  )
-}
+</div>
