@@ -857,7 +857,7 @@ export default function FinancePanel() {
         </p>
       </div>
 
-      {/* История + экспорт + таблица */}
+      {/* История + eksportas + santrauka + nauja lentele */}
       <div className="rounded-2xl bg-zinc-900/80 border border-zinc-800 p-4 md:p-5 space-y-4 shadow-[0_22px_60px_rgba(15,23,42,0.9)]">
         <div className="flex items-center justify-between gap-2">
           <div>
@@ -933,99 +933,115 @@ export default function FinancePanel() {
           </div>
         </div>
 
-        {/* ГЛАВНАЯ НИЖНЯЯ ТАБЛИЦА — в стиле твоего скрина (карточка-ряд) */}
+        {/* === NAUJA LENTELE: viena eilė, langeliai, 7 stulpeliai === */}
         <div className="mt-4">
           <h3 className="text-sm font-semibold mb-2">Visi įrašai (lentelė)</h3>
 
-          {/* header (Data / Laikas / Paslauga / Suma / Kvito Nr. / Veiksmai) */}
-          <div className="hidden md:grid grid-cols-[1.2fr_1.4fr_2.4fr_1.1fr_1fr_0.9fr] text-[11px] text-zinc-400 px-2 pb-1">
-            <div>Data</div>
-            <div>Laikas</div>
-            <div>Paslauga</div>
-            <div>Suma (€)</div>
-            <div>Kvito Nr.</div>
-            <div className="text-center">Veiksmai</div>
+          {/* Header – kaip atskiri langeliai, tik desktop */}
+          <div className="hidden md:block overflow-x-auto">
+            <div className="min-w-[920px] grid grid-cols-[12%_12%_35%_10%_8%_18%_5%] gap-2 px-1 pb-1">
+              {['Data', 'Laikas', 'Paslauga', 'Suma (€)', 'Kvito Nr.', 'Klientas', 'Veiksmai'].map(
+                (label) => (
+                  <div
+                    key={label}
+                    className="bg-[#140a1f] border border-purple-500/40 rounded-xl px-3 py-2 text-[11px] uppercase tracking-wide text-zinc-300 flex items-center"
+                  >
+                    {label}
+                  </div>
+                )
+              )}
+            </div>
           </div>
 
           {groupedByDate.length ? (
             <div className="space-y-2">
               {groupedByDate.map((group) =>
-                group.items.map((item, idx) => (
-                  <div
-                    key={item.id}
-                    className="rounded-xl border border-purple-500/50 bg-[#12081b] px-3 py-2 md:px-4 md:py-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.6)] flex flex-col md:grid md:grid-cols-[1.2fr_1.4fr_2.4fr_1.1fr_1fr_0.9fr] gap-1 md:gap-3 text-xs md:text-sm"
-                  >
-                    {/* Data */}
-                    <div className="flex items-center text-[11px] md:text-xs text-zinc-300">
-                      <span className="md:inline">
-                        {idx === 0 ? group.dateDisplay : ''}
-                      </span>
-                    </div>
+                group.items.map((item, idx) => {
+                  const clientName =
+                    item.type === 'system'
+                      ? item.booking?.userName || ''
+                      : ''
 
-                    {/* Laikas */}
-                    <div className="flex items-center text-[11px] md:text-xs text-zinc-200">
-                      {item.timeDisplay}
-                    </div>
-
-                    {/* Paslauga / tags */}
-                    <div className="flex items-center">
-                      {item.type === 'system' ? (
-                        <div className="flex flex-wrap gap-1">
-                          {renderTags(item.tags, item.type)}
+                  return (
+                    <div key={item.id} className="overflow-x-auto">
+                      {/* viena eilė su langeliais */}
+                      <div className="min-w-[920px] grid grid-cols-[12%_12%_35%_10%_8%_18%_5%] gap-2 px-1">
+                        {/* Data */}
+                        <div className="bg-[#12081b] border border-purple-500/40 rounded-xl px-3 py-2 text-[11px] md:text-xs flex items-center text-zinc-200">
+                          {idx === 0 ? group.dateDisplay : ''}
                         </div>
-                      ) : (
-                        <span className="text-xs text-zinc-100">
-                          {item.description || 'Rankinis įrašas'}
-                        </span>
-                      )}
+
+                        {/* Laikas */}
+                        <div className="bg-[#12081b] border border-purple-500/40 rounded-xl px-3 py-2 text-[11px] md:text-xs flex items-center text-zinc-100">
+                          {item.timeDisplay}
+                        </div>
+
+                        {/* Paslauga / tag’ai / aprašymas */}
+                        <div className="bg-[#12081b] border border-purple-500/40 rounded-xl px-3 py-2 text-[11px] md:text-xs flex items-center">
+                          {item.type === 'system' ? (
+                            <div className="flex flex-wrap gap-1">
+                              {renderTags(item.tags, item.type)}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-zinc-100">
+                              {item.description || 'Rankinis įrašas'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Suma */}
+                        <div className="bg-[#12081b] border border-purple-500/40 rounded-xl px-3 py-2 text-[11px] md:text-xs flex items-center justify-center">
+                          <span className="font-semibold text-emerald-300">
+                            €{item.amount.toFixed(2)}
+                          </span>
+                        </div>
+
+                        {/* Kvito Nr. */}
+                        <div className="bg-[#12081b] border border-purple-500/40 rounded-xl px-3 py-2 text-[11px] md:text-xs flex items-center justify-center text-zinc-200">
+                          {item.type === 'system' && item.receiptNumber
+                            ? `#${item.receiptNumber}`
+                            : '—'}
+                        </div>
+
+                        {/* Klientas – tik sisteminiams */}
+                        <div className="bg-[#12081b] border border-purple-500/40 rounded-xl px-3 py-2 text-[11px] md:text-xs flex items-center text-zinc-100">
+                          {item.type === 'system' && clientName ? clientName : ''}
+                        </div>
+
+                        {/* Veiksmai */}
+                        <div className="bg-[#12081b] border border-purple-500/40 rounded-xl px-2 py-2 flex items-center justify-center gap-1">
+                          {item.type === 'system' && (
+                            <button
+                              className="h-7 w-7 flex items-center justify-center rounded-lg bg-gradient-to-b from-violet-500 to-violet-700 text-[13px] text-white shadow-[0_0_12px_rgba(139,92,246,0.8)] hover:brightness-110"
+                              title="Kvitas"
+                              onClick={() => downloadReceipt(item)}
+                            >
+                              🧾
+                            </button>
+                          )}
+
+                          {item.type === 'manual' && (
+                            <button
+                              className="h-7 w-7 flex items-center justify-center rounded-lg bg-gradient-to-b from-sky-500 to-sky-700 text-[13px] text-white shadow-[0_0_12px_rgba(56,189,248,0.8)] hover:brightness-110"
+                              title="Redaguoti"
+                              onClick={() => editFromTable(item)}
+                            >
+                              ✏️
+                            </button>
+                          )}
+
+                          <button
+                            className="h-7 w-7 flex items-center justify-center rounded-lg bg-gradient-to-b from-rose-500 to-rose-700 text-[13px] text-white shadow-[0_0_12px_rgba(248,113,113,0.9)] hover:brightness-110"
+                            title="Ištrinti"
+                            onClick={() => deleteItem(item)}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
                     </div>
-
-                    {/* Suma */}
-                    <div className="flex items-center">
-                      <span className="text-xs font-semibold text-emerald-300">
-                        €{item.amount.toFixed(2)}
-                      </span>
-                    </div>
-
-                    {/* Kvito Nr. */}
-                    <div className="flex items-center text-[11px] text-zinc-300">
-                      {item.type === 'system' && item.receiptNumber
-                        ? `#${item.receiptNumber}`
-                        : '—'}
-                    </div>
-
-                    {/* Veiksmai */}
-                    <div className="flex items-center justify-end md:justify-center gap-2">
-                      {item.type === 'system' && (
-                        <button
-                          className="h-7 w-7 flex items-center justify-center rounded-lg bg-gradient-to-b from-violet-500 to-violet-700 text-[13px] text-white shadow-[0_0_12px_rgba(139,92,246,0.8)] hover:brightness-110"
-                          title="Kvitas"
-                          onClick={() => downloadReceipt(item)}
-                        >
-                          🧾
-                        </button>
-                      )}
-
-                      {item.type === 'manual' && (
-                        <button
-                          className="h-7 w-7 flex items-center justify-center rounded-lg bg-gradient-to-b from-sky-500 to-sky-700 text-[13px] text-white shadow-[0_0_12px_rgba(56,189,248,0.8)] hover:brightness-110"
-                          title="Redaguoti"
-                          onClick={() => editFromTable(item)}
-                        >
-                          ✏️
-                        </button>
-                      )}
-
-                      <button
-                        className="h-7 w-7 flex items-center justify-center rounded-lg bg-gradient-to-b from-rose-500 to-rose-700 text-[13px] text-white shadow-[0_0_12px_rgba(248,113,113,0.9)] hover:brightness-110"
-                        title="Ištrinti"
-                        onClick={() => deleteItem(item)}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           ) : (
