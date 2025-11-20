@@ -37,7 +37,7 @@ export default function FinancePanel() {
   const [rangeTo, setRangeTo] = useState(now.toISOString().slice(0, 10))
 
   const [manualEntries, setManualEntries] = useState([])
-  const [excludedIds, setExcludedIds] = useState([])
+  const [excludedIds, setExcludedIds] = useState([]) // id броней, исключённых из фин.расчёта
 
   // форма ручного ввода
   const [formDate, setFormDate] = useState(now.toISOString().slice(0, 10))
@@ -320,12 +320,12 @@ export default function FinancePanel() {
     )
   }
 
-  // ===== красивые теги (как в Admin) =====
+  // ===== красивые теги (для UI) =====
   const renderTags = (tags, type) => {
     if (!tags || !tags.length) {
       if (type === 'manual') {
         return (
-          <span className="inline-flex items-center rounded-full border border-pink-400/70 bg-pink-500/15 px-3 py-0.5 text-xs text-pink-100">
+          <span className="inline-flex items-center rounded-full border border-pink-400/70 bg-pink-500/15 px-3 py-0.5 text-[10px] md:text-xs text-pink-100">
             ranka
           </span>
         )
@@ -344,11 +344,11 @@ export default function FinancePanel() {
     return tags.map((t) => {
       const base =
         colorMap[t] ||
-        'border-fuchsia-400/80 text-fuchsia-100 bg-fuchsia-500/15'
+        'border-purple-400/80 text-purple-100 bg-purple-500/15'
       return (
         <span
           key={t}
-          className={`inline-flex items-center rounded-full px-3 py-0.5 text-xs ${base}`}
+          className={`inline-flex items-center rounded-full px-3 py-0.5 text-[10px] md:text-xs ${base}`}
         >
           {t}
         </span>
@@ -387,10 +387,10 @@ export default function FinancePanel() {
       max-width: 640px;
       margin: 0 auto;
       border-radius: 18px;
-      border: 1px solid rgba(236,72,153,0.7);
+      border: 1px solid rgba(168,85,247,0.7);
       background:
-        radial-gradient(circle at top left, rgba(236,72,153,0.25), transparent 55%),
-        radial-gradient(circle at bottom right, rgba(139,92,246,0.2), transparent 60%),
+        radial-gradient(circle at top left, rgba(168,85,247,0.25), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(59,130,246,0.2), transparent 60%),
         rgba(15,23,42,0.96);
       padding: 24px 28px 28px;
       box-shadow: 0 22px 60px rgba(15,23,42,0.9);
@@ -557,11 +557,11 @@ export default function FinancePanel() {
             padding: 6px 8px;
           }
           th {
-            background: #fdf2f8;
+            background: #fdf2ff;
             text-align: left;
           }
           tbody tr:nth-child(even) {
-            background: #fce7f3;
+            background: #f9fafb;
           }
         </style>
       </head>
@@ -678,65 +678,58 @@ export default function FinancePanel() {
           </p>
         </div>
 
+        {/* переключатель Mėnuo / Metai / Laikotarpis */}
         <div className="flex flex-col gap-3 md:items-end w-full md:w-auto">
-          {/* iOS style segmented control */}
-          <div className="w-full md:w-[360px]">
-            <div className="relative bg-zinc-900/80 border border-pink-500/60 rounded-2xl p-1 shadow-[0_0_25px_rgba(236,72,153,0.35)] overflow-hidden">
-              {/* moving slider */}
+          <div className="relative">
+            {/* iOS-like фон */}
+            <div className="flex items-center rounded-2xl bg-zinc-900/80 border border-pink-500/40 px-1 py-1 shadow-[0_0_25px_rgba(236,72,153,0.45)]">
+              {/* активная "капсула" */}
               <div
-                className="absolute top-1 bottom-1 w-1/3 rounded-xl bg-gradient-to-r from-pink-500 via-fuchsia-500 to-violet-500 shadow-[0_0_18px_rgba(236,72,153,0.8)] transition-transform duration-300 ease-out"
-                style={{
-                  transform:
-                    mode === 'month'
-                      ? 'translateX(0%)'
-                      : mode === 'year'
-                      ? 'translateX(100%)'
-                      : 'translateX(200%)'
-                }}
+                className={`absolute top-1 bottom-1 w-1/3 rounded-2xl bg-gradient-to-r from-pink-500/90 to-violet-500/90 shadow-[0_0_18px_rgba(236,72,153,0.7)] transition-transform duration-300 ${
+                  mode === 'month'
+                    ? 'translate-x-0'
+                    : mode === 'year'
+                    ? 'translate-x-full'
+                    : 'translate-x-[200%]'
+                }`}
               />
-              {/* buttons */}
-              <div className="relative z-10 grid grid-cols-3 text-[11px] md:text-xs font-medium">
-                <button
-                  type="button"
-                  onClick={() => setMode('month')}
-                  className={`flex flex-col items-center justify-center gap-0.5 px-2 py-2 md:py-2.5 transition-colors ${
-                    mode === 'month'
-                      ? 'text-white'
-                      : 'text-zinc-400 hover:text-zinc-100'
-                  }`}
-                >
-                  <span className="text-base md:text-lg">📅</span>
-                  <span>Mėnuo</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode('year')}
-                  className={`flex flex-col items-center justify-center gap-0.5 px-2 py-2 md:py-2.5 transition-colors ${
-                    mode === 'year'
-                      ? 'text-white'
-                      : 'text-zinc-400 hover:text-zinc-100'
-                  }`}
-                >
-                  <span className="text-base md:text-lg">🕓</span>
-                  <span>Metai</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode('range')}
-                  className={`flex flex-col items-center justify-center gap-0.5 px-2 py-2 md:py-2.5 transition-colors ${
-                    mode === 'range'
-                      ? 'text-white'
-                      : 'text-zinc-400 hover:text-zinc-100'
-                  }`}
-                >
-                  <span className="text-base md:text-lg">📆↔️</span>
-                  <span>Laikotarpis</span>
-                </button>
-              </div>
-
-              {/* subtle outer glow / border shine */}
-              <div className="pointer-events-none absolute inset-0 rounded-2xl border border-white/5 opacity-70" />
+              <button
+                className={`relative z-10 flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-[11px] md:text-xs font-medium transition ${
+                  mode === 'month'
+                    ? 'text-white'
+                    : 'text-zinc-300 hover:text-white'
+                }`}
+                onClick={() => setMode('month')}
+              >
+                <span className="text-[13px]">📅</span>
+                <span>Mėnuo</span>
+              </button>
+              <button
+                className={`relative z-10 flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-[11px] md:text-xs font-medium transition ${
+                  mode === 'year'
+                    ? 'text-white'
+                    : 'text-zinc-300 hover:text-white'
+                }`}
+                onClick={() => setMode('year')}
+              >
+                <span className="text-[13px]">🗓️</span>
+                <span>Metai</span>
+              </button>
+              <button
+                className={`relative z-10 flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-[11px] md:text-xs font-medium transition ${
+                  mode === 'range'
+                    ? 'text-white'
+                    : 'text-zinc-300 hover:text-white'
+                }`}
+                onClick={() => setMode('range')}
+              >
+                <span className="text-[13px]">📊</span>
+                <span>Laikotarpis</span>
+              </button>
             </div>
+
+            {/* subtle outer glow / border shine */}
+            <div className="pointer-events-none absolute inset-0 rounded-2xl border border-white/5 opacity-70" />
           </div>
 
           {/* контролы диапазона */}
@@ -803,6 +796,49 @@ export default function FinancePanel() {
         </div>
       </div>
 
+      {/* НОВАЯ ТАБЛИЦА-СВОДКА Sistema | Suma | Išlaidos (30%) | Uždarbis */}
+      <div className="rounded-2xl bg-gradient-to-br from-zinc-950 to-slate-950 border border-pink-500/40 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.9)]">
+        <h3 className="text-sm font-semibold mb-3">
+          Santrauka pagal pasirinktą laikotarpį
+        </h3>
+        <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/80">
+          <table className="w-full text-xs md:text-sm border-collapse">
+            <thead>
+              <tr className="bg-zinc-900/90 text-zinc-200">
+                <th className="px-3 py-2 border-b border-zinc-800 text-left">
+                  Sistema
+                </th>
+                <th className="px-3 py-2 border-b border-zinc-800 text-left">
+                  Suma
+                </th>
+                <th className="px-3 py-2 border-b border-zinc-800 text-left">
+                  Išlaidos (30%)
+                </th>
+                <th className="px-3 py-2 border-b border-zinc-800 text-left">
+                  Uždarbis
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="hover:bg-zinc-900/60 transition">
+                <td className="px-3 py-2 border-t border-zinc-800">
+                  Sistema + rankiniai
+                </td>
+                <td className="px-3 py-2 border-t border-zinc-800 font-semibold text-emerald-300">
+                  €{totalIncome.toFixed(2)}
+                </td>
+                <td className="px-3 py-2 border-t border-zinc-800 text-amber-200">
+                  €{totalExpense.toFixed(2)}
+                </td>
+                <td className="px-3 py-2 border-t border-zinc-800 font-semibold text-pink-200">
+                  €{balance.toFixed(2)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Блок ручных записей */}
       <div className="rounded-2xl bg-gradient-to-br from-fuchsia-950/70 to-slate-950/70 border border-pink-500/40 p-4 md:p-5 space-y-4 shadow-[0_18px_50px_rgba(15,23,42,0.85)]">
         <h2 className="text-xl font-semibold">Pridėti rankinį įrašą</h2>
@@ -857,7 +893,7 @@ export default function FinancePanel() {
         </p>
       </div>
 
-      {/* История + экспорт + главная таблица */}
+      {/* Истorija + eksport + G L A V N A T A B L E */}
       <div className="rounded-2xl bg-zinc-900/80 border border-zinc-800 p-4 md:p-5 space-y-4 shadow-[0_22px_60px_rgba(15,23,42,0.9)]">
         {/* заголовок + маленькая PDF кнопка */}
         <div className="flex items-center justify-between gap-2">
@@ -873,7 +909,7 @@ export default function FinancePanel() {
           </button>
         </div>
 
-        {/* Блок, который идёт в PDF (čia tik santrauka viršuje, be antros lentelės ekrane) */}
+        {/* Блок, который идёт в PDF (čia tik santrauka viršuje, без дублирующей таблицы на экране) */}
         <div
           id="finance-report"
           className="bg-zinc-900/90 text-white p-4 rounded-xl border border-zinc-700"
@@ -886,195 +922,140 @@ export default function FinancePanel() {
             rankinių įrašų, automatinės išlaidos (30%) ir balansas.
           </p>
 
-          {/* mini premium cards (Sistema / Rankiniai / Išlaidos / Balansas) */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm mt-2 mb-1">
-            <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-400/50 rounded-xl p-3 shadow-inner shadow-emerald-900/40">
-              <div className="text-[10px] uppercase text-emerald-300 tracking-wide">
+            <div className="bg-zinc-900 border border-emerald-400/40 rounded-xl p-3">
+              <div className="text-[11px] uppercase text-emerald-300">
                 Sistema
               </div>
-              <div className="text-lg font-semibold mt-0.5">
+              <div className="text-lg font-semibold">
                 €{systemIncomeTotal.toFixed(2)}
               </div>
-              <div className="text-[11px] text-emerald-100/80 mt-1">
-                Užbaigtos ir apmokėtos rezervacijos
-              </div>
             </div>
-            <div className="bg-gradient-to-br from-sky-500/10 to-sky-500/5 border border-sky-400/50 rounded-xl p-3 shadow-inner shadow-sky-900/40">
-              <div className="text-[10px] uppercase text-sky-300 tracking-wide">
+            <div className="bg-zinc-900 border border-sky-400/40 rounded-xl p-3">
+              <div className="text-[11px] uppercase text-sky-300">
                 Rankiniai
               </div>
-              <div className="text-lg font-semibold mt-0.5">
+              <div className="text-lg font-semibold">
                 €{manualIncomeTotal.toFixed(2)}
               </div>
-              <div className="text-[11px] text-sky-100/80 mt-1">
-                Papildomi rankiniai įrašai
-              </div>
             </div>
-            <div className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-400/50 rounded-xl p-3 shadow-inner shadow-amber-900/40">
-              <div className="text-[10px] uppercase text-amber-300 tracking-wide">
+            <div className="bg-zinc-900 border border-amber-400/40 rounded-xl p-3">
+              <div className="text-[11px] uppercase text-amber-300">
                 Išlaidos (30%)
               </div>
-              <div className="text-lg font-semibold mt-0.5">
+              <div className="text-lg font-semibold">
                 €{totalExpense.toFixed(2)}
               </div>
-              <div className="text-[11px] text-amber-100/80 mt-1">
-                Automatinės išlaidos nuo pajamų
-              </div>
             </div>
-            <div className="bg-gradient-to-br from-violet-500/10 to-violet-500/5 border border-violet-400/50 rounded-xl p-3 shadow-inner shadow-violet-900/40">
-              <div className="text-[10px] uppercase text-violet-300 tracking-wide">
+            <div className="bg-zinc-900 border border-pink-400/60 rounded-xl p-3">
+              <div className="text-[11px] uppercase text-pink-300">
                 Balansas
               </div>
-              <div className="text-lg font-semibold mt-0.5">
+              <div className="text-lg font-semibold">
                 €{balance.toFixed(2)}
-              </div>
-              <div className="text-[11px] text-violet-100/80 mt-1">
-                Pajamos minus 30% išlaidų
               </div>
             </div>
           </div>
         </div>
 
-        {/* ГЛАВНАЯ ЖИВАЯ ТАБЛИЦА — card-table */}
+        {/* G L A V N A T A B L E — premium one-line rows */}
         <div className="mt-4">
           <h3 className="text-sm font-semibold mb-2">Visi įrašai (lentelė)</h3>
+
           {groupedByDate.length ? (
-            <div className="overflow-x-auto rounded-2xl border border-pink-500/40 bg-zinc-950/80 shadow-[0_18px_55px_rgba(15,23,42,0.9)]">
-              <table className="w-full text-xs md:text-sm border-separate border-spacing-y-2 border-spacing-x-0">
-                <thead>
-                  <tr className="text-zinc-300">
-                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80 first:rounded-l-xl last:rounded-r-xl">
-                      Data
-                    </th>
-                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
-                      Laikas
-                    </th>
-                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
-                      Paslauga
-                    </th>
-                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
-                      Suma (€)
-                    </th>
-                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
-                      Kvito Nr.
-                    </th>
-                    <th className="px-3 py-2 text-center text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80 first:rounded-l-xl last:rounded-r-xl">
-                      Veiksmai
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {groupedByDate.map((group) =>
-                    group.items.map((item, idx) => (
-                      <tr
+            <div className="overflow-x-auto">
+              <div className="space-y-3 min-w-[720px]">
+                {groupedByDate.map((group) => (
+                  <div key={group.date}>
+                    {/* Data (vieną kartą grupei) */}
+                    <div className="text-[11px] font-semibold text-zinc-300 mb-1 ml-1">
+                      {group.dateDisplay}
+                    </div>
+
+                    {group.items.map((item) => (
+                      <div
                         key={item.id}
-                        className="transition-transform duration-150 hover:-translate-y-[1px]"
+                        className="relative grid grid-cols-[auto,1.8fr,auto,auto] md:grid-cols-[auto,2fr,auto,auto] items-center gap-3 px-3 py-2.5 rounded-2xl border border-pink-500/50 bg-gradient-to-r from-zinc-950 via-zinc-900/90 to-zinc-950 shadow-[0_0_25px_rgba(236,72,153,0.35)]"
                       >
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 first:rounded-l-xl">
-                          {idx === 0 ? (
-                            <span className="text-[11px] font-medium text-zinc-200">
-                              {group.dateDisplay}
-                            </span>
-                          ) : (
-                            <span className="text-[11px] text-zinc-500" />
-                          )}
-                        </td>
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 text-[11px] md:text-xs whitespace-nowrap">
-                          {item.timeDisplay}
-                        </td>
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70">
-                          {item.type === 'system' ? (
-                            <div className="flex flex-wrap gap-1">
-                              {renderTags(item.tags, item.type)}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-zinc-100">
-                              {item.description || '—'}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70">
-                          <span className="text-xs font-semibold text-emerald-300">
-                            €{item.amount.toFixed(2)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 text-[11px] text-zinc-300">
-                          {item.type === 'system' && item.receiptNumber
-                            ? `#${item.receiptNumber}`
-                            : '—'}
-                        </td>
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 last:rounded-r-xl">
-                          <div className="flex items-center justify-center gap-2">
-                            {item.type === 'system' && (
-                              <button
-                                className="text-violet-300 hover:text-violet-400"
-                                title="Kvitas"
-                                onClick={() => downloadReceipt(item)}
-                              >
-                                🧾
-                              </button>
-                            )}
+                        {/* shine border */}
+                        <div className="pointer-events-none absolute inset-0 rounded-2xl border border-white/5 opacity-60" />
 
-                            {item.type === 'manual' && (
-                              <button
-                                className="text-sky-300 hover:text-sky-400"
-                                title="Redaguoti"
-                                onClick={() => editFromTable(item)}
-                              >
-                                <svg
-                                  width="18"
-                                  height="18"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <path d="M12 20h9" />
-                                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                                </svg>
-                              </button>
-                            )}
-
-                            <button
-                              className="text-rose-300 hover:text-rose-400"
-                              title="Ištrinti"
-                              onClick={() => deleteItem(item)}
-                            >
-                              <svg
-                                width="18"
-                                height="18"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <polyline points="3 6 5 6 21 6" />
-                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m5 0V4a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2" />
-                                <line x1="10" y1="11" x2="10" y2="17" />
-                                <line x1="14" y1="11" x2="14" y2="17" />
-                              </svg>
-                            </button>
+                        {/* Laikas (kairė kapsulė) */}
+                        <div className="relative flex flex-col items-start gap-1 text-[11px] md:text-xs text-zinc-200">
+                          <div className="inline-flex items-center rounded-full bg-zinc-900/90 px-2 py-1 border border-zinc-700/80">
+                            <span className="mr-1 text-[12px]">⏰</span>
+                            <span className="whitespace-nowrap">
+                              {item.timeDisplay || '—'}
+                            </span>
                           </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                  {!combinedItems.length && (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="px-3 py-3 text-center text-zinc-400 bg-zinc-900/90 border border-zinc-700/80 rounded-xl"
-                      >
-                        Nėra įrašų šiam laikotarpiui
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                          {item.type === 'system' && item.receiptNumber && (
+                            <div className="inline-flex items-center rounded-full bg-zinc-950/90 px-2 py-0.5 border border-zinc-800 text-[10px] text-zinc-400">
+                              Kvitas #{item.receiptNumber}
+                            </div>
+                          )}
+                          {item.type === 'manual' && (
+                            <div className="inline-flex items-center rounded-full bg-zinc-950/90 px-2 py-0.5 border border-pink-500/60 text-[10px] text-pink-100">
+                              Rankinis
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Paslauga / žymos */}
+                        <div className="relative flex flex-col gap-1">
+                          <div className="flex flex-wrap gap-1">
+                            {item.type === 'system'
+                              ? renderTags(item.tags, item.type)
+                              : renderTags(item.tags, 'manual')}
+                          </div>
+                          {item.description && (
+                            <div className="text-[11px] md:text-xs text-zinc-200">
+                              {item.description}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Suma */}
+                        <div className="relative flex flex-col items-end gap-1">
+                          <div className="inline-flex items-center rounded-full bg-zinc-900/90 px-3 py-1 border border-emerald-400/60 text-[12px] font-semibold text-emerald-200">
+                            €{item.amount.toFixed(2)}
+                          </div>
+                        </div>
+
+                        {/* Veiksmai */}
+                        <div className="relative flex items-center justify-end gap-2">
+                          {item.type === 'system' && (
+                            <button
+                              className="inline-flex items-center justify-center rounded-full bg-zinc-900/90 border border-violet-400/70 px-2.5 py-1 text-[11px] text-violet-100 hover:bg-zinc-800"
+                              title="Kvitas"
+                              onClick={() => downloadReceipt(item)}
+                            >
+                              🧾
+                            </button>
+                          )}
+
+                          {item.type === 'manual' && (
+                            <button
+                              className="inline-flex items-center justify-center rounded-full bg-zinc-900/90 border border-sky-400/70 px-2.5 py-1 text-[11px] text-sky-100 hover:bg-zinc-800"
+                              title="Redaguoti"
+                              onClick={() => editFromTable(item)}
+                            >
+                              ✏️
+                            </button>
+                          )}
+
+                          <button
+                            className="inline-flex items-center justify-center rounded-full bg-zinc-900/90 border border-rose-500/70 px-2.5 py-1 text-[11px] text-rose-100 hover:bg-zinc-800"
+                            title="Ištrinti"
+                            onClick={() => deleteItem(item)}
+                          >
+                            ❌
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="text-xs text-center text-zinc-400 py-2">
