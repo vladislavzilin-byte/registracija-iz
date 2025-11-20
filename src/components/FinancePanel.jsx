@@ -938,165 +938,157 @@ export default function FinancePanel() {
         </div>
 
         {/* ГЛАВНАЯ ЖИВАЯ ТАБЛИЦА — каждая запись в одной строке */}
-        <div className="mt-4">
-          <h3 className="text-sm font-semibold mb-2">Visi įrašai (lentelė)</h3>
-          {groupedByDate.length ? (
-            <div className="overflow-x-auto rounded-2xl border border-pink-500/40 bg-zinc-950/80 shadow-[0_18px_55px_rgba(15,23,42,0.9)]">
-              <table className="w-full text-xs md:text-sm border-separate border-spacing-y-2 border-spacing-x-0">
-                <thead>
-                  <tr className="text-zinc-300">
-                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80 first:rounded-l-xl last:rounded-r-xl">
-                      Data
-                    </th>
-                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
-                      Laikas
-                    </th>
-                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
-                      Paslauga
-                    </th>
-                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
-                      Suma (€)
-                    </th>
-                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
-                      Kvito Nr.
-                    </th>
-                    <th className="px-3 py-2 text-center text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80 first:rounded-l-xl last:rounded-r-xl">
-                      Veiksmai
-                    </th>
-                  </tr>
-                </thead>
-               <tbody className="space-y-3">
+        <div className="mt-6 w-full">
 
-  {groupedByDate.map(group =>
-    group.items.map(item => (
-      <tr key={item.id} className="!block">
+  <h3 className="text-sm font-semibold mb-3">Visi įrašai (lentelė)</h3>
 
-        {/* ОДНА СТРОКА = ОДНА СТЕКЛЯННАЯ КАРТА */}
-        <div className="
-          w-full flex items-center gap-3 px-3 py-3
-          rounded-xl bg-[#0f0d16]/90 border border-violet-500/30
-          shadow-[0_0_15px_rgba(130,80,255,0.25)]
-        ">
-
-          {/* DATE */}
-          <div className="
-            min-w-[130px] px-4 py-2 rounded-lg
-            border border-violet-400/40 bg-[#1a1525]/70
-            text-[13px] font-semibold text-zinc-100 text-center
-          ">
-            {group.dateDisplay}
-          </div>
-
-          {/* TIME */}
-          <div className="
-            min-w-[130px] px-4 py-2 rounded-lg
-            border border-violet-400/40 bg-[#1a1525]/70
-            text-[13px] font-semibold text-zinc-100 text-center
-          ">
-            {item.timeDisplay}
-          </div>
-
-          {/* TAGS / PASLAUGA */}
-          <div className="flex-1 flex flex-wrap gap-2">
-            {item.type === "system"
-              ? renderTags(item.tags, item.type)
-              : (
-                <span className="text-sm text-zinc-200">
-                  {item.description || "—"}
-                </span>
-              )
-            }
-          </div>
-
-          {/* SUMA */}
-          <div className="
-            min-w-[110px] px-4 py-2 rounded-lg
-            border border-emerald-400/40 bg-[#102015]/70
-            text-[14px] font-bold text-emerald-300 text-center
-          ">
-            €{item.amount.toFixed(2)}
-          </div>
-
-          {/* KVITAS */}
-          <div className="
-            min-w-[95px] px-4 py-2 rounded-lg
-            border border-blue-400/40 bg-[#111a25]/70
-            text-[12px] text-blue-300 text-center
-          ">
-            {item.type === 'system' && item.receiptNumber
-              ? `#${item.receiptNumber}`
-              : "—"
-            }
-          </div>
-
-          {/* АКЦИИ (Вертикальный стек) */}
-          <div className="flex flex-col gap-2">
-
-            {item.type === "system" && (
-              <button
-                onClick={() => downloadReceipt(item)}
-                className="
-                  w-10 h-10 flex items-center justify-center
-                  rounded-lg bg-gradient-to-b from-violet-400/40 to-indigo-500/40
-                  border border-violet-300/40 text-white
-                  hover:scale-105 transition
-                ">
-                🧾
-              </button>
-            )}
-
-            {item.type === "manual" && (
-              <button
-                onClick={() => editFromTable(item)}
-                className="
-                  w-10 h-10 flex items-center justify-center
-                  rounded-lg bg-gradient-to-b from-sky-400/40 to-blue-500/40
-                  border border-sky-300/40 text-white
-                  hover:scale-105 transition
-                ">
-                ✏️
-              </button>
-            )}
-
-            <button
-              onClick={() => deleteItem(item)}
-              className="
-                w-10 h-10 flex items-center justify-center
-                rounded-lg bg-gradient-to-b from-rose-400/40 to-red-500/40
-                border border-rose-300/40 text-white
-                hover:scale-105 transition
-              ">
-              ✕
-            </button>
-          </div>
-
-        </div>
-
-      </tr>
-    ))
-  )}
-
-  {!combinedItems.length && (
-    <tr>
-      <td
-        colSpan={6}
-        className="px-3 py-3 text-center text-zinc-400 bg-zinc-900/90 border border-zinc-700/80 rounded-xl"
-      >
-        Nėra įrašų šiam laikotarpiui
-      </td>
-    </tr>
-  )}
-
-</tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-xs text-center text-zinc-400 py-2">
-              Nėra įrašų šiam laikotarpiui
-            </div>
-          )}
-        </div>
-      </div>
+  {combinedItems.length === 0 && (
+    <div className="text-center text-zinc-500 text-sm py-3">
+      Nėra įrašų šiam laikotarpiui
     </div>
-  )
-}
+  )}
+
+  <div className="space-y-4">
+
+    {groupedByDate.map((group) => (
+      <div key={group.date} className="space-y-2">
+
+        {/* Date label */}
+        <div className="text-xs text-zinc-400 font-medium ml-1 mb-1">
+          {group.dateDisplay}
+        </div>
+
+        {group.items.map((item) => (
+          <div
+            key={item.id}
+            className="
+              w-full flex items-center gap-3 px-3 py-3 rounded-xl
+              bg-zinc-900/80 border border-zinc-700/60
+              shadow-[0_0_15px_rgba(139,92,246,0.25)]
+              hover:bg-zinc-900/90 transition-all duration-150
+            "
+          >
+
+            {/* DATE — 10% */}
+            <div className="w-[10%]">
+              <div
+                className="
+                  px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
+                  text-[12px] font-semibold text-zinc-200 text-center
+                "
+              >
+                {group.dateDisplay}
+              </div>
+            </div>
+
+            {/* TIME — 12% */}
+            <div className="w-[12%]">
+              <div
+                className="
+                  px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
+                  text-[12px] font-semibold text-zinc-200 text-center whitespace-nowrap
+                "
+              >
+                {item.timeDisplay}
+              </div>
+            </div>
+
+            {/* TAGS / DESCRIPTION — 40% */}
+            <div className="w-[40%] flex flex-wrap gap-2">
+
+              {item.type === "system" ? (
+                <div className="flex flex-wrap gap-2">
+                  {renderTags(item.tags, item.type)}
+                </div>
+              ) : (
+                <div
+                  className="
+                    px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
+                    text-[12px] text-zinc-200
+                  "
+                >
+                  {item.description || "—"}
+                </div>
+              )}
+
+            </div>
+
+            {/* SUMA — 10% */}
+            <div className="w-[10%]">
+              <div
+                className="
+                  px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
+                  text-[13px] font-bold text-emerald-300 text-center
+                "
+              >
+                €{item.amount.toFixed(2)}
+              </div>
+            </div>
+
+            {/* KVITAS — 8% */}
+            <div className="w-[8%]">
+              <div
+                className="
+                  px-3 py-2 rounded-lg bg-zinc-900/70 border border-zinc-700/50
+                  text-[11px] text-center text-zinc-300
+                "
+              >
+                {item.type === "system" && item.receiptNumber
+                  ? `#${item.receiptNumber}`
+                  : "—"}
+              </div>
+            </div>
+
+            {/* ACTION BUTTONS — 10% (vertical stack) */}
+            <div className="w-[10%] flex flex-col gap-2 items-center justify-center">
+
+              {/* RECEIPT BTN (SYSTEM ONLY) */}
+              {item.type === "system" && (
+                <button
+                  onClick={() => downloadReceipt(item)}
+                  className="
+                    w-9 h-9 flex items-center justify-center rounded-lg
+                    bg-indigo-600/40 border border-indigo-400/60
+                    text-white hover:bg-indigo-500/50 transition
+                  "
+                >
+                  🧾
+                </button>
+              )}
+
+              {/* EDIT BTN (MANUAL ONLY) */}
+              {item.type === "manual" && (
+                <button
+                  onClick={() => editFromTable(item)}
+                  className="
+                    w-9 h-9 flex items-center justify-center rounded-lg
+                    bg-fuchsia-600/40 border border-fuchsia-400/60
+                    text-white hover:bg-fuchsia-500/50 transition
+                  "
+                >
+                  ✏️
+                </button>
+              )}
+
+              {/* DELETE BTN */}
+              <button
+                onClick={() => deleteItem(item)}
+                className="
+                  w-9 h-9 flex items-center justify-center rounded-lg
+                  bg-rose-600/40 border border-rose-400/60
+                  text-white hover:bg-rose-500/50 transition
+                "
+              >
+                ✕
+              </button>
+
+            </div>
+
+          </div>
+        ))}
+
+      </div>
+    ))}
+
+  </div>
+</div>
