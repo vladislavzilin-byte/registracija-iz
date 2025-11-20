@@ -574,13 +574,13 @@ export default function FinancePanel() {
             </div>
             <div class="logo">
               <b>IZ HAIR TREND</b>
-              <span>Finansų суvestinė</span>
+              <span>Finansų suvestinė</span>
             </div>
           </div>
           <div class="content">
             <div>
-              Suvestinė pagal pasirinktą laikotarpį: pajamos iš sistemos и rankinių įrašų,
-              automatinės išlaidos (30%) и balansas.
+              Suvestinė pagal pasirinktą laikotarpį: pajamos iš sistemos ir rankinių įrašų,
+              automatinės išlaidos (30%) ir balansas.
             </div>
 
             <div class="summary">
@@ -855,7 +855,7 @@ export default function FinancePanel() {
         </div>
 
         <p className="text-xs text-zinc-400">
-          Sistemos pajamos imamos automatiškai iš užbaigtų и apmokėtų
+          Sistemos pajamos imamos automatiškai iš užbaigtų ir apmokėtų
           rezervacijų. Čia galite pridėti papildomų pajamų rankiniu būdu
           (pvz. grynieji, papildomos paslaugos).
         </p>
@@ -938,7 +938,7 @@ export default function FinancePanel() {
           </div>
         </div>
 
-        {/* ГЛАВНЫЙ СПИСОК — одна строка как в макете */}
+        {/* ГЛАВНЫЙ СПИСОК — одна строка, скроллится по горизонтали при необходимости */}
         <div className="mt-6 w-full">
           <h3 className="text-sm font-semibold mb-3">Visi įrašai (lentelė)</h3>
 
@@ -948,96 +948,126 @@ export default function FinancePanel() {
             </div>
           )}
 
-<div className="space-y-3">
-  {combinedItems.map((item) => (
-    <div
-      key={item.id}
-      className="
-        w-full flex items-center gap-2
-        px-2 py-2 rounded-xl
-        bg-zinc-900/85 border border-zinc-700/70
-        shadow-[0_0_14px_rgba(139,92,246,0.25)]
-        hover:bg-zinc-900/95 transition-all duration-150
-        overflow-x-auto
-      "
-    >
+          <div className="space-y-3">
+            {combinedItems.map((item) => (
+              <div
+                key={item.id}
+                className="
+                  w-full flex items-center gap-2
+                  px-2 py-2 rounded-xl
+                  bg-zinc-900/85 border border-zinc-700/70
+                  shadow-[0_0_14px_rgba(139,92,246,0.25)]
+                  hover:bg-zinc-900/95 transition-all duration-150
+                  overflow-x-auto
+                "
+              >
+                {/* DATE */}
+                <div
+                  className="
+                    px-3 py-2 rounded-lg
+                    bg-zinc-900/70 border border-zinc-700/50
+                    text-[12px] font-semibold text-zinc-200 whitespace-nowrap
+                  "
+                >
+                  {item.dateDisplay}
+                </div>
 
-      {/* DATE */}
-      <div className="px-3 py-2 rounded-lg
-                      bg-zinc-900/70 border border-zinc-700/50
-                      text-[12px] font-semibold text-zinc-200 whitespace-nowrap">
-        {item.dateDisplay}
-      </div>
+                {/* TIME */}
+                <div
+                  className="
+                    px-3 py-2 rounded-lg
+                    bg-zinc-900/70 border border-zinc-700/50
+                    text-[12px] font-semibold text-zinc-200 whitespace-nowrap
+                  "
+                >
+                  {item.timeDisplay}
+                </div>
 
-      {/* TIME */}
-      <div className="px-3 py-2 rounded-lg
-                      bg-zinc-900/70 border border-zinc-700/50
-                      text-[12px] font-semibold text-zinc-200 whitespace-nowrap">
-        {item.timeDisplay}
-      </div>
+                {/* TAGS / DESCRIPTION */}
+                <div
+                  className="
+                    flex flex-wrap gap-1 px-3 py-2 rounded-lg
+                    bg-zinc-900/70 border border-zinc-700/50
+                    min-w-[280px]
+                  "
+                >
+                  {item.type === 'system' ? (
+                    renderTags(item.tags, item.type)
+                  ) : (
+                    <span className="text-[12px] text-zinc-200">
+                      {item.description || '—'}
+                    </span>
+                  )}
+                </div>
 
-      {/* TAGS */}
-      <div className="
-          flex flex-wrap gap-1 px-3 py-2 rounded-lg
-          bg-zinc-900/70 border border-zinc-700/50
-          min-w-[280px]
-        ">
-        {item.type === "system"
-          ? renderTags(item.tags, item.type)
-          : (
-            <span className="text-[12px] text-zinc-200">
-              {item.description || "—"}
-            </span>
-          )}
-      </div>
+                {/* AMOUNT */}
+                <div
+                  className="
+                    px-3 py-2 rounded-lg
+                    bg-zinc-900/70 border border-zinc-700/50
+                    text-[13px] font-bold text-emerald-300 whitespace-nowrap
+                  "
+                >
+                  €{item.amount.toFixed(2)}
+                </div>
 
-      {/* AMOUNT */}
-      <div className="px-3 py-2 rounded-lg
-                      bg-zinc-900/70 border border-zinc-700/50
-                      text-[13px] font-bold text-emerald-300 whitespace-nowrap">
-        €{item.amount.toFixed(2)}
-      </div>
+                {/* RECEIPT NUMBER */}
+                <div
+                  className="
+                    px-3 py-2 rounded-lg
+                    bg-zinc-900/70 border border-zinc-700/50
+                    text-[11px] text-zinc-200 whitespace-nowrap
+                  "
+                >
+                  {item.type === 'system' && item.receiptNumber
+                    ? `#${item.receiptNumber}`
+                    : '—'}
+                </div>
 
-      {/* RECEIPT NUMBER */}
-      <div className="px-3 py-2 rounded-lg
-                      bg-zinc-900/70 border border-zinc-700/50
-                      text-[11px] text-zinc-200 whitespace-nowrap">
-        {item.type === "system" && item.receiptNumber ? `#${item.receiptNumber}` : "—"}
-      </div>
+                {/* ACTION BUTTONS */}
+                <div className="flex items-center gap-2">
+                  {/* RECEIPT */}
+                  {item.type === 'system' && (
+                    <button
+                      onClick={() => downloadReceipt(item)}
+                      className="
+                        w-8 h-8 flex items-center justify-center rounded-lg
+                        bg-indigo-600/40 border border-indigo-400/70
+                        text-white text-sm hover:bg-indigo-500/60 transition
+                      "
+                      title="Kvitas"
+                    >
+                      🧾
+                    </button>
+                  )}
 
-      {/* ACTION BUTTONS */}
-      <div className="flex items-center gap-2">
+                  {/* EDIT (manual only) */}
+                  {item.type === 'manual' && (
+                    <button
+                      onClick={() => editFromTable(item)}
+                      className="
+                        w-8 h-8 flex items-center justify-center rounded-lg
+                        bg-fuchsia-600/40 border border-fuchsia-400/70
+                        text-white text-sm hover:bg-fuchsia-500/60 transition
+                      "
+                      title="Redaguoti"
+                    >
+                      ✏️
+                    </button>
+                  )}
 
-        {/* RECEIPT */}
-        {item.type === "system" && (
-          <button
-            onClick={() => downloadReceipt(item)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg
-                       bg-indigo-600/40 border border-indigo-400/70
-                       text-white text-sm hover:bg-indigo-500/60 transition">
-            🧾
-          </button>
-        )}
-
-        {/* EDIT */}
-        {item.type === "manual" && (
-          <button
-            onClick={() => editFromTable(item)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg
-                       bg-fuchsia-600/40 border border-fuchsia-400/70
-                       text-white text-sm hover:bg-fuchsia-500/60 transition">
-            ✏️
-          </button>
-        )}
-
-        {/* DELETE */}
-        <button
-          onClick={() => deleteItem(item)}
-          className="w-8 h-8 flex items-center justify-center rounded-lg
-                     bg-rose-600/40 border border-rose-400/70
-                     text-white text-sm hover:bg-rose-500/60 transition">
-          ✕
-        </button>
+                  {/* DELETE */}
+                  <button
+                    onClick={() => deleteItem(item)}
+                    className="
+                      w-8 h-8 flex items-center justify-center rounded-lg
+                      bg-rose-600/40 border border-rose-400/70
+                      text-white text-sm hover:bg-rose-500/60 transition
+                    "
+                    title="Ištrinti"
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
             ))}
