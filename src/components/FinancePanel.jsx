@@ -227,7 +227,7 @@ export default function FinancePanel() {
     return all.sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0))
   }, [systemIncomeItems, manualItemsForPeriod])
 
-  // ===== группировка по дате для UI / PDF =====
+  // ===== группировка по дате =====
   const groupedByDate = useMemo(() => {
     const map = {}
     combinedItems.forEach((item) => {
@@ -472,7 +472,7 @@ export default function FinancePanel() {
     win.document.close()
   }
 
-  // ===== экспорт в PDF (описание + таблица) =====
+  // ===== экспорт в PDF =====
   const exportPDF = () => {
     const win = window.open('', 'PRINT', 'width=900,height=650')
     if (!win) return
@@ -734,7 +734,7 @@ export default function FinancePanel() {
                 </button>
               </div>
 
-              {/* subtle outer glow / border shine */}
+              {/* subtle outer glow */}
               <div className="pointer-events-none absolute inset-0 rounded-2xl border border-white/5 opacity-70" />
             </div>
           </div>
@@ -857,9 +857,8 @@ export default function FinancePanel() {
         </p>
       </div>
 
-      {/* История + экспорт + главная таблица */}
+      {/* История + экспорт + таблица */}
       <div className="rounded-2xl bg-zinc-900/80 border border-zinc-800 p-4 md:p-5 space-y-4 shadow-[0_22px_60px_rgba(15,23,42,0.9)]">
-        {/* заголовок + маленькая PDF кнопка */}
         <div className="flex items-center justify-between gap-2">
           <div>
             <h2 className="text-xl font-semibold">Istorija</h2>
@@ -873,7 +872,7 @@ export default function FinancePanel() {
           </button>
         </div>
 
-        {/* Блок, который идёт в PDF (čia tik santrauka viršuje, be antros lentelės ekrane) */}
+        {/* Санtrauka viršuje (PDF header) */}
         <div
           id="finance-report"
           className="bg-zinc-900/90 text-white p-4 rounded-xl border border-zinc-700"
@@ -886,7 +885,6 @@ export default function FinancePanel() {
             rankinių įrašų, automatinės išlaidos (30%) ir balansas.
           </p>
 
-          {/* mini premium cards (Sistema / Rankiniai / Išlaidos / Balansas) */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm mt-2 mb-1">
             <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-400/50 rounded-xl p-3 shadow-inner shadow-emerald-900/40">
               <div className="text-[10px] uppercase text-emerald-300 tracking-wide">
@@ -935,146 +933,100 @@ export default function FinancePanel() {
           </div>
         </div>
 
-        {/* ГЛАВНАЯ ЖИВАЯ ТАБЛИЦА — card-table */}
+        {/* ГЛАВНАЯ НИЖНЯЯ ТАБЛИЦА — в стиле твоего скрина (карточка-ряд) */}
         <div className="mt-4">
           <h3 className="text-sm font-semibold mb-2">Visi įrašai (lentelė)</h3>
+
+          {/* header (Data / Laikas / Paslauga / Suma / Kvito Nr. / Veiksmai) */}
+          <div className="hidden md:grid grid-cols-[1.2fr_1.4fr_2.4fr_1.1fr_1fr_0.9fr] text-[11px] text-zinc-400 px-2 pb-1">
+            <div>Data</div>
+            <div>Laikas</div>
+            <div>Paslauga</div>
+            <div>Suma (€)</div>
+            <div>Kvito Nr.</div>
+            <div className="text-center">Veiksmai</div>
+          </div>
+
           {groupedByDate.length ? (
-            <div className="overflow-x-auto rounded-2xl border border-pink-500/40 bg-zinc-950/80 shadow-[0_18px_55px_rgba(15,23,42,0.9)]">
-              <table className="w-full text-xs md:text-sm border-separate border-spacing-y-2 border-spacing-x-0">
-                <thead>
-                  <tr className="text-zinc-300">
-                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80 first:rounded-l-xl last:rounded-r-xl">
-                      Data
-                    </th>
-                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
-                      Laikas
-                    </th>
-                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
-                      Paslauga
-                    </th>
-                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
-                      Suma (€)
-                    </th>
-                    <th className="px-3 py-2 text-left text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80">
-                      Kvito Nr.
-                    </th>
-                    <th className="px-3 py-2 text-center text-[11px] md:text-xs font-semibold bg-zinc-900/90 border border-zinc-700/80 first:rounded-l-xl last:rounded-r-xl">
-                      Veiksmai
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {groupedByDate.map((group) =>
-                    group.items.map((item, idx) => (
-                      <tr
-                        key={item.id}
-                        className="transition-transform duration-150 hover:-translate-y-[1px]"
-                      >
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 first:rounded-l-xl">
-                          {idx === 0 ? (
-                            <span className="text-[11px] font-medium text-zinc-200">
-                              {group.dateDisplay}
-                            </span>
-                          ) : (
-                            <span className="text-[11px] text-zinc-500" />
-                          )}
-                        </td>
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 text-[11px] md:text-xs whitespace-nowrap">
-                          {item.timeDisplay}
-                        </td>
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70">
-                          {item.type === 'system' ? (
-                            <div className="flex flex-wrap gap-1">
-                              {renderTags(item.tags, item.type)}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-zinc-100">
-                              {item.description || '—'}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70">
-                          <span className="text-xs font-semibold text-emerald-300">
-                            €{item.amount.toFixed(2)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 text-[11px] text-zinc-300">
-                          {item.type === 'system' && item.receiptNumber
-                            ? `#${item.receiptNumber}`
-                            : '—'}
-                        </td>
-                        <td className="px-3 py-2 align-top bg-zinc-900/85 border border-zinc-700/70 last:rounded-r-xl">
-                          <div className="flex items-center justify-center gap-2">
-                            {item.type === 'system' && (
-                              <button
-                                className="text-violet-300 hover:text-violet-400"
-                                title="Kvitas"
-                                onClick={() => downloadReceipt(item)}
-                              >
-                                🧾
-                              </button>
-                            )}
+            <div className="space-y-2">
+              {groupedByDate.map((group) =>
+                group.items.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    className="rounded-xl border border-purple-500/50 bg-[#12081b] px-3 py-2 md:px-4 md:py-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.6)] flex flex-col md:grid md:grid-cols-[1.2fr_1.4fr_2.4fr_1.1fr_1fr_0.9fr] gap-1 md:gap-3 text-xs md:text-sm"
+                  >
+                    {/* Data */}
+                    <div className="flex items-center text-[11px] md:text-xs text-zinc-300">
+                      <span className="md:inline">
+                        {idx === 0 ? group.dateDisplay : ''}
+                      </span>
+                    </div>
 
-                            {item.type === 'manual' && (
-                              <button
-                                className="text-sky-300 hover:text-sky-400"
-                                title="Redaguoti"
-                                onClick={() => editFromTable(item)}
-                              >
-                                <svg
-                                  width="18"
-                                  height="18"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <path d="M12 20h9" />
-                                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                                </svg>
-                              </button>
-                            )}
+                    {/* Laikas */}
+                    <div className="flex items-center text-[11px] md:text-xs text-zinc-200">
+                      {item.timeDisplay}
+                    </div>
 
-                            <button
-                              className="text-rose-300 hover:text-rose-400"
-                              title="Ištrinti"
-                              onClick={() => deleteItem(item)}
-                            >
-                              <svg
-                                width="18"
-                                height="18"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <polyline points="3 6 5 6 21 6" />
-                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m5 0V4a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2" />
-                                <line x1="10" y1="11" x2="10" y2="17" />
-                                <line x1="14" y1="11" x2="14" y2="17" />
-                              </svg>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                  {!combinedItems.length && (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="px-3 py-3 text-center text-zinc-400 bg-zinc-900/90 border border-zinc-700/80 rounded-xl"
+                    {/* Paslauga / tags */}
+                    <div className="flex items-center">
+                      {item.type === 'system' ? (
+                        <div className="flex flex-wrap gap-1">
+                          {renderTags(item.tags, item.type)}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-zinc-100">
+                          {item.description || 'Rankinis įrašas'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Suma */}
+                    <div className="flex items-center">
+                      <span className="text-xs font-semibold text-emerald-300">
+                        €{item.amount.toFixed(2)}
+                      </span>
+                    </div>
+
+                    {/* Kvito Nr. */}
+                    <div className="flex items-center text-[11px] text-zinc-300">
+                      {item.type === 'system' && item.receiptNumber
+                        ? `#${item.receiptNumber}`
+                        : '—'}
+                    </div>
+
+                    {/* Veiksmai */}
+                    <div className="flex items-center justify-end md:justify-center gap-2">
+                      {item.type === 'system' && (
+                        <button
+                          className="h-7 w-7 flex items-center justify-center rounded-lg bg-gradient-to-b from-violet-500 to-violet-700 text-[13px] text-white shadow-[0_0_12px_rgba(139,92,246,0.8)] hover:brightness-110"
+                          title="Kvitas"
+                          onClick={() => downloadReceipt(item)}
+                        >
+                          🧾
+                        </button>
+                      )}
+
+                      {item.type === 'manual' && (
+                        <button
+                          className="h-7 w-7 flex items-center justify-center rounded-lg bg-gradient-to-b from-sky-500 to-sky-700 text-[13px] text-white shadow-[0_0_12px_rgba(56,189,248,0.8)] hover:brightness-110"
+                          title="Redaguoti"
+                          onClick={() => editFromTable(item)}
+                        >
+                          ✏️
+                        </button>
+                      )}
+
+                      <button
+                        className="h-7 w-7 flex items-center justify-center rounded-lg bg-gradient-to-b from-rose-500 to-rose-700 text-[13px] text-white shadow-[0_0_12px_rgba(248,113,113,0.9)] hover:brightness-110"
+                        title="Ištrinti"
+                        onClick={() => deleteItem(item)}
                       >
-                        Nėra įrašų šiam laikotarpiui
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           ) : (
             <div className="text-xs text-center text-zinc-400 py-2">
