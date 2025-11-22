@@ -53,7 +53,7 @@ export default function Calendar(){
   const [modal, setModal] = useState(null)
 
   const [hoverIdx, setHoverIdx] = useState(-1)
-  const [animDir, setAnimDir] = useState(0)
+  const [animDir, setAnimDir] = useState(0) // пока не используется, но оставим
   const touchStartX = useRef(null)
 
   // услуги, выбранные в модалке
@@ -61,6 +61,7 @@ export default function Calendar(){
   const [selectedServices, setSelectedServices] = useState([])
 
   const today = toDateOnly(new Date())
+  const now = new Date() // текущее время для сравнения слотов
   const minDate = today
   const maxDate = addMonths(new Date(), 24)
 
@@ -73,11 +74,12 @@ export default function Calendar(){
     const arr=[]; let d=new Date(gridStart); 
     while(d<=gridEnd){ arr.push(new Date(d)); d=addDays(d,1) } 
     return arr
-  }, [currentMonth])
+  }, [currentMonth, gridStart, gridEnd])
 
   const bookings = getBookings()
 
   const slotsForDay = (d) => {
+    // прошлые даты — вообще не показываем слоты
     if(toDateOnly(d) < today) return []
 
     const [sh, sm] = settings.workStart.split(':').map(Number)
@@ -146,10 +148,15 @@ export default function Calendar(){
 
   // открываем модалку при клике по времени
   const openTimeModal = (tSel) => {
-    if(toDateOnly(tSel) < today){
-      alert(t('cannot_book_past') || 'Нельзя записываться на прошедшие даты')
+    // защита: прошлые даты и прошлое время (сегодня)
+    if(
+      toDateOnly(tSel) < today ||
+      (isSameDay(tSel, now) && tSel < now)
+    ){
+      alert(t('cannot_book_past') || 'Нельзя записываться на прошедшее время')
       return
     }
+
     const user = getCurrentUser()
     if(!user) { alert(t('login_or_register')); return }
     if(isTaken(tSel)) { alert(t('already_booked')); return }
@@ -181,10 +188,15 @@ export default function Calendar(){
     }
 
     const start = pendingTime
-    if (toDateOnly(start) < today) {
-      alert(t('cannot_book_past') || 'Нельзя записываться на прошедшие даты')
+    // ещё раз проверим «не прошлое»
+    if (
+      toDateOnly(start) < today ||
+      (isSameDay(start, now) && start < now)
+    ) {
+      alert(t('cannot_book_past') || 'Нельзя записываться на прошедшее время')
       return
     }
+
     if (isTaken(start)) {
       alert(t('already_booked'))
       return
@@ -316,6 +328,7 @@ export default function Calendar(){
     <div className="card" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
 
       <style>{`
+        /* Точка под прошлыми днями */
         .past-day-dot::after {
           content: '';
           width: 6px;
@@ -328,9 +341,62 @@ export default function Calendar(){
           transform: translateX(-50%);
         }
 
-        @media(max-width: 500px){
+        /* Кнопка слота времени — базовый класс */
+        .time-slot-btn {
+          position: relative;
+        }
+
+        /* Точка под прошедшими временами (вариант B) */
+        .time-past-dot::after {
+          content: '';
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: rgba(180,180,210,0.6);
+          position: absolute;
+          left: 50%;
+          bottom: -2px;
+          transform: translateX(-50%);
+        }
+
+        /* Приглушённый стиль для прошедших слотов */
+        .time-past {
+          opacity: 0.55;
+          filter: grayscale(35%);
+        }
+
+        /* Мобильная адаптация календаря + навигации */
+        @media(max-width: 600px){
+          .calendar-nav {
+            display: flex;
+            width: 100%;
+            gap: 8px;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: nowrap;
+          }
+
+          .calendar-nav button {
+            flex: 1;
+            width: auto !important;
+            height: 40px !important;
+            font-size: 18px !important;
+          }
+
+          .calendar-nav .month-pill {
+            flex: 2;
+            width: auto !important;
+            height: 40px !important;
+            font-size: 16px !important;
+          }
+
           .grid { gap: 6px !important; }
           .muted { font-size: 13px !important; }
+        }
+
+        /* Немного стабилизируем поведение на тач-экранах */
+        html, body, .card, button {
+          touch-action: manipulation;
         }
 
         @keyframes spin { to{ transform: rotate(360deg); } }
@@ -476,7 +542,7 @@ export default function Calendar(){
                 price: "50 € užstatas / 100 €",
                 title: "Plaukų Tresų nuoma",
                 text:
-                  "Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžinu užstatą",
+                  "Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžину užstatą",
               },
               {
                 price: "Iki 20 €",
@@ -487,7 +553,7 @@ export default function Calendar(){
                 price: "130 €",
                 title: "Atvykimas Klaipėdoje",
                 text:
-                  "Daiktų kraustymai, važiavimai — per tą laiką galiu priimti kitą klientę.",
+                  "Daiktų kraustymai, važiavimai — per тą laiką galiu priimti kitą klientę.",
               },
             ].map((item, i) => (
               <div
@@ -520,6 +586,7 @@ export default function Calendar(){
 
       {/* NAVIGATION + MONTH */}
       <div
+        className="calendar-nav"
         style={{
           display:'flex',
           gap:12,
@@ -536,7 +603,7 @@ export default function Calendar(){
           ←
         </button>
 
-        <div style={centerPillStyle}>
+        <div className="month-pill" style={centerPillStyle}>
           {monthLabel}
         </div>
 
@@ -606,6 +673,10 @@ export default function Calendar(){
             const isLocal = bookedISO.some(x => isSameMinute(x, ti))
             const disabledLike = taken || busy || isProcessing
 
+            // прошедшее время СЕГОДНЯ
+            const isPastTime =
+              isSameDay(ti, now) && ti < now
+
             let label = format(ti,'HH:mm')
             if(isProcessing) label = t('processing')
             else if(taken || isLocal) label = t('reserved_label')
@@ -613,21 +684,25 @@ export default function Calendar(){
             return (
               <button
                 key={ti.toISOString()}
-                disabled={disabledLike}
+                disabled={disabledLike || isPastTime}
                 onClick={()=>openTimeModal(ti)}
+                className={
+                  'time-slot-btn ' +
+                  (isPastTime ? 'time-past-dot time-past' : '')
+                }
                 style={{
                   borderRadius:10,
                   padding:'8px 12px',
                   border: '1px solid ' + (
-                    disabledLike
+                    disabledLike || isPastTime
                       ? 'rgba(180,180,200,0.25)'
                       : 'rgba(168,85,247,0.45)'
                   ),
-                  background: disabledLike
+                  background: (disabledLike || isPastTime)
                     ? 'rgba(255,255,255,0.04)'
                     : 'rgba(98,0,180,0.18)',
                   color:'#fff',
-                  cursor: disabledLike ? 'default' : 'pointer',
+                  cursor: (disabledLike || isPastTime) ? 'default' : 'pointer',
                   backdropFilter:'blur(6px)',
                   transition:'0.2s'
                 }}
