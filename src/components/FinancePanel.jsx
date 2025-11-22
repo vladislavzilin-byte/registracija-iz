@@ -462,16 +462,14 @@ export default function FinancePanel({
       <body>
         <div class="shell">
 <div class="header">
-  <div class="header-left">
-    <img src="/logo2.svg" alt="${settings.masterName || 'IZ HAIR TREND'}" />
-
-    <div class="header-title">
-      <div class="header-title-main">
-        ${settings.masterName || "IZ HAIR TREND"}
-      </div>
-      <div class="header-title-sub">
-        Finansų ataskaita pagal laikotarpį
-      </div>
+ <div class="header-left">
+  <img src="/logo2.svg" alt="${settings.masterName || 'IZ HAIR TREND'}" />
+  <div class="header-title">
+    <div class="header-title-main">
+      ${settings.masterName || "IZ HAIR TREND"}
+    </div>
+    <div class="header-title-sub">
+      Finansų ataskaita pagal laikotarpį
     </div>
   </div>
 </div>
