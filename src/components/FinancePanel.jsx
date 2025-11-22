@@ -711,14 +711,23 @@ export default function FinancePanel({
               Išlaidų procentas:{" "}
               <input
                 type="number"
-                value={percent}
+                value={percent === "" ? "" : percent}
                 min={0}
                 max={100}
-                onChange={(e) =>
-                  setPercent(
-                    Math.min(100, Math.max(0, Number(e.target.value) || 0))
-                  )
-                }
+               onChange={(e) => {
+  const v = e.target.value;
+
+  if (v === "") {
+    // временно показываем пустое значение — не сбрасываем на 0
+    setPercent("");
+    return;
+  }
+
+  const n = Number(v);
+  if (!isNaN(n)) {
+    setPercent(Math.min(100, Math.max(0, n)));
+  }
+}}
                 style={{
                   width: 60,
                   padding: "4px 6px",
