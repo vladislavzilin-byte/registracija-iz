@@ -32,12 +32,14 @@ const formatDateISO = (dateLike) => {
   if (isNaN(d)) return "";
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 };
+
 export default function FinancePanel({
   bookings = [],
   serviceStyles = {},
   onDownloadReceipt,
-  settings = {},   // ← добавляем!
+  settings = {}, // ← добавили ОК
 }) {
+
 export default function FinancePanel({
   bookings = [],
   serviceStyles = {},
