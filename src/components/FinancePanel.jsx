@@ -664,7 +664,7 @@ export default function FinancePanel({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "180px 240px 100px 1fr 120px",
+            gridTemplateColumns: "150px 240px 100px 1fr 120px",
             gap: 8,
           }}
         >
