@@ -791,9 +791,9 @@ export default function Calendar(){
                       }}
                     >
                       <span>{s.name}</span>
-                      <span style={{ fontSize: 13, opacity: 0.8 }}>
-                        {s.duration || 0} min · {s.deposit || 0} €
-                      </span>
+                     <span style={{ fontSize: 13, opacity: 0.9 }}>
+  {s.duration || 0} min • Avansas {s.deposit || 0} €
+</span>
                     </button>
                   ))}
                 </div>
