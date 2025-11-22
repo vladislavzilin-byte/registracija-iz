@@ -340,14 +340,25 @@ export default function Calendar(){
           bottom: 4px;
           transform: translateX(-50%);
         }
+
 .slots-title {
-  text-align: center;
   width: 100%;
-  font-size: 18px;
+  text-align: center;
+
+  /* рамка и фон — как раньше у badge */
+  border: 1px solid rgba(168,85,247,0.25);
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+
+  /* уменьшенный текст на 25% */
+  font-size: 14px;
   font-weight: 600;
-  padding: 6px 0;
+
+  padding: 8px 0;
   color: #dbe0ff;
   letter-spacing: 0.4px;
+
+  backdrop-filter: blur(6px);
 }
 
 .flash-date {
@@ -356,15 +367,16 @@ export default function Calendar(){
   padding: 2px 6px;
   border-radius: 8px;
 
-  /* soft-glow animation */
+  /* эффект подсветки */
   animation: flashGlow 2.4s infinite ease-in-out;
 }
 
 @keyframes flashGlow {
-  0% { text-shadow: 0 0 0px rgba(168,85,247,0.0); }
-  50% { text-shadow: 0 0 12px rgba(168,85,247,0.65); }
+  0%   { text-shadow: 0 0 0px rgba(168,85,247,0.0); }
+  50%  { text-shadow: 0 0 10px rgba(168,85,247,0.65); }
   100% { text-shadow: 0 0 0px rgba(168,85,247,0.0); }
 }
+
 
         /* Кнопка слота времени — базовый класс */
         .time-slot-btn {
@@ -674,9 +686,10 @@ export default function Calendar(){
 
       {/* SLOTS */}
       <div>
-        <div className="slots-title">
+ <div className="slots-title">
   {t('slots_for')} <span className="flash-date">{format(selectedDate,'dd.MM.yyyy')}</span>
 </div>
+
 
         <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:8}}>
           {slotsForDay(selectedDate).map(ti=>{
