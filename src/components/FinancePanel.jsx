@@ -33,17 +33,12 @@ const formatDateISO = (dateLike) => {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 };
 
+// ✅ ПРАВИЛЬНЫЙ СТАРТ КОМПОНЕНТА — ТОЛЬКО ОДИН export default
 export default function FinancePanel({
   bookings = [],
   serviceStyles = {},
   onDownloadReceipt,
-  settings = {}, // ← добавили ОК
-}) {
-
-export default function FinancePanel({
-  bookings = [],
-  serviceStyles = {},
-  onDownloadReceipt,
+  settings = {}, // ← добавили
 }) {
   const now = new Date();
 
