@@ -674,9 +674,9 @@ export default function Calendar(){
 
       {/* SLOTS */}
       <div>
-        <div className="badge">
-         {t('slots_for')} <span className="flash-date">{format(selectedDate,'dd.MM.yyyy')}</span>
-        </div>
+        <div className="slots-title">
+  {t('slots_for')} <span className="flash-date">{format(selectedDate,'dd.MM.yyyy')}</span>
+</div>
 
         <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:8}}>
           {slotsForDay(selectedDate).map(ti=>{
