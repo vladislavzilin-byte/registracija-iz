@@ -1,13 +1,14 @@
 import { useState, useMemo, useEffect } from "react";
 import { fmtDate, fmtTime } from "../lib/storage";
 
-// те же правила оплаты/отмены, что и в Admin
+// такие же правила, как в Admin.jsx
 const isPaid = (b) => !!(b?.paid || b?.status === "approved_paid");
 const isCanceled = (b) =>
   b.status === "canceled_client" || b.status === "canceled_admin";
 
 const MANUAL_KEY = "iz.finance.manual.v1";
 const EXCLUDE_KEY = "iz.finance.exclude.v1";
+const PERCENT_KEY = "iz.finance.expensePercent.v1";
 
 const MONTHS = [
   "Sausis",
@@ -51,6 +52,17 @@ export default function FinancePanel({
   // ручные записи и исключённые системные id
   const [manualEntries, setManualEntries] = useState([]);
   const [excludedIds, setExcludedIds] = useState([]);
+
+  // процент расходов
+  const [percent, setPercent] = useState(() => {
+    try {
+      const raw = localStorage.getItem(PERCENT_KEY);
+      const n = Number(raw);
+      return !isNaN(n) && n >= 0 && n <= 100 ? n : 30;
+    } catch {
+      return 30;
+    }
+  });
 
   // форма ручной записи
   const [formDate, setFormDate] = useState(formatDateISO(now));
@@ -97,6 +109,14 @@ export default function FinancePanel({
     }
   }, [excludedIds]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(PERCENT_KEY, String(percent));
+    } catch (e) {
+      console.error("Finance percent save error", e);
+    }
+  }, [percent]);
+
   // === расчёт диапазона дат ===
   const [rangeStart, rangeEnd, rangeLabel] = useMemo(() => {
     let start, end, label;
@@ -114,7 +134,7 @@ export default function FinancePanel({
       const to = rangeTo ? new Date(rangeTo) : now;
       start = from;
       end = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
-      label = `Laikotarpis: ${rangeFrom || "…"} – ${rangeTo || "…"} `;
+      label = `Laikotarpis: ${rangeFrom || "…"} – ${rangeTo || "…"}`;
     }
 
     return [start, end, label];
@@ -158,27 +178,29 @@ export default function FinancePanel({
   const systemTotal = systemItems.reduce((s, i) => s + i.amount, 0);
 
   // === ручные доходы ===
-  const manualItems = useMemo(() => {
-    return manualEntries
-      .map((e) => ({
-        id: "man-" + e.id,
-        manualId: e.id,
-        type: "manual",
-        date: e.date,
-        dateDisplay: fmtDate(e.date),
-        timeDisplay: e.time || "—",
-        amount: Number(e.amount) || 0,
-        description: e.description || "Rankinė pajamų įmoka",
-        tags: ["rankinis"],
-      }))
-      .filter((e) => isInRange(new Date(e.date)));
-  }, [manualEntries, rangeStart, rangeEnd]);
+  const manualItems = useMemo(
+    () =>
+      manualEntries
+        .map((e) => ({
+          id: "man-" + e.id,
+          manualId: e.id,
+          type: "manual",
+          date: e.date,
+          dateDisplay: fmtDate(e.date),
+          timeDisplay: e.time || "—",
+          amount: Number(e.amount) || 0,
+          description: e.description || "Rankinė pajamų įmoka",
+          tags: ["rankinis"],
+        }))
+        .filter((e) => isInRange(new Date(e.date))),
+    [manualEntries, rangeStart, rangeEnd]
+  );
 
   const manualTotal = manualItems.reduce((s, i) => s + i.amount, 0);
 
   // === сводка ===
   const totalIncome = systemTotal + manualTotal;
-  const totalExpenses = totalIncome * 0.3;
+  const totalExpenses = totalIncome * (percent / 100);
   const balance = totalIncome - totalExpenses;
 
   // === общий список для таблицы/экспорта ===
@@ -285,62 +307,89 @@ export default function FinancePanel({
     onDownloadReceipt(item.booking);
   };
 
-  // === экспорт PDF ===
+  // === экспорт PDF — стиль квитанции, логотип слева, без штрихкода ===
   const exportPDF = () => {
-    const win = window.open("", "PRINT", "width=900,height=650");
+    const win = window.open("", "FINANCE_REPORT", "width=900,height=700");
     if (!win) return;
 
     win.document.write(`
       <html>
       <head>
         <title>Finansų ataskaita</title>
+        <meta charSet="utf-8" />
         <style>
+          * { box-sizing: border-box; }
           body {
             font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
             padding: 24px;
-            background: #0f172a;
-            color: #0f172a;
+            background: #0b1120;
           }
           .shell {
             max-width: 900px;
             margin: 0 auto;
             background: #f9fafb;
-            border-radius: 16px;
-            border: 1px solid #d1d5db;
-            box-shadow: 0 18px 50px rgba(15,23,42,0.25);
+            border-radius: 18px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 22px 60px rgba(15,23,42,0.45);
             overflow: hidden;
           }
           .header {
-            padding: 16px 22px;
-            background: linear-gradient(135deg,#ec4899,#8b5cf6);
-            color: white;
+            padding: 18px 22px 14px 22px;
+            background: linear-gradient(135deg,#020617,#111827);
+            color: #f9fafb;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
+            gap: 16px;
           }
-          .header h1 {
-            margin: 0;
-            font-size: 20px;
+          .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
           }
-          .header small {
-            opacity: 0.9;
-            font-size: 12px;
+          .header-left img {
+            display:block;
+            height:68px;
           }
-          .logo {
+          .header-title {
+            display:flex;
+            flex-direction:column;
+            gap:2px;
+          }
+          .header-title-main {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: .04em;
+          }
+          .header-title-sub {
+            font-size: 11px;
+            opacity: 0.75;
+          }
+          .header-right {
             text-align: right;
             font-size: 12px;
           }
-          .content {
-            padding: 16px 20px 22px;
+          .header-right b {
             font-size: 13px;
           }
+          .content {
+            padding: 16px 22px 22px 22px;
+            font-size: 13px;
+            color: #0f172a;
+          }
+          .intro {
+            font-size: 12px;
+            color: #4b5563;
+            margin-bottom: 10px;
+          }
           .summary {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(4,minmax(0,1fr));
             gap: 10px;
-            margin: 10px 0 14px;
+            margin-bottom: 14px;
           }
           .card {
-            flex: 1;
             border-radius: 12px;
             border: 1px solid #e5e7eb;
             background: #f9fafb;
@@ -350,16 +399,25 @@ export default function FinancePanel({
             text-transform: uppercase;
             font-size: 11px;
             color: #6b7280;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
           }
           .card-value {
             font-weight: 600;
             font-size: 15px;
+            margin-bottom: 2px;
+          }
+          .card-caption {
+            font-size: 11px;
+            color: #9ca3af;
+          }
+          h2 {
+            font-size: 14px;
+            margin: 6px 0 6px 0;
           }
           table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 6px;
+            margin-top: 4px;
             font-size: 12px;
           }
           th, td {
@@ -367,66 +425,94 @@ export default function FinancePanel({
             padding: 6px 8px;
           }
           th {
-            background: #fdf2f8;
+            background: #f3f4f6;
             text-align: left;
           }
           tbody tr:nth-child(even) {
-            background: #fce7f3;
+            background: #f9fafb;
+          }
+          .muted {
+            color: #9ca3af;
+            text-align: center;
+          }
+
+          @media print {
+            body {
+              background: #fff;
+              padding: 0;
+            }
+            .shell {
+              box-shadow: none;
+              border-radius: 0;
+              border: none;
+            }
           }
         </style>
       </head>
       <body>
         <div class="shell">
           <div class="header">
-            <div>
-              <h1>Finansų ataskaita</h1>
-              <small>${rangeLabel}</small>
+            <div class="header-left">
+              <img src="/logo2.svg" alt="IZ HAIR TREND" />
+              <div class="header-title">
+                <div class="header-title-main">IZ HAIR TREND</div>
+                <div class="header-title-sub">Finansų ataskaita pagal laikotarpį</div>
+              </div>
             </div>
-            <div class="logo">
-              <b>IZ HAIR TREND</b><br/>
-              Finansų suvestinė
+            <div class="header-right">
+              <div><b>Laikotarpis:</b><br/>${rangeLabel}</div>
+              <div style="margin-top:4px;">Išlaidos: <b>${percent}%</b></div>
+              <div style="margin-top:4px; font-size:11px; color:#9ca3af;">
+                Sugeneruota: ${new Date().toLocaleString("lt-LT")}
+              </div>
             </div>
           </div>
+
           <div class="content">
-            <div>
+            <div class="intro">
               Suvestinė pagal pasirinktą laikotarpį: pajamos iš sistemos ir rankinių įrašų,
-              automatinės išlaidos (30%) ir balansas.
+              automatinės išlaidos (${percent}%) ir balansas.
             </div>
+
             <div class="summary">
               <div class="card">
                 <div class="card-title">Sistema</div>
                 <div class="card-value">€${systemTotal.toFixed(2)}</div>
+                <div class="card-caption">Užbaigtos ir apmokėtos rezervacijos</div>
               </div>
               <div class="card">
                 <div class="card-title">Rankiniai</div>
                 <div class="card-value">€${manualTotal.toFixed(2)}</div>
+                <div class="card-caption">Papildomi rankiniai įrašai</div>
               </div>
               <div class="card">
-                <div class="card-title">Išlaidos (30%)</div>
+                <div class="card-title">Išlaidos (${percent}%)</div>
                 <div class="card-value">€${totalExpenses.toFixed(2)}</div>
+                <div class="card-caption">Automatinės išlaidos nuo pajamų</div>
               </div>
               <div class="card">
                 <div class="card-title">Balansas</div>
                 <div class="card-value">€${balance.toFixed(2)}</div>
+                <div class="card-caption">Pajamos minus išlaidos</div>
               </div>
             </div>
 
-            <h2 style="margin:8px 0 4px;font-size:14px;">Įrašų sąrašas</h2>
+            <h2>Įrašų sąrašas</h2>
             <table>
               <thead>
                 <tr>
-                  <th>Data</th>
-                  <th>Laikas</th>
+                  <th style="width:90px;">Data</th>
+                  <th style="width:120px;">Laikas</th>
                   <th>Paslaugos / aprašymas</th>
-                  <th>Suma (€)</th>
-                  <th>Kvito nr.</th>
+                  <th style="width:80px;">Suma (€)</th>
+                  <th style="width:80px;">Kvito nr.</th>
                   <th>Žymos</th>
                 </tr>
               </thead>
               <tbody>
                 ${
                   groupedByDate.length === 0
-                    ? `<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:8px;">Nėra įrašų</td></tr>`
+                    ? `<tr><td colspan="6" class="muted">Nėra įrašų šiam laikotarpiui</td></tr>`
                     : groupedByDate
                         .map((g) =>
                           g.items
@@ -453,14 +539,18 @@ export default function FinancePanel({
             </table>
           </div>
         </div>
+
+        <script>
+          window.focus();
+          setTimeout(function(){ window.print(); }, 400);
+          // ВАЖНО: окно не закрываем — пользователь может нажать Cancel и просто просматривать ataskaitą
+        </script>
       </body>
       </html>
     `);
 
     win.document.close();
     win.focus();
-    win.print();
-    win.close();
   };
 
   // === стили-помощники ===
@@ -477,12 +567,16 @@ export default function FinancePanel({
     whiteSpace: "nowrap",
   };
 
-  const years = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1];
+  const years = [
+    now.getFullYear() - 1,
+    now.getFullYear(),
+    now.getFullYear() + 1,
+  ];
 
   // === render ===
   return (
     <div style={wrapStyle}>
-      {/* верх: заголовок + диапазон + экспорт */}
+      {/* верх: заголовок + диапазон + экспорт + процент */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div
           style={{
@@ -503,12 +597,12 @@ export default function FinancePanel({
             </div>
           </div>
 
-          {/* выбор периода */}
+          {/* выбор периода + процент */}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 6,
+              gap: 8,
               alignItems: "flex-end",
             }}
           >
@@ -552,7 +646,6 @@ export default function FinancePanel({
               ))}
             </div>
 
-            {/* конкретные контролы */}
             {mode === "month" && (
               <div style={{ display: "flex", gap: 6 }}>
                 <select
@@ -612,15 +705,43 @@ export default function FinancePanel({
                 />
               </div>
             )}
+
+            {/* процент расходов */}
+            <div style={{ fontSize: 11, color: "#e5e7eb" }}>
+              Išlaidų procentas:{" "}
+              <input
+                type="number"
+                value={percent}
+                min={0}
+                max={100}
+                onChange={(e) =>
+                  setPercent(
+                    Math.min(100, Math.max(0, Number(e.target.value) || 0))
+                  )
+                }
+                style={{
+                  width: 60,
+                  padding: "4px 6px",
+                  borderRadius: 8,
+                  border: "1px solid rgba(148,163,184,0.7)",
+                  background: "rgba(15,23,42,0.95)",
+                  color: "#e5e7eb",
+                  fontSize: 11,
+                  marginLeft: 4,
+                  marginRight: 2,
+                }}
+              />
+              %
+            </div>
           </div>
         </div>
 
-        {/* большая полоса PDF */}
+        {/* большая кнопка PDF */}
         <button onClick={exportPDF} style={bigPdfBtn}>
           <span style={{ marginRight: 6 }}>📄</span> Eksportuoti PDF
         </button>
 
-        {/* текстовая сводка, как у тебя */}
+        {/* текстовая сводка */}
         <div
           style={{
             display: "grid",
@@ -632,7 +753,9 @@ export default function FinancePanel({
           <div>
             <div style={{ fontWeight: 600 }}>Sistema</div>
             <div>€{systemTotal.toFixed(2)}</div>
-            <div style={{ opacity: 0.7 }}>Užbaigtos ir apmokėtos rezervacijos</div>
+            <div style={{ opacity: 0.7 }}>
+              Užbaigtos ir apmokėtos rezervacijos
+            </div>
           </div>
           <div>
             <div style={{ fontWeight: 600 }}>Rankiniai</div>
@@ -640,14 +763,14 @@ export default function FinancePanel({
             <div style={{ opacity: 0.7 }}>Papildomi rankiniai įrašai</div>
           </div>
           <div>
-            <div style={{ fontWeight: 600 }}>Išlaidos (30%)</div>
+            <div style={{ fontWeight: 600 }}>Išlaidos ({percent}%)</div>
             <div>€{totalExpenses.toFixed(2)}</div>
             <div style={{ opacity: 0.7 }}>Automatinės išlaidos nuo pajamų</div>
           </div>
           <div>
             <div style={{ fontWeight: 600 }}>Balansas</div>
             <div>€{balance.toFixed(2)}</div>
-            <div style={{ opacity: 0.7 }}>Pajamos minus 30% išlaidų</div>
+            <div style={{ opacity: 0.7 }}>Pajamos minus {percent}% išlaidų</div>
           </div>
         </div>
       </div>
@@ -835,12 +958,12 @@ export default function FinancePanel({
                 <span
                   style={{
                     ...pillBase,
-                padding: "4px 6px",       // ← было 5px 12px — стало в 2 раза меньше
-    minWidth: 50,             // ← чтобы выглядело одинаково
-    textAlign: "center",
-    background: "rgba(22,163,74,0.2)",
-    border: "1px solid rgba(34,197,94,0.9)",
-    fontWeight: 600,
+                    padding: "4px 6px",
+                    minWidth: 50,
+                    textAlign: "center",
+                    background: "rgba(22,163,74,0.2)",
+                    border: "1px solid rgba(34,197,94,0.9)",
+                    fontWeight: 600,
                   }}
                 >
                   €{item.amount.toFixed(2)}
@@ -969,24 +1092,13 @@ const iconBtnRed = {
   background: "rgba(127,29,29,0.7)",
 };
 
-const manualTagStyle = {
-  padding: "4px 10px",
-  borderRadius: 999,
-  fontSize: 11,
-  background: "rgba(190,24,93,0.25)",
-  border: "1px solid rgba(244,114,182,0.9)",
-  color: "#fecdd3",
-};
-
-/** генерим цветные пилюли услуг, похожие на Admin */
 function renderTagPills(tags, serviceStyles) {
   if (!tags || !tags.length) return null;
 
   return tags.map((name) => {
     const base = serviceStyles[name] || {};
     const bg =
-      base.bg ||
-      "rgba(148,163,184,0.18)"; /* если вдруг нет стилей для услуги */
+      base.bg || "rgba(148,163,184,0.18)";
     const border =
       base.border || "1px solid rgba(148,163,184,0.85)";
 
