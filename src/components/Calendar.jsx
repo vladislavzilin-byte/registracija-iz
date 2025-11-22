@@ -340,23 +340,35 @@ export default function Calendar(){
           bottom: 4px;
           transform: translateX(-50%);
         }
+.slots-title {
+  text-align: center;
+  width: 100%;
+  font-size: 18px;
+  font-weight: 600;
+  padding: 6px 0;
+  color: #dbe0ff;
+  letter-spacing: 0.4px;
+}
+
+.flash-date {
+  color: #ffffff;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 8px;
+
+  /* soft-glow animation */
+  animation: flashGlow 2.4s infinite ease-in-out;
+}
+
+@keyframes flashGlow {
+  0% { text-shadow: 0 0 0px rgba(168,85,247,0.0); }
+  50% { text-shadow: 0 0 12px rgba(168,85,247,0.65); }
+  100% { text-shadow: 0 0 0px rgba(168,85,247,0.0); }
+}
 
         /* Кнопка слота времени — базовый класс */
         .time-slot-btn {
           position: relative;
-        }
-
-        /* Точка под прошедшими временами (вариант B) */
-        .time-past-dot::after {
-          content: '';
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: rgba(180,180,210,0.6);
-          position: absolute;
-          left: 50%;
-          bottom: -2px;
-          transform: translateX(-50%);
         }
 
         /* Приглушённый стиль для прошедших слотов */
@@ -663,7 +675,7 @@ export default function Calendar(){
       {/* SLOTS */}
       <div>
         <div className="badge">
-          {t('slots_for')} {format(selectedDate,'dd.MM.yyyy')}
+         {t('slots_for')} <span className="flash-date">{format(selectedDate,'dd.MM.yyyy')}</span>
         </div>
 
         <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:8}}>
@@ -688,7 +700,7 @@ export default function Calendar(){
                 onClick={()=>openTimeModal(ti)}
                 className={
                   'time-slot-btn ' +
-                  (isPastTime ? 'time-past-dot time-past' : '')
+                  (isPastTime ? 'time-past' : '')
                 }
                 style={{
                   borderRadius:10,
