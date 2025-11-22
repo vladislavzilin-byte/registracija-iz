@@ -835,10 +835,12 @@ export default function FinancePanel({
                 <span
                   style={{
                     ...pillBase,
-                    padding: "5px 12px",
-                    background: "rgba(22,163,74,0.2)",
-                    border: "1px solid rgba(34,197,94,0.9)",
-                    fontWeight: 600,
+                padding: "4px 6px",       // ← было 5px 12px — стало в 2 раза меньше
+    minWidth: 50,             // ← чтобы выглядело одинаково
+    textAlign: "center",
+    background: "rgba(22,163,74,0.2)",
+    border: "1px solid rgba(34,197,94,0.9)",
+    fontWeight: 600,
                   }}
                 >
                   €{item.amount.toFixed(2)}
