@@ -461,26 +461,20 @@ export default function FinancePanel({
       </head>
       <body>
         <div class="shell">
-          <div class="header">
-            <div class="header-left">
-              <img src="/logo2.svg" alt="${
-                settings.masterName || "IZ HAIR TREND"
-              }" />
-              <div class="header-title">
-                <div class="header-title-main">${
-                  settings.masterName || "IZ HAIR TREND"
-                }</div>
-                <div class="header-title-sub">Finansų ataskaita pagal laikotarpį</div>
-              </div>
-            </div>
-            <div class="header-right">
-              <div><b>Laikotarpis:</b><br/>${rangeLabel}</div>
-              <div style="margin-top:4px;">Išlaidos: <b>${percent}%</b></div>
-              <div style="margin-top:4px; font-size:11px; color:#9ca3af;">
-                Sugeneruota: ${new Date().toLocaleString("lt-LT")}
-              </div>
-            </div>
-          </div>
+<div class="header">
+  <div class="header-left">
+    <img src="/logo2.svg" alt="${settings.masterName || 'IZ HAIR TREND'}" />
+
+    <div class="header-title">
+      <div class="header-title-main">
+        ${settings.masterName || "IZ HAIR TREND"}
+      </div>
+      <div class="header-title-sub">
+        Finansų ataskaita pagal laikotarpį
+      </div>
+    </div>
+  </div>
+</div>
 
           <div class="content">
             <div class="intro">
@@ -521,8 +515,7 @@ export default function FinancePanel({
                   <th style="width:80px;">Suma (€)</th>
                   <th style="width:80px;">Išlaidos</th>
                   <th style="width:80px;">Kvito nr.</th>
-                  <th>Žymos</th>
-                </tr>
+                                  </tr>
               </thead>
               <tbody>
                 ${
@@ -544,8 +537,7 @@ export default function FinancePanel({
                                 <td>€${item.amount.toFixed(2)}</td>
                                 <td>€${item.expense.toFixed(2)}</td>
                                 <td>${kv ? "#" + kv : ""}</td>
-                                <td>${tagsStr}</td>
-                              </tr>`;
+                                                              </tr>`;
                             })
                             .join("")
                         )
