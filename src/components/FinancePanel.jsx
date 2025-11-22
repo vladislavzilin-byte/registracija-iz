@@ -109,13 +109,16 @@ export default function FinancePanel({
     }
   }, [excludedIds]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(PERCENT_KEY, String(percent));
-    } catch (e) {
-      console.error("Finance percent save error", e);
-    }
-  }, [percent]);
+useEffect(() => {
+  try {
+    // Не сохраняем пустое значение — иначе поле ломается
+    if (percent === "" || percent === null) return;
+
+    localStorage.setItem(PERCENT_KEY, String(percent));
+  } catch (e) {
+    console.error("Finance percent save error", e);
+  }
+}, [percent]);
 
   // === расчёт диапазона дат ===
   const [rangeStart, rangeEnd, rangeLabel] = useMemo(() => {
