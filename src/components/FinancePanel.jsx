@@ -56,9 +56,9 @@ export default function FinancePanel({
   // процент расходов
   const [percent, setPercent] = useState(() => {
     try {
-      const raw = localStorage.getItem(PERCENT_KEY);
-      const n = Number(raw);
-      return !isNaN(n) && n >= 0 && n <= 100 ? n : 30;
+     const n = Number(raw);
+if (raw === "" || raw === null) return 30;
+return !isNaN(n) && n >= 0 && n <= 100 ? n : 30;
     } catch {
       return 30;
     }
