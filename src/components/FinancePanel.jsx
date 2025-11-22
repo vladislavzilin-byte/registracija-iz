@@ -30,15 +30,16 @@ const pad2 = (n) => String(n).padStart(2, "0");
 const formatDateISO = (dateLike) => {
   const d = new Date(dateLike);
   if (isNaN(d)) return "";
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(
+    d.getDate()
+  )}`;
 };
 
-// ✅ ПРАВИЛЬНЫЙ СТАРТ КОМПОНЕНТА — ТОЛЬКО ОДИН export default
 export default function FinancePanel({
   bookings = [],
   serviceStyles = {},
   onDownloadReceipt,
-  settings = {}, // ← добавили
+  settings = {}, // имя мастера придёт отсюда
 }) {
   const now = new Date();
 
@@ -58,9 +59,10 @@ export default function FinancePanel({
   // процент расходов
   const [percent, setPercent] = useState(() => {
     try {
-     const n = Number(raw);
-if (raw === "" || raw === null) return 30;
-return !isNaN(n) && n >= 0 && n <= 100 ? n : 30;
+      const raw = localStorage.getItem(PERCENT_KEY);
+      if (raw === "" || raw === null) return 30;
+      const n = Number(raw);
+      return !isNaN(n) && n >= 0 && n <= 100 ? n : 30;
     } catch {
       return 30;
     }
@@ -111,16 +113,15 @@ return !isNaN(n) && n >= 0 && n <= 100 ? n : 30;
     }
   }, [excludedIds]);
 
-useEffect(() => {
-  try {
-    // Не сохраняем пустое значение — иначе поле ломается
-    if (percent === "" || percent === null) return;
-
-    localStorage.setItem(PERCENT_KEY, String(percent));
-  } catch (e) {
-    console.error("Finance percent save error", e);
-  }
-}, [percent]);
+  useEffect(() => {
+    try {
+      // Не сохраняем пустое значение — иначе поле ломается
+      if (percent === "" || percent === null) return;
+      localStorage.setItem(PERCENT_KEY, String(percent));
+    } catch (e) {
+      console.error("Finance percent save error", e);
+    }
+  }, [percent]);
 
   // === расчёт диапазона дат ===
   const [rangeStart, rangeEnd, rangeLabel] = useMemo(() => {
@@ -208,14 +209,18 @@ useEffect(() => {
   const totalExpenses = totalIncome * (percent / 100);
   const balance = totalIncome - totalExpenses;
 
-  // === общий список для таблицы/экспорта ===
+  // === общий список для таблицы/экспорта (добавляем expense на каждый item) ===
   const combinedItems = useMemo(() => {
-    const all = [...systemItems, ...manualItems];
+    const all = [...systemItems, ...manualItems].map((item) => {
+      const expense = (Number(item.amount) || 0) * (percent / 100);
+      return { ...item, expense };
+    });
+
     return all.sort((a, b) => {
       if (a.date === b.date) return a.timeDisplay.localeCompare(b.timeDisplay);
       return a.date.localeCompare(b.date);
     });
-  }, [systemItems, manualItems]);
+  }, [systemItems, manualItems, percent]);
 
   const groupedByDate = useMemo(() => {
     const map = {};
@@ -458,9 +463,13 @@ useEffect(() => {
         <div class="shell">
           <div class="header">
             <div class="header-left">
-              <img src="/logo2.svg" alt="IZ HAIR TREND" />
+              <img src="/logo2.svg" alt="${
+                settings.masterName || "IZ HAIR TREND"
+              }" />
               <div class="header-title">
-                <div class="header-title-main">settings.masterName</div>
+                <div class="header-title-main">${
+                  settings.masterName || "IZ HAIR TREND"
+                }</div>
                 <div class="header-title-sub">Finansų ataskaita pagal laikotarpį</div>
               </div>
             </div>
@@ -510,6 +519,7 @@ useEffect(() => {
                   <th style="width:120px;">Laikas</th>
                   <th>Paslaugos / aprašymas</th>
                   <th style="width:80px;">Suma (€)</th>
+                  <th style="width:80px;">Išlaidos</th>
                   <th style="width:80px;">Kvito nr.</th>
                   <th>Žymos</th>
                 </tr>
@@ -517,7 +527,7 @@ useEffect(() => {
               <tbody>
                 ${
                   groupedByDate.length === 0
-                    ? `<tr><td colspan="6" class="muted">Nėra įrašų šiam laikotarpiui</td></tr>`
+                    ? `<tr><td colspan="7" class="muted">Nėra įrašų šiam laikotarpiui</td></tr>`
                     : groupedByDate
                         .map((g) =>
                           g.items
@@ -532,6 +542,7 @@ useEffect(() => {
                                 <td>${item.timeDisplay}</td>
                                 <td>${item.description || ""}</td>
                                 <td>€${item.amount.toFixed(2)}</td>
+                                <td>€${item.expense.toFixed(2)}</td>
                                 <td>${kv ? "#" + kv : ""}</td>
                                 <td>${tagsStr}</td>
                               </tr>`;
@@ -548,7 +559,7 @@ useEffect(() => {
         <script>
           window.focus();
           setTimeout(function(){ window.print(); }, 400);
-          // ВАЖНО: окно не закрываем — пользователь может нажать Cancel и просто просматривать ataskaitą
+          // окно не закрываем — можно нажать Cancel и просто žiūrėti ataskaitą
         </script>
       </body>
       </html>
@@ -719,20 +730,20 @@ useEffect(() => {
                 value={percent === "" ? "" : percent}
                 min={0}
                 max={100}
-               onChange={(e) => {
-  const v = e.target.value;
+                onChange={(e) => {
+                  const v = e.target.value;
 
-  if (v === "") {
-    // временно показываем пустое значение — не сбрасываем на 0
-    setPercent("");
-    return;
-  }
+                  if (v === "") {
+                    // временно показываем пустое значение — не сбрасываем на 0
+                    setPercent("");
+                    return;
+                  }
 
-  const n = Number(v);
-  if (!isNaN(n)) {
-    setPercent(Math.min(100, Math.max(0, n)));
-  }
-}}
+                  const n = Number(v);
+                  if (!isNaN(n)) {
+                    setPercent(Math.min(100, Math.max(0, n)));
+                  }
+                }}
                 style={{
                   width: 60,
                   padding: "4px 6px",
@@ -779,12 +790,16 @@ useEffect(() => {
           <div>
             <div style={{ fontWeight: 600 }}>Išlaidos ({percent}%)</div>
             <div>€{totalExpenses.toFixed(2)}</div>
-            <div style={{ opacity: 0.7 }}>Automatinės išlaidos nuo pajamų</div>
+            <div style={{ opacity: 0.7 }}>
+              Automatinės išlaidos nuo pajamų
+            </div>
           </div>
           <div>
             <div style={{ fontWeight: 600 }}>Balansas</div>
             <div>€{balance.toFixed(2)}</div>
-            <div style={{ opacity: 0.7 }}>Pajamos minus {percent}% išlaidų</div>
+            <div style={{ opacity: 0.7 }}>
+              Pajamos minus {percent}% išlaidų
+            </div>
           </div>
         </div>
       </div>
@@ -1111,10 +1126,8 @@ function renderTagPills(tags, serviceStyles) {
 
   return tags.map((name) => {
     const base = serviceStyles[name] || {};
-    const bg =
-      base.bg || "rgba(148,163,184,0.18)";
-    const border =
-      base.border || "1px solid rgba(148,163,184,0.85)";
+    const bg = base.bg || "rgba(148,163,184,0.18)";
+    const border = base.border || "1px solid rgba(148,163,184,0.85)";
 
     return (
       <span
