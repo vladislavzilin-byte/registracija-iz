@@ -459,8 +459,37 @@ export default function Calendar(){
     transform: none !important;
     position: relative !important;
   }
+/* ============================================
+   100% фикс центрирования модалки на iOS/Android
+   ============================================ */
+@media (max-width: 768px) {
 
-  /* Убираем zoom на iOS */
+  .modal-backdrop {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    z-index: 999999 !important;
+  }
+
+  .modal {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+
+    width: 90vw !important;
+    max-width: 420px !important;
+
+    margin: 0 !important;
+    border-radius: 18px !important;
+  }
+
+  /* отключаем iOS zoom при вводе */
   input, select, textarea, button {
     font-size: 16px !important;
   }
