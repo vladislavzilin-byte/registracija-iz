@@ -416,23 +416,25 @@ export default function Calendar(){
 
         @keyframes spin { to{ transform: rotate(360deg); } }
 
+<style>{`
+
 /* ============================================
      МОБИЛЬНАЯ МОДАЛКА КАК FORGOT PASSWORD
    ============================================ */
 
 .card {
-  position: relative; /* обязательно! модалка будет внутри card */
+  position: relative; /* ← обязательно, чтобы backdrop был внутри */
 }
 
 /* затемнение поверх календаря */
 .modal-backdrop {
-  position: absolute !important;   /* КЛЮЧ! никакого fixed */
+  position: absolute !important;   /* ← ключевое: НЕТ fixed */
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
 
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0,0,0,0.55);
   backdrop-filter: blur(14px);
 
   display: flex;
@@ -447,18 +449,18 @@ export default function Calendar(){
 
 /* сама модалка */
 .modal {
-  position: relative !important;
-  transform: none !important;
-
+  position: relative !important;  /* ← НЕ fixed */
+  transform: none !important;     /* ← без translate */
   width: 90%;
   max-width: 420px;
 
-  background: rgba(17, 0, 40, 0.85);
+  background: rgba(17,0,40,0.85);
   border: 1px solid rgba(168,85,247,0.35);
   border-radius: 18px;
-  padding: 22px;
 
+  padding: 22px;
   color: #fff;
+
   box-shadow: 0 8px 28px rgba(120,0,255,0.35);
 
   animation: modalFadeIn 0.28s ease;
@@ -477,7 +479,7 @@ export default function Calendar(){
   }
 }
 
-/* loader */
+/* спиннер */
 .loader {
   width: 18px;
   height: 18px;
@@ -488,6 +490,10 @@ export default function Calendar(){
   display: inline-block;
   vertical-align: middle;
 }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+`}</style>
 
       {/* ------------------------- */}
       {/*         KAINAS           */}
