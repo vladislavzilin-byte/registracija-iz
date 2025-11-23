@@ -341,42 +341,33 @@ export default function Calendar(){
           transform: translateX(-50%);
         }
 
-.slots-title {
-  width: 100%;
-  text-align: center;
+        .slots-title {
+          width: 100%;
+          text-align: center;
+          border: 1px solid rgba(168,85,247,0.25);
+          background: rgba(255,255,255,0.03);
+          border-radius: 12px;
+          font-size: 14px;
+          font-weight: 600;
+          padding: 8px 0;
+          color: #dbe0ff;
+          letter-spacing: 0.4px;
+          backdrop-filter: blur(6px);
+        }
 
-  /* рамка и фон — как раньше у badge */
-  border: 1px solid rgba(168,85,247,0.25);
-  background: rgba(255,255,255,0.03);
-  border-radius: 12px;
+        .flash-date {
+          color: #ffffff;
+          font-weight: 700;
+          padding: 2px 6px;
+          border-radius: 8px;
+          animation: flashGlow 2.4s infinite ease-in-out;
+        }
 
-  /* уменьшенный текст на 25% */
-  font-size: 14px;
-  font-weight: 600;
-
-  padding: 8px 0;
-  color: #dbe0ff;
-  letter-spacing: 0.4px;
-
-  backdrop-filter: blur(6px);
-}
-
-.flash-date {
-  color: #ffffff;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 8px;
-
-  /* эффект подсветки */
-  animation: flashGlow 2.4s infinite ease-in-out;
-}
-
-@keyframes flashGlow {
-  0%   { text-shadow: 0 0 0px rgba(168,85,247,0.0); }
-  50%  { text-shadow: 0 0 10px rgba(168,85,247,0.65); }
-  100% { text-shadow: 0 0 0px rgba(168,85,247,0.0); }
-}
-
+        @keyframes flashGlow {
+          0%   { text-shadow: 0 0 0px rgba(168,85,247,0.0); }
+          50%  { text-shadow: 0 0 10px rgba(168,85,247,0.65); }
+          100% { text-shadow: 0 0 0px rgba(168,85,247,0.0); }
+        }
 
         /* Кнопка слота времени — базовый класс */
         .time-slot-btn {
@@ -424,65 +415,50 @@ export default function Calendar(){
         }
 
         @keyframes spin { to{ transform: rotate(360deg); } }
+
+        /* ============================================
+           MODAL LIKE FORGOT PASSWORD (CENTER + BLUR)
+           ============================================ */
         .modal-backdrop {
-          position: fixed; inset: 0; background: rgba(0,0,0,0.55);
-          display:flex; align-items:center; justify-content:center; z-index: 9999;
-          backdrop-filter: blur(2px);
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.45);
+          backdrop-filter: blur(18px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          padding: 16px;
+          box-sizing: border-box;
         }
+
         .modal {
-          background: rgba(17, 0, 40, 0.85);
-          border: 1px solid rgba(168,85,247,0.35);
-          border-radius: 16px; padding: 20px; color: #fff;
-          box-shadow: 0 8px 32px rgba(120,0,255,0.35);
-          min-width: 280px;
+          position: relative;
+          width: 100%;
+          max-width: 420px;
+          padding: 24px 26px;
+          background: rgba(30, 0, 60, 0.78);
+          backdrop-filter: blur(14px);
+          border-radius: 20px;
+          border: 1px solid rgba(190, 140, 255, 0.55);
+          box-shadow:
+            0 0 32px rgba(140, 80, 255, 0.45),
+            0 0 18px rgba(100, 0, 180, 0.25) inset;
+          color: #fff;
+          animation: modalFadeIn 0.25s ease-out;
         }
-/* ============================================
-   СТАБИЛЬНАЯ МОДАЛКА — БЕЗ FIXED, БЕЗ ПРЫЖКОВ
-   ============================================ */
 
-.modal-backdrop {
-  position: absolute;       /* ← ключ! */
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+        @keyframes modalFadeIn {
+          0%   { opacity: 0; transform: scale(0.94); }
+          100% { opacity: 1; transform: scale(1); }
+        }
 
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(2px);
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-
-  /* Для Safari, чтобы не ломался layout */
-  overflow: hidden;
-}
-
-/* МОДАЛКА САМА */
-.modal {
-  position: relative;        /* ← вместо fixed */
-  width: 90%;
-  max-width: 420px;
-
-  background: rgba(17,0,40,0.85);
-  border: 1px solid rgba(168,85,247,0.35);
-  border-radius: 18px;
-
-  padding: 20px;
-  color: #fff;
-  box-shadow: 0 8px 32px rgba(120,0,255,0.35);
-
-  /* никакого transform */
-  transform: none !important;
-}
-
-/* ОТКЛЮЧАЕМ iOS ZOOM */
-@media (max-width: 768px) {
-  input, select, textarea, button {
-    font-size: 16px !important;
-  }
-}
+        /* ОТКЛЮЧАЕМ iOS ZOOM ДЛЯ ИНПУТОВ */
+        @media (max-width: 768px) {
+          input, select, textarea, button {
+            font-size: 16px !important;
+          }
+        }
 
         .loader {
           width: 18px; height: 18px; border-radius: 50%;
@@ -625,7 +601,7 @@ export default function Calendar(){
                 price: "130 €",
                 title: "Atvykimas Klaipėdoje",
                 text:
-                  "Daiktų kraustymai, važiavimai — per тą laiką galiu priimti kitą klientę.",
+                  "Daiktų краустymai, važiavimai — per tą laiką galiu priimti kitą klientę.",
               },
             ].map((item, i) => (
               <div
@@ -734,10 +710,12 @@ export default function Calendar(){
 
       {/* SLOTS */}
       <div>
- <div className="slots-title">
-  {t('slots_for')} <span className="flash-date">{format(selectedDate,'dd.MM.yyyy')}</span>
-</div>
-
+        <div className="slots-title">
+          {t('slots_for')}{" "}
+          <span className="flash-date">
+            {format(selectedDate,'dd.MM.yyyy')}
+          </span>
+        </div>
 
         <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:8}}>
           {slotsForDay(selectedDate).map(ti=>{
@@ -839,9 +817,9 @@ export default function Calendar(){
                       }}
                     >
                       <span>{s.name}</span>
-                     <span style={{ fontSize: 13, opacity: 0.9 }}>
-  {s.duration || 0} min • Avansas {s.deposit || 0} €
-</span>
+                      <span style={{ fontSize: 13, opacity: 0.9 }}>
+                        {s.duration || 0} min • Avansas {s.deposit || 0} €
+                      </span>
                     </button>
                   ))}
                 </div>
