@@ -198,21 +198,22 @@ css.innerHTML = `
 
 /* --- унифицированный стиль кнопок --- */
 .lang-btn {
-  border-radius: 10px;
-  padding: 4px 10px;
-  font-size: 12px;
+  border-radius: 12px;
+  padding: 6px 14px;
+  font-size: 13px;
   font-weight: 600;
-  background: rgba(20, 15, 30, 0.45);
-  border: 1px solid rgba(120,80,180,0.25);
+  background: linear-gradient(180deg, rgba(160,70,255,0.9), rgba(80,0,160,0.9));
+  border: 1.5px solid rgba(210,160,255,0.7);
   color: #fff;
   cursor: pointer;
   transition: 0.25s;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 12px rgba(150,80,240,0.6);
 }
 .lang-btn.active {
-  background: linear-gradient(180deg, rgba(130,60,255,0.9), rgba(70,0,120,0.85));
-  border: 1.5px solid rgba(168,85,247,0.9);
-  box-shadow: 0 0 12px rgba(150,85,247,0.4);
+  background: linear-gradient(180deg, rgba(200,120,255,1), rgba(120,20,220,1));
+  border: 2px solid rgba(255,230,255,0.9);
+  box-shadow: 0 0 18px rgba(200,120,255,0.9);
 }
 
 /* --- ПК: верхнее меню видно --- */
