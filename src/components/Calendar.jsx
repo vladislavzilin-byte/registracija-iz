@@ -404,66 +404,79 @@ export default function Calendar(){
 
         @keyframes spin { to{ transform: rotate(360deg); } }
 
-        /* ============================================
-             МОБИЛЬНАЯ МОДАЛКА КАК FORGOT PASSWORD
-           ============================================ */
+     /* ============================================
+     МОБИЛЬНАЯ МОДАЛКА — КАК В AUTH / FORGOT
+   ============================================ */
 
-        .card {
-          position: relative;
-          min-height: 100vh;
-        }
+/* Модалка должна быть поверх ВСЕГО экрана */
+.modal-backdrop {
+  position: fixed !important;      /* ← КРИТИЧНО */
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
 
-        .modal-backdrop {
-          position: absolute !important;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0,0,0,0.55);
-          backdrop-filter: blur(14px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 9999;
-          pointer-events: all;
-          animation: modalFadeIn 0.25s ease;
-        }
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(14px);
 
-        .modal {
-          position: relative !important;
-          transform: none !important;
-          width: 90%;
-          max-width: 420px;
-          background: rgba(17,0,40,0.85);
-          border: 1px solid rgba(168,85,247,0.35);
-          border-radius: 18px;
-          padding: 22px;
-          color: #fff;
-          box-shadow: 0 8px 28px rgba(120,0,255,0.35);
-          animation: modalFadeIn 0.28s ease;
-        }
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 
-        @keyframes modalFadeIn {
-          0%   { opacity: 0; transform: scale(0.94); }
-          100% { opacity: 1; transform: scale(1); }
-        }
+  padding: 0 !important;
+  margin: 0 !important;
 
-        @media (max-width: 768px) {
-          input, select, textarea, button {
-            font-size: 16px !important;
-          }
-        }
+  z-index: 999999 !important;
+  animation: modalFadeIn 0.25s ease;
+}
 
-        .loader {
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          border: 2px solid rgba(255,255,255,0.25);
-          border-top-color: rgba(168,85,247,0.9);
-          animation: spin .8s linear infinite;
-          display: inline-block;
-          vertical-align: middle;
-        }
+/* Контейнер модалки */
+.modal {
+  position: relative !important;
+  transform: none !important;
+
+  width: 90%;
+  max-width: 420px;
+
+  background: rgba(17,0,40,0.85);
+  border: 1px solid rgba(168,85,247,0.35);
+  border-radius: 18px;
+
+  padding: 22px;
+  color: #fff;
+
+  box-shadow: 0 8px 28px rgba(120,0,255,0.35);
+  animation: modalFadeIn 0.28s ease;
+}
+
+/* Анимация */
+@keyframes modalFadeIn {
+  0%   { opacity: 0; transform: scale(0.94); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Отключаем zoom iOS при вводе */
+@media (max-width: 768px) {
+  input, select, textarea, button {
+    font-size: 16px !important;
+  }
+}
+
+/* Спиннер */
+.loader {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.25);
+  border-top-color: rgba(168,85,247,0.9);
+  animation: spin .8s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
       `}</style>
 
       {/* ------------------------- */}
