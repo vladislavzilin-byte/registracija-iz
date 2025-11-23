@@ -459,40 +459,45 @@ export default function Calendar(){
     transform: none !important;
     position: relative !important;
   }
-/* ============================================
-   100% фикс центрирования модалки на iOS/Android
-   ============================================ */
+/* ==============================================
+   МОБИЛЬНАЯ МОДАЛКА — 100% стабильный фикс
+   ============================================== */
 @media (max-width: 768px) {
 
+  /* Фон modalki */
   .modal-backdrop {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
+    background: rgba(0,0,0,0.55) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     padding: 0 !important;
     margin: 0 !important;
-    display: block !important;
     z-index: 999999 !important;
+    backdrop-filter: blur(2px);
   }
 
-  .modal {
-    position: fixed !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
+  /* сама модалка */
+.modal {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 90vw !important;
+  max-width: 420px !important;
+  margin: 0 !important;
+  border-radius: 18px !important;
+}
 
-    width: 90vw !important;
-    max-width: 420px !important;
-
-    margin: 0 !important;
-    border-radius: 18px !important;
-  }
-
-  /* отключаем iOS zoom при вводе */
+  /* отключаем iOS zoom */
   input, select, textarea, button {
     font-size: 16px !important;
   }
+}
         .loader {
           width: 18px; height: 18px; border-radius: 50%;
           border: 2px solid rgba(255,255,255,0.25);
