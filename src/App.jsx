@@ -195,4 +195,62 @@ css.innerHTML = `
   border: 1.5px solid rgba(210,160,255,0.7);
   color: #fff;
   cursor: pointer;
-  
+}
+
+.lang-btn.active {
+  background: linear-gradient(180deg, rgba(200,120,255,1), rgba(120,20,220,1));
+  border: 2px solid rgba(255,230,255,0.9);
+  box-shadow: 0 0 16px rgba(200,120,255,0.9);
+}
+
+@media (min-width: 768px) {
+  .lang-switcher-top { display:flex !important; }
+  .lang-switcher-bottom { display:none !important; }
+}
+
+@media (max-width: 768px) {
+  .lang-switcher-top { display:none !important; }
+}
+
+.lang-switcher-bottom {
+  position: fixed;
+  bottom: 12px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 9999;
+  transition: 0.35s ease;
+}
+
+.lang-switcher-bottom.hidden-mobile {
+  transform: translateY(150%);
+  opacity: 0;
+}
+`;
+
+document.head.appendChild(css);
+
+/* ===== СОЗДАЁМ МОБИЛЬНОЕ МЕНЮ ===== */
+const bottomLang = document.createElement("div");
+bottomLang.className = "lang-switcher-bottom";
+bottomLang.innerHTML = `
+  <div class="lang-group">
+    <button class="lang-btn lang-bottom-lt">LT</button>
+    <button class="lang-btn lang-bottom-ru">RU</button>
+    <button class="lang-btn lang-bottom-en">GB</button>
+  </div>
+`;
+document.body.appendChild(bottomLang);
+
+document.querySelector(".lang-bottom-lt").onclick = () => window.setLang && window.setLang("lt");
+document.querySelector(".lang-bottom-ru").onclick = () => window.setLang && window.setLang("ru");
+document.querySelector(".lang-bottom-en").onclick = () => window.setLang && window.setLang("en");
+
+window.addEventListener("scroll", () => {
+  if (window.innerWidth > 768) return;
+  if (!bottomLang) return;
+
+  if (window.scrollY > 40) bottomLang.classList.add("hidden-mobile");
+  else bottomLang.classList.remove("hidden-mobile");
+});
