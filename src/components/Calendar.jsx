@@ -436,6 +436,34 @@ export default function Calendar(){
           box-shadow: 0 8px 32px rgba(120,0,255,0.35);
           min-width: 280px;
         }
+        /* ============================================
+   MOBILE FIX: центрирование + отключение зума
+   ============================================ */
+@media (max-width: 768px) {
+
+  /* Центрирование модалки */
+  .modal-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 16px;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 420px;
+    border-radius: 18px;
+    margin: 0 auto !important;
+    transform: none !important;
+    position: relative !important;
+  }
+
+  /* Убираем zoom на iOS */
+  input, select, textarea, button {
+    font-size: 16px !important;
+  }
         .loader {
           width: 18px; height: 18px; border-radius: 50%;
           border: 2px solid rgba(255,255,255,0.25);
