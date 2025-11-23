@@ -410,6 +410,7 @@ export default function Calendar(){
 
         .card {
           position: relative;
+          min-height: 100vh;
         }
 
         .modal-backdrop {
