@@ -2,19 +2,52 @@ import Auth from './components/Auth.jsx'
 import Calendar from './components/Calendar.jsx'
 import Admin from './components/Admin.jsx'
 import MyBookings from './components/MyBookings.jsx'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getCurrentUser } from './lib/storage'
 import { useI18n } from './lib/i18n'
+
+/* ============================================================
+   МЕХАНИЗМ СКРЫТИЯ ЯЗЫКОВОГО МЕНЮ НА МОБИЛЬНОМ
+   ============================================================ */
+const useMobileLangHide = () => {
+  const [hidden, setHidden] = useState(false)
+
+  useEffect(() => {
+    let last = window.scrollY
+
+    const onScroll = () => {
+      // ПК → меню не скрывается
+      if (window.innerWidth > 768) {
+        setHidden(false)
+        return
+      }
+
+      // вниз → скрыть
+      if (window.scrollY > last + 12) setHidden(true)
+
+      // вверх → показать
+      if (window.scrollY < last - 12) setHidden(false)
+
+      last = window.scrollY
+    }
+
+    window.addEventListener('scroll', onScroll)
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  return hidden
+}
 
 export default function App() {
   const { lang, setLang, t } = useI18n()
   const [tab, setTab] = useState('calendar')
   const [user, setUser] = useState(getCurrentUser())
+  const hiddenLang = useMobileLangHide()
 
-  // состояние для эффекта нажатия кнопки Kainas
+  // эффект нажатия кнопки Kainas
   const [kPress, setKPress] = useState(false)
 
-  // Проверка на админа
+  // проверка админа
   const isAdmin =
     user?.role === 'admin' ||
     user?.isAdmin === true ||
@@ -23,12 +56,12 @@ export default function App() {
 
   return (
     <div className="container" style={containerStyle}>
-      
+
       {/* === Верхняя панель === */}
       <div style={navBar}>
-        <div style={leftSide}>
 
-          {/* КАЛЕНДАРЬ */}
+        {/* --- Левая сторона: Календарь, Мои записи, Kainas --- */}
+        <div style={leftSide}>
           <button
             onClick={() => setTab('calendar')}
             style={navButton(tab === 'calendar')}
@@ -36,7 +69,6 @@ export default function App() {
             {t('nav_calendar')}
           </button>
 
-          {/* МОИ ЗАПИСИ */}
           <button
             onClick={() => setTab('my')}
             style={navButton(tab === 'my')}
@@ -52,27 +84,25 @@ export default function App() {
               transition: 'transform .25s ease',
             }}
             onClick={() => {
-              // эффект нажатия кнопки
               setKPress(true)
               setTimeout(() => setKPress(false), 260)
 
-              // переключаем на календарь
               setTab('calendar')
 
-              // после рендера → автоскролл к Kainas
+              // Автопрокрутка к Kainas
               setTimeout(() => {
                 const section = document.getElementById('kainas-section')
                 section?.scrollIntoView({ behavior: 'smooth', block: 'start' })
               }, 150)
 
-              // авто-открытие аккордеона
+              // Авто-открытие аккордеона
               window.dispatchEvent(new CustomEvent("togglePrices"))
             }}
           >
             Kainas
           </button>
 
-          {/* АДМИН */}
+          {/* Админ */}
           {isAdmin && (
             <button
               onClick={() => setTab('admin')}
@@ -86,17 +116,17 @@ export default function App() {
           )}
         </div>
 
-        {/* Языки */}
-        <div style={langBlock}>
-          <button onClick={() => setLang('lt')} style={langButton(lang === 'lt')}>
-            LT
-          </button>
-          <button onClick={() => setLang('ru')} style={langButton(lang === 'ru')}>
-            RU
-          </button>
-          <button onClick={() => setLang('en')} style={langButton(lang === 'en')}>
-            GB
-          </button>
+        {/* === Языковое меню: ПК сверху, мобилка — скрывается === */}
+        <div
+          className={`lang-switcher-top ${hiddenLang ? 'hidden-mobile' : ''}`}
+          style={{
+            display: 'flex',
+            gap: '8px',
+          }}
+        >
+          <button onClick={() => setLang('lt')} className={`lang-btn ${lang === 'lt' ? 'active' : ''}`}>LT</button>
+          <button onClick={() => setLang('ru')} className={`lang-btn ${lang === 'ru' ? 'active' : ''}`}>RU</button>
+          <button onClick={() => setLang('en')} className={`lang-btn ${lang === 'en' ? 'active' : ''}`}>GB</button>
         </div>
       </div>
 
@@ -108,11 +138,13 @@ export default function App() {
 
       {/* === Футер === */}
       <footer style={footerStyle}>© IZ HAIR TREND</footer>
-    </div>
+    </div> {/* /container */}
   )
 }
 
-/* === СТИЛИ === */
+/* ============================================================
+   СТИЛИ — ВКЛЮЧАЮТ МОБИЛЬНОЕ ЯЗЫКОВОЕ МЕНЮ
+   ============================================================ */
 
 const containerStyle = {
   minHeight: '100vh',
@@ -163,25 +195,13 @@ const navButton = (active) => ({
   transform: active ? 'translateY(-1px)' : 'translateY(0)',
 })
 
-const langBlock = { display: 'flex', gap: '8px' }
+/* === ПК версия: меню сверху === */
+const langBlock = {
+  display: 'flex',
+  gap: '8px'
+}
 
-const langButton = (active) => ({
-  borderRadius: '10px',
-  width: '44px',
-  height: '36px',
-  fontWeight: 600,
-  border: active
-    ? '1.5px solid rgba(168,85,247,0.9)'
-    : '1px solid rgba(120,80,180,0.25)',
-  background: active
-    ? 'linear-gradient(180deg, rgba(130,60,255,0.9), rgba(70,0,120,0.85))'
-    : 'rgba(20,15,30,0.45)',
-  color: '#fff',
-  cursor: 'pointer',
-  boxShadow: active ? '0 0 12px rgba(150,85,247,0.4)' : 'none',
-  transition: 'all 0.25s ease',
-})
-
+/* === Футер === */
 const footerStyle = {
   marginTop: 40,
   textAlign: 'center',
@@ -189,12 +209,97 @@ const footerStyle = {
   fontSize: '0.9rem',
 }
 
-/* === Анимация === */
-const style = document.createElement('style')
-style.innerHTML = `
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+/* ============================================================
+   ДОБАВЛЯЕМ CSS ДЛЯ ЯЗЫКОВОГО МЕНЮ
+   ============================================================ */
+const css = document.createElement("style");
+css.innerHTML = `
+
+/* --- Кнопки языков (универсальный стиль) --- */
+.lang-btn {
+  border-radius: 10px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(20, 15, 30, 0.45);
+  border: 1px solid rgba(120,80,180,0.25);
+  color: #fff;
+  cursor: pointer;
+  transition: 0.25s;
+  backdrop-filter: blur(6px);
 }
-`
-document.head.appendChild(style)
+.lang-btn.active {
+  background: linear-gradient(180deg, rgba(130,60,255,0.9), rgba(70,0,120,0.85));
+  border: 1.5px solid rgba(168,85,247,0.9);
+  box-shadow: 0 0 12px rgba(150,85,247,0.4);
+}
+
+/* --- ПК: меню сверху --- */
+@media (min-width: 768px) {
+  .lang-switcher-top {
+    display: flex !important;
+  }
+}
+
+/* --- МОБИЛЬНЫЕ: скрыть верхнее меню --- */
+@media (max-width: 768px) {
+  .lang-switcher-top {
+    display: none !important;
+  }
+}
+
+/* --- МОБИЛЬНОЕ ЯЗЫКОВОЕ МЕНЮ СНИЗУ --- */
+.lang-switcher-bottom {
+  position: fixed;
+  bottom: 12px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  z-index: 9999;
+  transition: 0.35s ease;
+}
+.lang-switcher-bottom.hidden-mobile {
+  transform: translateY(150%);
+  opacity: 0;
+}
+@media (min-width: 769px) {
+  .lang-switcher-bottom {
+    display: none !important;
+  }
+}
+
+`;
+document.head.appendChild(css);
+
+/* ============================================================
+   ВСТАВЛЯЕМ МОБИЛЬНОЕ МЕНЮ В КОНЕЦ ДОКУМЕНТА
+   ============================================================ */
+const bottomLang = document.createElement("div");
+bottomLang.className = "lang-switcher-bottom";
+bottomLang.innerHTML = `
+  <button class="lang-btn lang-bottom-lt">LT</button>
+  <button class="lang-btn lang-bottom-ru">RU</button>
+  <button class="lang-btn lang-bottom-en">GB</button>
+`;
+document.body.appendChild(bottomLang);
+
+/* навешиваем обработчики */
+document.querySelector(".lang-bottom-lt").onclick = () => window.setLang && window.setLang('lt');
+document.querySelector(".lang-bottom-ru").onclick = () => window.setLang && window.setLang('ru');
+document.querySelector(".lang-bottom-en").onclick = () => window.setLang && window.setLang('en');
+
+/* ============================================================
+   ВКЛЮЧАЕМ СКРЫТИЕ НИЖНЕГО МЕНЮ ПРИ СКРОЛЛЕ
+   ============================================================ */
+window.addEventListener("scroll", () => {
+  if (window.innerWidth > 768) return;
+  if (!bottomLang) return;
+
+  if (window.scrollY > 40) {
+    bottomLang.classList.add("hidden-mobile");
+  } else {
+    bottomLang.classList.remove("hidden-mobile");
+  }
+});
