@@ -6,7 +6,7 @@ import MyBookings from './components/MyBookings.jsx'
 import { useState, useEffect } from 'react'
 import { getCurrentUser } from './lib/storage'
 import { useI18n } from './lib/i18n'
-
+const { lang, setLang, t } = useI18n()
 /* ============================================================
    МЕХАНИЗМ СКРЫТИЯ ЯЗЫКОВОГО МЕНЮ НА МОБИЛЬНОМ
    ============================================================ */
@@ -254,3 +254,23 @@ window.addEventListener("scroll", () => {
   if (window.scrollY > 40) bottomLang.classList.add("hidden-mobile");
   else bottomLang.classList.remove("hidden-mobile");
 });
+// ============================================================
+// ПРОБРОС setLang В window + ПОДСВЕТКА МОБИЛЬНЫХ КНОПОК
+// ============================================================
+useEffect(() => {
+  // делаем setLang доступным для мобильных кнопок вне React
+  window.setLang = setLang
+
+  // подсветка мобильных кнопок
+  const btnLT = document.querySelector(".lang-bottom-lt")
+  const btnRU = document.querySelector(".lang-bottom-ru")
+  const btnEN = document.querySelector(".lang-bottom-en")
+
+  const all = [btnLT, btnRU, btnEN]
+  all.forEach(btn => btn?.classList.remove("active"))
+
+  if (lang === "lt") btnLT?.classList.add("active")
+  if (lang === "ru") btnRU?.classList.add("active")
+  if (lang === "en") btnEN?.classList.add("active")
+
+}, [lang, setLang])
