@@ -625,7 +625,6 @@ export default function Admin() {
                     gap: 8,
                     padding: "4px 10px",
                     borderRadius: 999,
-                    border: "1px solid rgba(148,163,184,0.35)",
                     background:
                       "linear-gradient(90deg, rgba(15,23,42,0.98), rgba(24,24,27,0.95))",
                     fontSize: 12.5,
