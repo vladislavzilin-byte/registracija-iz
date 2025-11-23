@@ -182,16 +182,3 @@ css.innerHTML = `
   border: 1.5px solid rgba(180, 120, 255, 0.55);
   box-shadow: 0 0 18px rgba(160, 80, 240, 0.35);
   backdrop-filter: blur(10px);
-}
-
-/* === КОМПАКТНЫЕ КНОПКИ === */
-.lang-btn {
-  border-radius: 10px;
-  padding: 4px 8px;
-  min-width: 42px;
-  font-size: 12px;
-  font-weight: 600;
-  background: linear-gradient(180deg, rgba(160,70,255,0.9), rgba(80,0,160,0.9));
-  border: 1.5px solid rgba(210,160,255,0.7);
-  color: #fff;
-  cursor: pointer;
