@@ -436,68 +436,54 @@ export default function Calendar(){
           box-shadow: 0 8px 32px rgba(120,0,255,0.35);
           min-width: 280px;
         }
-        /* ============================================
-   MOBILE FIX: центрирование + отключение зума
+/* ============================================
+   СТАБИЛЬНАЯ МОДАЛКА — БЕЗ FIXED, БЕЗ ПРЫЖКОВ
    ============================================ */
-@media (max-width: 768px) {
 
-  /* Центрирование модалки */
-  .modal-backdrop {
-    position: fixed !important;
-    inset: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 16px;
-  }
+.modal-backdrop {
+  position: absolute;       /* ← ключ! */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 
-  .modal {
-    width: 100%;
-    max-width: 420px;
-    border-radius: 18px;
-    margin: 0 auto !important;
-    transform: none !important;
-    position: relative !important;
-  }
-/* ==============================================
-   МОБИЛЬНАЯ МОДАЛКА — 100% стабильный фикс
-   ============================================== */
-@media (max-width: 768px) {
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(2px);
 
-  /* Фон modalki */
-  .modal-backdrop {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    background: rgba(0,0,0,0.55) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    z-index: 999999 !important;
-    backdrop-filter: blur(2px);
-  }
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
 
-  /* сама модалка */
-.modal {
-  position: fixed !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  width: 90vw !important;
-  max-width: 420px !important;
-  margin: 0 !important;
-  border-radius: 18px !important;
+  /* Для Safari, чтобы не ломался layout */
+  overflow: hidden;
 }
 
-  /* отключаем iOS zoom */
+/* МОДАЛКА САМА */
+.modal {
+  position: relative;        /* ← вместо fixed */
+  width: 90%;
+  max-width: 420px;
+
+  background: rgba(17,0,40,0.85);
+  border: 1px solid rgba(168,85,247,0.35);
+  border-radius: 18px;
+
+  padding: 20px;
+  color: #fff;
+  box-shadow: 0 8px 32px rgba(120,0,255,0.35);
+
+  /* никакого transform */
+  transform: none !important;
+}
+
+/* ОТКЛЮЧАЕМ iOS ZOOM */
+@media (max-width: 768px) {
   input, select, textarea, button {
     font-size: 16px !important;
   }
 }
+
         .loader {
           width: 18px; height: 18px; border-radius: 50%;
           border: 2px solid rgba(255,255,255,0.25);
