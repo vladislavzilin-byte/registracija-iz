@@ -1571,4 +1571,4 @@ const downloadReceipt = (b) => {
   }
 };
 
-export default Admin;
+
