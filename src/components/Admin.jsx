@@ -715,63 +715,44 @@ export default function Admin() {
                           {/* ID */}
                           <span style={pillId}>#{b.id.slice(0, 6)}</span>
 
-                         {/* справа: оплата + подтверждение + стрелка */}
-<span
-  style={{
-    marginLeft: "auto",
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-  }}
->
-  {/* Оплата */}
-  <span
-    style={{
-      fontSize: 11,
-      padding: "3px 8px",
-      borderRadius: 999,
-      border: paid
-        ? "1px solid rgba(34,197,94,0.85)"
-        : "1px solid rgba(248,113,113,0.9)",
-      background: paid
-        ? "rgba(22,163,74,0.25)"
-        : "rgba(127,29,29,0.6)",
-    }}
-  >
-    {paid ? "Оплачено" : "Не оплачено"}
-  </span>
+                          {/* справа: оплата + стрелка */}
+                          <span
+                            style={{
+                              marginLeft: "auto",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: 11,
+                                padding: "3px 8px",
+                                borderRadius: 999,
+                                border: paid
+                                  ? "1px solid rgba(34,197,94,0.85)"
+                                  : "1px solid rgba(248,113,113,0.9)",
+                                background: paid
+                                  ? "rgba(22,163,74,0.25)"
+                                  : "rgba(127,29,29,0.6)",
+                              }}
+                            >
+                              {paid ? "Оплачено" : "Не оплачено"}
+                            </span>
 
-  {/* Подтверждение */}
-  <span
-    style={{
-      fontSize: 11,
-      padding: "3px 8px",
-      borderRadius: 999,
-      border: b.status?.includes("approved")
-        ? "1px solid rgba(34,197,94,0.85)"
-        : "1px solid rgba(248,113,113,0.9)",
-      background: b.status?.includes("approved")
-        ? "rgba(22,163,74,0.25)"
-        : "rgba(127,29,29,0.6)",
-    }}
-  >
-    {b.status?.includes("approved")
-      ? "Подтверждено"
-      : "Не подтверждено"}
-  </span>
-
-  {/* Стрелка */}
-  <div
-    style={{
-      transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-      transition: "transform .25s ease",
-      marginLeft: 4,
-    }}
-  >
-    <Chevron open={isOpen} />
-  </div>
-</span>
+                            <div
+                              style={{
+                                transform: isOpen
+                                  ? "rotate(180deg)"
+                                  : "rotate(0deg)",
+                                transition: "transform .25s ease",
+                              }}
+                            >
+                              <Chevron open={isOpen} />
+                            </div>
+                          </span>
+                        </div>
+                      </button>
 
                       {/* раскрытая карточка */}
                       {isOpen && (
