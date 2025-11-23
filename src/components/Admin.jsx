@@ -44,6 +44,12 @@ const serviceStyles = {
   },
 };
 
+const formatPrice = (value) => {
+  if (value == null || value === "") return "0.00";
+  const num = Number(value) || 0;
+  return num.toFixed(2);
+};
+
 // оплачено — либо новое поле paid, либо старый статус approved_paid
 const isPaid = (b) => !!(b?.paid || b?.status === "approved_paid");
 
@@ -61,7 +67,7 @@ const toInputTime = (dateLike) => {
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 };
 
-export default function Admin() {
+function Admin() {
   const me = getCurrentUser();
   const isAdmin = me && (me.role === "admin" || ADMINS.includes(me.email));
 
@@ -91,6 +97,7 @@ export default function Admin() {
   const [showFinance, setShowFinance] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all"); // all | active | finished | canceled
+  const [openId, setOpenId] = useState(null); // раскрытая запись
   const [toast, setToast] = useState(null);
 
   const updateSettings = (patch) => {
@@ -101,19 +108,24 @@ export default function Admin() {
 
   // синк записей при обновлении профиля
   useEffect(() => {
-    const handler = () => setBookings(getBookings());
-    window.addEventListener("profileUpdated", handler);
-    return () => window.removeEventListener("profileUpdated", handler);
+    const handleStorage = (e) => {
+      if (e.key === "bookings_v1") {
+        setBookings(getBookings());
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
-  // === СТАТИСТИКА ===
   const stats = useMemo(() => {
     const total = bookings.length;
     const active = bookings.filter(
-      (b) => b.status === "approved" || b.status === "pending"
+      (b) =>
+        ["pending", "approved", "approved_paid"].includes(b.status) &&
+        new Date(b.end || b.start) >= new Date()
     ).length;
-    const canceled = bookings.filter(
-      (b) => b.status === "canceled_client" || b.status === "canceled_admin"
+    const canceled = bookings.filter((b) =>
+      String(b.status).includes("canceled")
     ).length;
     return { total, active, canceled };
   }, [bookings]);
@@ -142,12 +154,7 @@ export default function Admin() {
             ["approved", "approved_paid"].includes(b.status) &&
             new Date(b.end || b.start) < now;
         } else if (statusFilter === "canceled") {
-          matchStatus = ["canceled_client", "canceled_admin"].includes(
-            b.status
-          );
-        } else {
-          // all — ничего не ограничиваем
-          matchStatus = true;
+          matchStatus = String(b.status).includes("canceled");
         }
 
         return matchQ && matchStatus;
@@ -155,347 +162,341 @@ export default function Admin() {
       .sort((a, b) => new Date(a.start) - new Date(b.start));
   }, [bookings, search, statusFilter]);
 
-  // === helper для обновления одной записи ===
   const updateBooking = (id, updater) => {
-    const all = getBookings();
-    const next = all.map((b) => (b.id === id ? updater(b) : b));
-    saveBookings(next);
-    setBookings(next);
+    setBookings((prev) => {
+      const next = prev.map((b) => (b.id === id ? updater(b) : b));
+      saveBookings(next);
+      return next;
+    });
   };
 
-  // === ДЕЙСТВИЯ С ЗАПИСЯМИ ===
+  const setStatus = (id, statusPatch) => {
+    updateBooking(id, (b) => ({ ...b, ...statusPatch }));
+  };
+
+  const approveByAdmin = (id) => {
+    updateBooking(id, (b) => ({
+      ...b,
+      status: isPaid(b) ? "approved_paid" : "approved",
+    }));
+    showToast("Запись подтверждена");
+  };
+
   const cancelByAdmin = (id) => {
-    if (!confirm("Отменить эту запись?")) return;
+    if (!window.confirm("Точно отменить запись?")) return;
     updateBooking(id, (b) => ({
       ...b,
-      status: "canceled_admin",
-      canceledAt: new Date().toISOString(),
+      status: `${b.status || "pending"}_canceled_by_admin`,
     }));
+    showToast("Запись отменена");
   };
 
-  const approveByAdmin = (id) =>
-    updateBooking(id, (b) => ({
-      ...b,
-      status: "approved",
-      approvedAt: new Date().toISOString(),
-    }));
+  const togglePaid = (id) => {
+    updateBooking(id, (b) => {
+      const nextPaid = !isPaid(b);
+      let status = b.status;
+      if (["approved", "approved_paid"].includes(b.status)) {
+        status = nextPaid ? "approved_paid" : "approved";
+      }
+      return { ...b, paid: nextPaid, status };
+    });
+    showToast("Статус оплаты обновлён");
+  };
 
-  const togglePaid = (id) =>
-    updateBooking(id, (b) => ({ ...b, paid: !b.paid }));
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  };
 
-  // === НАСТРОЙКИ УСЛУГ ===
-  const services = settings.serviceList || [];
+  const handleExport = () => {
+    const data = JSON.stringify(bookings, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "bookings-export.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
-  const updateServiceField = (index, field, value) => {
-    const next = [...services];
-    next[index] = {
-      ...next[index],
-      [field]:
-        field === "duration" || field === "deposit"
-          ? Number(value) || 0
-          : value,
+  const handleImport = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!Array.isArray(data)) throw new Error("Invalid data");
+        saveBookings(data);
+        setBookings(data);
+        showToast("Импортировано");
+      } catch (err) {
+        alert("Ошибка импорта");
+      }
     };
-    updateSettings({ serviceList: next });
+    reader.readAsText(file);
   };
 
-  const addService = () => {
-    updateSettings({
-      serviceList: [
-        ...services,
-        { name: "Новая услуга", duration: 60, deposit: 0 },
-      ],
-    });
-  };
-
-  const removeService = (index) => {
-    if (services.length <= 1) return;
-    updateSettings({
-      serviceList: services.filter((_, i) => i !== index),
-    });
-  };
+  const today = new Date();
 
   return (
-    <div className="col" style={{ gap: 16 }}>
-      {/* === НАСТРОЙКИ (ГАРМОШКА) === */}
-      <div style={{ width: "100%" }}>
-        <div style={cardAurora}>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        padding: "16px 10px 32px",
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: 1180 }}>
+        <div
+          style={{
+            marginBottom: 14,
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 10,
+            alignItems: "center",
+          }}
+        >
           <button
-            onClick={() => setShowSettings(!showSettings)}
             style={headerToggle}
+            onClick={() => setShowSettings((v) => !v)}
           >
-            <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <Chevron open={showSettings} />
-              <span style={{ fontWeight: 700 }}>Редактировать настройки</span>
-            </span>
-          </button>
-
-          <div
-            style={{
-              maxHeight: showSettings ? 1200 : 0,
-              overflow: "hidden",
-              transition: "max-height .35s ease",
-            }}
-          >
-            <div style={{ paddingTop: 10 }}>
-              {/* ОСНОВНЫЕ НАСТРОЙКИ */}
-              <div className="row" style={{ gap: 12 }}>
-                <div className="col">
-                  <label style={labelStyle}>{t("master_name")}</label>
-                  <input
-                    style={inputGlass}
-                    value={settings.masterName}
-                    onChange={(e) =>
-                      updateSettings({ masterName: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div className="col">
-                  <label style={labelStyle}>{t("admin_phone")}</label>
-                  <input
-                    style={inputGlass}
-                    value={settings.adminPhone}
-                    onChange={(e) =>
-                      updateSettings({ adminPhone: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-
-              {/* РАБОЧЕЕ ВРЕМЯ */}
-              <div
-                className="row"
-                style={{ gap: 12, marginTop: 12, marginBottom: 8 }}
-              >
-                <div className="col">
-                  <label style={labelStyle}>{t("day_start")}</label>
-                  <select
-                    style={inputGlass}
-                    value={settings.workStart}
-                    onChange={(e) =>
-                      updateSettings({ workStart: e.target.value })
-                    }
-                  >
-                    {generateTimes(0, 12).map((t) => (
-                      <option key={t}>{t}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="col">
-                  <label style={labelStyle}>{t("day_end")}</label>
-                  <select
-                    style={inputGlass}
-                    value={settings.workEnd}
-                    onChange={(e) =>
-                      updateSettings({ workEnd: e.target.value })
-                    }
-                  >
-                    {generateTimes(12, 24).map((t) => (
-                      <option key={t}>{t}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="col">
-                  <label style={labelStyle}>{t("slot_minutes")}</label>
-                  <select
-                    style={inputGlass}
-                    value={settings.slotMinutes}
-                    onChange={(e) =>
-                      updateSettings({
-                        slotMinutes: parseInt(e.target.value, 10),
-                      })
-                    }
-                  >
-                    {[15, 30, 45, 60].map((m) => (
-                      <option key={m}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* УСЛУГИ */}
+            <div style={{ flex: 1 }}>
               <div
                 style={{
-                  marginTop: 18,
-                  paddingTop: 14,
-                  borderTop: "1px solid rgba(148,85,247,0.35)",
+                  fontSize: 13,
+                  opacity: 0.8,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: 8,
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 600 }}>Услуги</div>
-                    <div style={{ opacity: 0.75, fontSize: 12 }}>
-                      Название, длительность, депозит
-                    </div>
-                  </div>
+                Панель администратора
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 600 }}>
+                {showSettings ? "Настройки сервиса" : "Все записи"}
+              </div>
+            </div>
+            <div
+              style={{
+                padding: "4px 10px",
+                borderRadius: 999,
+                border: "1px solid rgba(148,163,184,0.65)",
+                background: "rgba(15,23,42,0.9)",
+                fontSize: 12,
+              }}
+            >
+              {today.toLocaleDateString("lt-LT", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              })}
+            </div>
+            <div style={{ marginLeft: 6 }}>
+              <Chevron open={showSettings} />
+            </div>
+          </button>
 
-                  <button style={btnPrimary} onClick={addService}>
-                    + Добавить услугу
-                  </button>
+          <button
+            style={headerToggleSmall}
+            onClick={() => setShowFinance((v) => !v)}
+          >
+            <span style={{ fontSize: 13, fontWeight: 500 }}>Finansai</span>
+            <div style={{ marginLeft: 6 }}>
+              <Chevron open={showFinance} />
+            </div>
+          </button>
+        </div>
+
+        {showFinance && (
+          <div style={{ marginBottom: 14 }}>
+            <FinancePanel bookings={bookings} />
+          </div>
+        )}
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: showSettings ? "minmax(0,1fr)" : "minmax(0,1.3fr) minmax(0,1.1fr)",
+            gap: 16,
+          }}
+        >
+          {/* ЛЕВАЯ ЧАСТЬ — СПИСОК */}
+          <div style={cardAurora}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 10,
+                alignItems: "center",
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>
+                  {t("all_records")}
                 </div>
 
-                {/* РЕДАКТИРОВАНИЕ УСЛУГ */}
                 <div
                   style={{
                     display: "flex",
-                    flexDirection: "column",
                     gap: 8,
-                    marginTop: 6,
+                    alignItems: "center",
+                    flexWrap: "wrap",
                   }}
                 >
-                  {services.map((s, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1.4fr .7fr .7fr auto",
-                        gap: 8,
-                        alignItems: "center",
-                      }}
-                    >
-                      <input
-                        style={inputGlass}
-                        value={s.name}
-                        onChange={(e) =>
-                          updateServiceField(idx, "name", e.target.value)
-                        }
-                      />
-                      <input
-                        style={inputGlass}
-                        type="number"
-                        value={s.duration}
-                        onChange={(e) =>
-                          updateServiceField(idx, "duration", e.target.value)
-                        }
-                      />
-                      <input
-                        style={inputGlass}
-                        type="number"
-                        value={s.deposit}
-                        onChange={(e) =>
-                          updateServiceField(idx, "deposit", e.target.value)
-                        }
-                      />
-                      <button
-                        onClick={() => removeService(idx)}
-                        style={{
-                          padding: "8px 10px",
-                          borderRadius: 10,
-                          background: "rgba(110,20,30,.35)",
-                          border: "1px solid rgba(239,68,68,.7)",
-                          color: "#fff",
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
+                  <div className="muted" style={{ fontSize: 12.5 }}>
+                    Сегодня: {fmtDate(new Date())}
+                  </div>
+                  <div
+                    style={{
+                      padding: "3px 10px",
+                      borderRadius: 999,
+                      background: "rgba(15,23,42,0.9)",
+                      border: "1px solid rgba(148,163,184,0.4)",
+                      fontSize: 12,
+                    }}
+                  >
+                    Всего: {stats.total}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    fontSize: 11.5,
+                    padding: "3px 10px",
+                    borderRadius: 999,
+                    background: "rgba(22,101,52,0.35)",
+                    border: "1px solid rgba(34,197,94,0.75)",
+                  }}
+                >
+                  Активных: {stats.active}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11.5,
+                    padding: "3px 10px",
+                    borderRadius: 999,
+                    background: "rgba(127,29,29,0.50)",
+                    border: "1px solid rgba(248,113,113,0.8)",
+                  }}
+                >
+                  Отменённых: {stats.canceled}
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* === FINANSAI (ГАРМОШКА) === */}
-      <div style={{ width: "100%" }}>
-        <div style={cardAurora}>
-          <button
-            onClick={() => setShowFinance(!showFinance)}
-            style={headerToggle}
-          >
-            <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <Chevron open={showFinance} />
-              <span style={{ fontWeight: 700 }}>Finansai</span>
-            </span>
-          </button>
-
-          <div
-            style={{
-              maxHeight: showFinance ? 2000 : 0,
-              overflow: "hidden",
-              transition: "max-height .4s ease",
-            }}
-          >
-            <div style={{ paddingTop: 10 }}>
-              <FinancePanel
-                bookings={bookings}
-                serviceStyles={serviceStyles}
-                onDownloadReceipt={downloadReceipt}
+            <div
+              style={{
+                marginTop: 12,
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 10,
+                alignItems: "center",
+              }}
+            >
+              <input
+                type="text"
+                placeholder="Поиск по имени, телефону или Instagram"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setOpenId(null);
+                }}
+                style={{
+                  ...inputGlass,
+                  flex: 1,
+                  minWidth: 220,
+                  paddingLeft: 12,
+                  paddingRight: 12,
+                }}
               />
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* === ВСЕ ЗАПИСИ (НЕ ГАРМОШКА) === */}
-      <div style={{ width: "100%" }}>
-        <div style={cardAurora}>
-          <div style={topBar}>
-            <div style={{ fontWeight: 700, fontSize: "1.05rem" }}>
-              Все записи
-            </div>
-          </div>
-
-          {/* ПОИСК И ФИЛЬТРЫ */}
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              margin: "8px 0 12px",
-              flexWrap: "wrap",
-            }}
-          >
-            <input
-              style={{ ...inputGlass, flex: "1 1 260px" }}
-              placeholder={t("search_placeholder")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-
-            {/* ПАНЕЛЬ ФИЛЬТРОВ */}
-            <div style={segmented}>
-              {[
-                { v: "all", label: "Все" },
-                { v: "active", label: "Активные" },
-                { v: "finished", label: "Завершённые" },
-                { v: "canceled", label: "Отменённые" },
-              ].map((it) => (
+              <div style={segmented}>
                 <button
-                  key={it.v}
-                  onClick={() => setStatusFilter(it.v)}
                   style={{
                     ...segBtn,
-                    ...(statusFilter === it.v ? segActive : {}),
+                    ...(statusFilter === "all" ? segActive : segInactive),
                   }}
+                  onClick={() => setStatusFilter("all")}
                 >
-                  {it.label}
+                  Все
                 </button>
-              ))}
+                <button
+                  style={{
+                    ...segBtn,
+                    ...(statusFilter === "active" ? segActive : segInactive),
+                  }}
+                  onClick={() => setStatusFilter("active")}
+                >
+                  Активные
+                </button>
+                <button
+                  style={{
+                    ...segBtn,
+                    ...(statusFilter === "finished" ? segActive : segInactive),
+                  }}
+                  onClick={() => setStatusFilter("finished")}
+                >
+                  Завершённые
+                </button>
+                <button
+                  style={{
+                    ...segBtn,
+                    ...(statusFilter === "canceled" ? segActive : segInactive),
+                  }}
+                  onClick={() => setStatusFilter("canceled")}
+                >
+                  Отменённые
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* СТАТИСТИКА */}
-          <div className="badge" style={{ marginBottom: 10 }}>
-            {t("total")}: {stats.total} • {t("total_active")}: {stats.active} •{" "}
-            {t("total_canceled")}: {stats.canceled}
-          </div>
+            <div
+              style={{
+                marginTop: 10,
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 8,
+                flexWrap: "wrap",
+                fontSize: 11.5,
+              }}
+            >
+              <div>
+                <span className="muted">{t("total_all")}: </span>
+                {stats.total}
+                <span className="muted"> · </span>
+                <span className="muted">
+                  {t("total_active")}: {stats.active}
+                </span>
+                <span className="muted"> · </span>
+                <span className="muted">
+                  {t("total_canceled")}: {stats.canceled}
+                </span>
+              </div>
 
-          {/* СПИСОК ЗАПИСЕЙ */}
+              <div style={{ display: "flex", gap: 6 }}>
+                <label style={exportLabel}>
+                  <span>Import</span>
+                  <input
+                    type="file"
+                    accept="application/json"
+                    style={{ display: "none" }}
+                    onChange={handleImport}
+                  />
+                </label>
+                <button style={exportBtn} onClick={handleExport}>
+                  Export
+                </button>
+              </div>
+            </div>
+
+          {/* СПИСОК ЗАПИСЕЙ — ГАРМОШКА */}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 18,
+              gap: 10,
               marginTop: 12,
             }}
           >
@@ -504,6 +505,8 @@ export default function Admin() {
               const startDate = new Date(b.start);
               const endDate = new Date(b.end || b.start);
               const servicesArr = Array.isArray(b.services) ? b.services : [];
+              const paid = isPaid(b);
+              const isOpen = openId === b.id;
 
               const serviceTagStyle = (name) => ({
                 padding: "4px 12px",
@@ -517,331 +520,434 @@ export default function Admin() {
                 border: (serviceStyles[name] || {}).border,
               });
 
-              const paid = isPaid(b);
-
               return (
                 <div
                   key={b.id}
                   style={{
                     borderRadius: 16,
-                    border: "1px solid rgba(168,85,247,0.25)",
-                    background: "rgba(15,10,25,0.85)",
-                    padding: "16px 20px",
-                    boxShadow: "0 0 18px rgba(168,85,247,0.20)",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 10,
+                    border: "1px solid rgba(88,28,135,0.7)",
+                    background: "rgba(10,6,25,0.9)",
+                    padding: 8,
+                    boxShadow: "0 0 16px rgba(88,28,135,0.55)",
                   }}
                 >
-                  {/* ВЕРХНЯЯ СТРОКА */}
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 10,
-                      alignItems: "center",
-                    }}
+                  {/* ОДНА СТРОКА */}
+                  <button
+                    type="button"
+                    onClick={() => setOpenId(isOpen ? null : b.id)}
+                    style={accordionRow}
                   >
-                    <div>{statusDot(b)}</div>
-
-                    {/* Дата */}
-                    <div style={{ minWidth: 140 }}>
-                      <div style={{ fontSize: 12, opacity: 0.8 }}>Дата</div>
-                      <input
-                        type="date"
-                        value={toInputDate(startDate)}
-                        style={{
-                          ...inputGlass,
-                          height: 32,
-                          padding: "6px 10px",
-                        }}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (!val) return;
-                          const [y, m, d] = val.split("-").map(Number);
-                          updateBooking(b.id, (orig) => {
-                            const st = new Date(orig.start);
-                            const en = new Date(orig.end || orig.start);
-                            const duration = en - st;
-                            const ns = new Date(orig.start);
-                            ns.setFullYear(y, m - 1, d);
-                            const ne = new Date(
-                              ns.getTime() + Math.max(duration, 15 * 60000)
-                            );
-                            return { ...orig, start: ns, end: ne };
-                          });
-                        }}
-                      />
-                    </div>
-
-                    {/* Время от */}
-                    <div style={{ minWidth: 110 }}>
-                      <div style={{ fontSize: 12, opacity: 0.8 }}>
-                        Время от
-                      </div>
-                      <input
-                        type="time"
-                        value={toInputTime(startDate)}
-                        style={{
-                          ...inputGlass,
-                          height: 32,
-                          padding: "6px 10px",
-                        }}
-                        onChange={(e) => {
-                          const [hh, mm] = e.target.value.split(":").map(Number);
-                          updateBooking(b.id, (orig) => {
-                            const ns = new Date(orig.start);
-                            ns.setHours(hh, mm);
-                            const ne = new Date(orig.end || orig.start);
-                            if (ne <= ns) {
-                              ne.setTime(ns.getTime() + 15 * 60000);
-                            }
-                            return { ...orig, start: ns, end: ne };
-                          });
-                        }}
-                      />
-                    </div>
-
-                    {/* Время до */}
-                    <div style={{ minWidth: 110 }}>
-                      <div style={{ fontSize: 12, opacity: 0.8 }}>
-                        Время до
-                      </div>
-                      <input
-                        type="time"
-                        value={toInputTime(endDate)}
-                        style={{
-                          ...inputGlass,
-                          height: 32,
-                          padding: "6px 10px",
-                        }}
-                        onChange={(e) => {
-                          const [hh, mm] = e.target.value.split(":").map(Number);
-                          updateBooking(b.id, (orig) => {
-                            const st = new Date(orig.start);
-                            let ne = new Date(st);
-                            ne.setHours(hh, mm);
-                            if (ne <= st)
-                              ne.setTime(st.getTime() + 15 * 60000);
-                            return { ...orig, end: ne };
-                          });
-                        }}
-                      />
-                    </div>
-
-                    {/* Правый блок: время + квитанция */}
                     <div
                       style={{
-                        marginLeft: "auto",
                         display: "flex",
-                        flexDirection: "column",
-                        alignItems: "flex-end",
+                        alignItems: "center",
+                        gap: 8,
+                        flexWrap: "wrap",
+                        width: "100%",
                       }}
                     >
-                      <div style={{ opacity: 0.8, fontSize: 13 }}>
-                        {fmtTime(b.start)} – {fmtTime(b.end)}
-                      </div>
+                      <div>{statusDot(b)}</div>
 
-                      {paid && (
-                        <button
-                          type="button"
-                          style={receiptBtn}
-                          onClick={() => downloadReceipt(b)}
-                        >
-                          📄 Скачать квитанцию
-                        </button>
+                      {/* Дата */}
+                      <span style={pillDate}>{fmtDate(b.start)}</span>
+
+                      {/* Время диапазон */}
+                      <span style={pillTime}>
+                        {fmtTime(b.start)} – {fmtTime(b.end)}
+                      </span>
+
+                      {/* Телефон */}
+                      {b.userPhone && (
+                        <span style={pillPhone}>{b.userPhone}</span>
                       )}
 
-                      {/* Номер квитанции */}
+                      {/* Услуги */}
+                      {servicesArr.length > 0 && (
+                        <span style={pillService}>
+                          {servicesArr.join(", ")}
+                        </span>
+                      )}
+
+                      {/* Цена */}
+                      <span style={pillPrice}>
+                        €{formatPrice(b.price)}
+                      </span>
+
+                      {/* ID */}
+                      <span style={pillId}>#{b.id.slice(0, 6)}</span>
+
+                      {/* Справа: статус оплаты + стрелка */}
+                      <span
+                        style={{
+                          marginLeft: "auto",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 11,
+                            padding: "3px 8px",
+                            borderRadius: 999,
+                            border: paid
+                              ? "1px solid rgba(34,197,94,0.85)"
+                              : "1px solid rgba(248,113,113,0.9)",
+                            background: paid
+                              ? "rgba(22,163,74,0.25)"
+                              : "rgba(127,29,29,0.6)",
+                          }}
+                        >
+                          {paid ? "Оплачено" : "Не оплачено"}
+                        </span>
+
+                        <div
+                          style={{
+                            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                            transition: "transform .25s ease",
+                          }}
+                        >
+                          <Chevron open={isOpen} />
+                        </div>
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* РАСКРЫТАЯ КАРТОЧКА */}
+                  {isOpen && (
+                    <div
+                      style={{
+                        marginTop: 10,
+                        borderRadius: 14,
+                        border: "1px solid rgba(168,85,247,0.35)",
+                        background: "rgba(15,10,25,0.95)",
+                        padding: "14px 16px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
+                      }}
+                    >
+                      {/* ВЕРХНЯЯ СТРОКА */}
                       <div
                         style={{
-                          opacity: 0.7,
-                          fontSize: 11,
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 10,
+                          alignItems: "center",
+                        }}
+                      >
+                        <div>{statusDot(b)}</div>
+
+                        {/* Дата */}
+                        <div style={{ minWidth: 140 }}>
+                          <div style={{ fontSize: 12, opacity: 0.8 }}>Дата</div>
+                          <input
+                            type="date"
+                            value={toInputDate(startDate)}
+                            style={{
+                              ...inputGlass,
+                              height: 32,
+                              padding: "6px 10px",
+                            }}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (!val) return;
+                              const [y, m, d] = val.split("-").map(Number);
+                              updateBooking(b.id, (orig) => {
+                                const st = new Date(orig.start);
+                                const en = new Date(orig.end || orig.start);
+                                const duration = en - st;
+                                const ns = new Date(orig.start);
+                                ns.setFullYear(y, m - 1, d);
+                                const ne = new Date(
+                                  ns.getTime() + Math.max(duration, 15 * 60000)
+                                );
+                                return { ...orig, start: ns, end: ne };
+                              });
+                            }}
+                          />
+                        </div>
+
+                        {/* Время от */}
+                        <div style={{ minWidth: 110 }}>
+                          <div style={{ fontSize: 12, opacity: 0.8 }}>
+                            Время от
+                          </div>
+                          <input
+                            type="time"
+                            value={toInputTime(startDate)}
+                            style={{
+                              ...inputGlass,
+                              height: 32,
+                              padding: "6px 10px",
+                            }}
+                            onChange={(e) => {
+                              const [hh, mm] = e.target.value
+                                .split(":")
+                                .map(Number);
+                              updateBooking(b.id, (orig) => {
+                                const ns = new Date(orig.start);
+                                ns.setHours(hh, mm);
+                                const ne = new Date(orig.end || orig.start);
+                                if (ne <= ns) {
+                                  ne.setTime(ns.getTime() + 15 * 60000);
+                                }
+                                return { ...orig, start: ns, end: ne };
+                              });
+                            }}
+                          />
+                        </div>
+
+                        {/* Время до */}
+                        <div style={{ minWidth: 110 }}>
+                          <div style={{ fontSize: 12, opacity: 0.8 }}>
+                            Время до
+                          </div>
+                          <input
+                            type="time"
+                            value={toInputTime(endDate)}
+                            style={{
+                              ...inputGlass,
+                              height: 32,
+                              padding: "6px 10px",
+                            }}
+                            onChange={(e) => {
+                              const [hh, mm] = e.target.value
+                                .split(":")
+                                .map(Number);
+                              updateBooking(b.id, (orig) => {
+                                const st = new Date(orig.start);
+                                let ne = new Date(st);
+                                ne.setHours(hh, mm);
+                                if (ne <= st)
+                                  ne.setTime(st.getTime() + 15 * 60000);
+                                return { ...orig, end: ne };
+                              });
+                            }}
+                          />
+                        </div>
+
+                        {/* Правый блок: время + квитанция */}
+                        <div
+                          style={{
+                            marginLeft: "auto",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "flex-end",
+                          }}
+                        >
+                          <div style={{ opacity: 0.8, fontSize: 13 }}>
+                            {fmtTime(b.start)} – {fmtTime(b.end)}
+                          </div>
+
+                          {paid && (
+                            <button
+                              type="button"
+                              style={receiptBtn}
+                              onClick={() => downloadReceipt(b)}
+                            >
+                              📄 Скачать квитанцию
+                            </button>
+                          )}
+
+                          {/* Номер квитанции */}
+                          <div
+                            style={{
+                              opacity: 0.7,
+                              fontSize: 11,
+                              marginTop: 4,
+                            }}
+                          >
+                            Nr. kvitancii: <b>#{b.id.slice(0, 6)}</b>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Бейджи услуг */}
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 8,
                           marginTop: 4,
                         }}
                       >
-                        Nr. kvitancii: <b>#{b.id.slice(0, 6)}</b>
+                        {servicesArr.map((s, i) => (
+                          <span key={i} style={serviceTagStyle(s)}>
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* Клиент */}
+                      <div style={{ marginTop: 6 }}>
+                        <b>{b.userName}</b>
+                        <div style={{ opacity: 0.8 }}>{b.userPhone}</div>
+                        {b.userInstagram && (
+                          <div style={{ opacity: 0.8 }}>
+                            @{b.userInstagram}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Блок оплаты */}
+                      <div
+                        style={{
+                          marginTop: 6,
+                          padding: "10px 12px",
+                          borderRadius: 10,
+                          border: "1px solid rgba(148,163,184,0.25)",
+                          background: "rgba(30,20,40,0.55)",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 6,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            alignItems: "center",
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: 10,
+                              height: 10,
+                              borderRadius: "50%",
+                              background: b.paid ? "#22c55e" : "#ef4444",
+                              boxShadow: b.paid
+                                ? "0 0 8px rgba(34,197,94,0.9)"
+                                : "0 0 8px rgba(248,113,113,0.9)",
+                            }}
+                          />
+                          <span
+                            style={{
+                              color: b.paid ? "#bbf7d0" : "#fecaca",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {b.paid ? "Apmokėta" : "Neapmokėta"}
+                          </span>
+                        </div>
+
+                        {/* Цена / аванс */}
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            alignItems: "center",
+                          }}
+                        >
+                          <span style={{ minWidth: 90 }}>Avansas (€):</span>
+                          <input
+                            type="number"
+                            value={b.price ?? ""}
+                            style={{
+                              ...inputGlass,
+                              maxWidth: 120,
+                              height: 32,
+                            }}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              updateBooking(b.id, (orig) => ({
+                                ...orig,
+                                price: v === "" ? null : Number(v),
+                              }));
+                            }}
+                          />
+                        </div>
+
+                        <button
+                          onClick={() => togglePaid(b.id)}
+                          style={{
+                            marginTop: 6,
+                            width: "100%",
+                            padding: 8,
+                            borderRadius: 8,
+                            border: "1px solid rgba(148,163,184,0.5)",
+                            background: "rgba(0,0,0,0.25)",
+                            color: "#fff",
+                          }}
+                        >
+                          {b.paid ? "Снять оплату" : "Пометить оплаченной"}
+                        </button>
+                      </div>
+
+                      {/* Статусы */}
+                      <div style={{ marginTop: 6 }}>
+                        <span
+                          style={{
+                            padding: "4px 10px",
+                            borderRadius: 999,
+                            fontSize: 12,
+                            marginRight: 6,
+                            background:
+                              b.status === "pending"
+                                ? "rgba(250,204,21,0.14)"
+                                : b.status.includes("canceled")
+                                ? "rgba(248,113,113,0.12)"
+                                : "rgba(22,163,74,0.18)",
+                            border:
+                              b.status === "pending"
+                                ? "1px solid rgba(234,179,8,0.9)"
+                                : b.status.includes("canceled")
+                                ? "1px solid rgba(248,113,113,0.9)"
+                                : "1px solid rgba(34,197,94,0.9)",
+                          }}
+                        >
+                          {b.status === "pending"
+                            ? "Ожидает подтверждения"
+                            : b.status.includes("canceled")
+                            ? "Отменено"
+                            : "Подтверждено"}
+                        </span>
+
+                        <span
+                          style={{
+                            padding: "4px 10px",
+                            borderRadius: 999,
+                            fontSize: 12,
+                            background: b.paid
+                              ? "rgba(22,163,74,0.18)"
+                              : "rgba(127,29,29,0.45)",
+                            border: b.paid
+                              ? "1px solid rgba(34,197,94,0.9)"
+                              : "1px solid rgba(248,113,113,0.9)",
+                            marginLeft: 6,
+                          }}
+                        >
+                          {b.paid ? "Оплачено" : "Не оплачено"}
+                        </span>
+                      </div>
+
+                      {/* Кнопки действий */}
+                      <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                        {b.status === "pending" && (
+                          <button
+                            onClick={() => approveByAdmin(b.id)}
+                            style={btnPrimary}
+                          >
+                            {t("approve")}
+                          </button>
+                        )}
+
+                        {!b.status.includes("canceled") && inFuture && (
+                          <button
+                            onClick={() => cancelByAdmin(b.id)}
+                            style={{
+                              ...btnBase,
+                              background: "rgba(110,20,30,.35)",
+                              border: "1px solid rgba(239,68,68,.6)",
+                              color: "#fff",
+                            }}
+                          >
+                            {t("rejected")}
+                          </button>
+                        )}
                       </div>
                     </div>
-                  </div>
-
-                  {/* Услуги */}
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 8,
-                      marginTop: 4,
-                    }}
-                  >
-                    {servicesArr.map((s, i) => (
-                      <span key={i} style={serviceTagStyle(s)}>
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Клиент */}
-                  <div style={{ marginTop: 6 }}>
-                    <b>{b.userName}</b>
-                    <div style={{ opacity: 0.8 }}>{b.userPhone}</div>
-                    {b.userInstagram && (
-                      <div style={{ opacity: 0.8 }}>@{b.userInstagram}</div>
-                    )}
-                  </div>
-
-                  {/* Блок оплаты */}
-                  <div
-                    style={{
-                      marginTop: 6,
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: "1px solid rgba(148,163,184,0.25)",
-                      background: "rgba(30,20,40,0.55)",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 6,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 8,
-                        alignItems: "center",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: "50%",
-                          background: b.paid ? "#22c55e" : "#ef4444",
-                          boxShadow: b.paid
-                            ? "0 0 8px rgba(34,197,94,0.9)"
-                            : "0 0 8px rgba(248,113,113,0.9)",
-                        }}
-                      />
-                      <span
-                        style={{
-                          color: b.paid ? "#bbf7d0" : "#fecaca",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {b.paid ? "Apmokėta" : "Neapmokėta"}
-                      </span>
-                    </div>
-
-                    {/* Цена / аванс */}
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 8,
-                        alignItems: "center",
-                      }}
-                    >
-                      <span style={{ minWidth: 90 }}>Avansas (€):</span>
-                      <input
-                        type="number"
-                        value={b.price ?? ""}
-                        style={{ ...inputGlass, maxWidth: 120, height: 32 }}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          updateBooking(b.id, (orig) => ({
-                            ...orig,
-                            price: v === "" ? null : Number(v),
-                          }));
-                        }}
-                      />
-                    </div>
-
-                    <button
-                      onClick={() => togglePaid(b.id)}
-                      style={{
-                        marginTop: 6,
-                        width: "100%",
-                        padding: 8,
-                        borderRadius: 8,
-                        border: "1px solid rgba(148,163,184,0.5)",
-                        background: "rgba(0,0,0,0.25)",
-                        color: "#fff",
-                      }}
-                    >
-                      {b.paid ? "Снять оплату" : "Пометить оплаченной"}
-                    </button>
-                  </div>
-
-                  {/* Статусы */}
-                  <div style={{ marginTop: 6 }}>
-                    <span
-                      style={{
-                        padding: "4px 10px",
-                        borderRadius: 999,
-                        fontSize: 12,
-                        marginRight: 6,
-                        background:
-                          b.status === "pending"
-                            ? "rgba(250,204,21,0.14)"
-                            : b.status.includes("canceled")
-                            ? "rgba(248,113,113,0.12)"
-                            : "rgba(22,163,74,0.18)",
-                        border:
-                          b.status === "pending"
-                            ? "1px solid rgba(234,179,8,0.9)"
-                            : b.status.includes("canceled")
-                            ? "1px solid rgba(248,113,113,0.9)"
-                            : "1px solid rgba(34,197,94,0.9)",
-                      }}
-                    >
-                      {b.status === "pending"
-                        ? "Ожидает подтверждения"
-                        : b.status.includes("canceled")
-                        ? "Отменено"
-                        : "Подтверждено"}
-                    </span>
-
-                    <span
-                      style={{
-                        padding: "4px 10px",
-                        borderRadius: 999,
-                        fontSize: 12,
-                        background: b.paid
-                          ? "rgba(22,163,74,0.18)"
-                          : "rgba(127,29,29,0.45)",
-                        border: b.paid
-                          ? "1px solid rgba(34,197,94,0.9)"
-                          : "1px solid rgba(248,113,113,0.9)",
-                        marginLeft: 6,
-                      }}
-                    >
-                      {b.paid ? "Оплачено" : "Не оплачено"}
-                    </span>
-                  </div>
-
-                  {/* Кнопки действий */}
-                  <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                    {b.status === "pending" && (
-                      <button
-                        onClick={() => approveByAdmin(b.id)}
-                        style={btnPrimary}
-                      >
-                        {t("approve")}
-                      </button>
-                    )}
-
-                    {!b.status.includes("canceled") && inFuture && (
-                      <button
-                        onClick={() => cancelByAdmin(b.id)}
-                        style={{
-                          ...btnBase,
-                          background: "rgba(110,20,30,.35)",
-                          border: "1px solid rgba(239,68,68,.6)",
-                          color: "#fff",
-                        }}
-                      >
-                        {t("rejected")}
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
               );
             })}
@@ -856,6 +962,155 @@ export default function Admin() {
           {toast && (
             <div className="toast" style={{ marginTop: 10 }}>
               {toast}
+            </div>
+          )}
+        </div>
+
+        {/* ПРАВАЯ ЧАСТЬ — НАСТРОЙКИ */}
+        <div style={cardAurora}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <h3 style={{ margin: 0 }}>Настройки</h3>
+            <div
+              style={{
+                padding: "3px 10px",
+                borderRadius: 999,
+                border: "1px solid rgba(148,163,184,0.5)",
+                fontSize: 11,
+                background: "rgba(15,23,42,0.9)",
+              }}
+            >
+              Admin
+            </div>
+          </div>
+
+          {!showSettings && (
+            <div style={{ marginTop: 12 }} className="muted">
+              Разверните верхний переключатель, чтобы изменить список услуг,
+              время до автоматической отмены и другие настройки.
+            </div>
+          )}
+
+          {showSettings && (
+            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Список услуг */}
+              <div>
+                <div style={labelStyle}>Paslaugos</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {settings.serviceList.map((s, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <input
+                        type="text"
+                        value={s.name}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          updateSettings({
+                            serviceList: settings.serviceList.map((item, i) =>
+                              i === idx ? { ...item, name: val } : item
+                            ),
+                          });
+                        }}
+                        style={{ ...inputGlass, flex: 2, minWidth: 120 }}
+                      />
+                      <input
+                        type="number"
+                        value={s.duration}
+                        onChange={(e) => {
+                          const val = Number(e.target.value) || 0;
+                          updateSettings({
+                            serviceList: settings.serviceList.map((item, i) =>
+                              i === idx ? { ...item, duration: val } : item
+                            ),
+                          });
+                        }}
+                        style={{ ...inputGlass, width: 80 }}
+                        placeholder="Min"
+                      />
+                      <input
+                        type="number"
+                        value={s.deposit}
+                        onChange={(e) => {
+                          const val = Number(e.target.value) || 0;
+                          updateSettings({
+                            serviceList: settings.serviceList.map((item, i) =>
+                              i === idx ? { ...item, deposit: val } : item
+                            ),
+                          });
+                        }}
+                        style={{ ...inputGlass, width: 80 }}
+                        placeholder="€"
+                      />
+                      <button
+                        style={{
+                          ...btnBase,
+                          padding: "6px 10px",
+                          borderColor: "rgba(239,68,68,0.7)",
+                          background: "rgba(127,29,29,0.6)",
+                        }}
+                        onClick={() =>
+                          updateSettings({
+                            serviceList: settings.serviceList.filter(
+                              (_, i) => i !== idx
+                            ),
+                          })
+                        }
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+
+                  <button
+                    style={{
+                      ...btnBase,
+                      padding: "6px 10px",
+                      alignSelf: "flex-start",
+                    }}
+                    onClick={() =>
+                      updateSettings({
+                        serviceList: [
+                          ...settings.serviceList,
+                          { name: "", duration: 60, deposit: 0 },
+                        ],
+                      })
+                    }
+                  >
+                    + Pridėti paslaugą
+                  </button>
+                </div>
+              </div>
+
+              {/* Время до автотмены */}
+              <div>
+                <div style={labelStyle}>Auto-cancel laikas (valandomis)</div>
+                <input
+                  type="number"
+                  value={settings.autoCancelHours ?? ""}
+                  onChange={(e) =>
+                    updateSettings({
+                      autoCancelHours:
+                        e.target.value === ""
+                          ? null
+                          : Math.max(1, Number(e.target.value) || 1),
+                    })
+                  }
+                  style={{ ...inputGlass, width: 120 }}
+                  placeholder="24"
+                />
+                <div className="muted" style={{ marginTop: 4, fontSize: 12 }}>
+                  Po šio laiko nepatvirtintos rezervacijos gali būti
+                  automatiškai atšauktos.
+                </div>
+              </div>
+
+              {/* Дополнительные настройки позже */}
             </div>
           )}
         </div>
@@ -880,18 +1135,6 @@ function Chevron({ open }) {
   );
 }
 
-/* === TIME OPTIONS === */
-function generateTimes(start, end) {
-  const res = [];
-  for (let h = start; h < end; h++) {
-    for (let m = 0; m < 60; m += 30) {
-      res.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-    }
-  }
-  return res;
-}
-
-/* === СТИЛИ === */
 const cardAurora = {
   background:
     "linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))",
@@ -908,30 +1151,45 @@ const headerToggle = {
   alignItems: "center",
   gap: 10,
   borderRadius: 12,
-  padding: "14px 18px",
-  border: "1px solid rgba(168,85,247,0.25)",
-  background: "rgba(25,10,45,0.55)",
-  color: "#fff",
+  padding: "10px 14px",
+  border: "1px solid rgba(168,85,247,0.4)",
+  background:
+    "radial-gradient(circle at top left, rgba(168,85,247,0.35), transparent 55%), rgba(15,23,42,0.96)",
   cursor: "pointer",
+  color: "#fff",
+};
+
+const headerToggleSmall = {
+  ...headerToggle,
+  maxWidth: 180,
+  padding: "8px 12px",
+};
+
+const inputGlass = {
+  background: "rgba(15,23,42,0.96)",
+  borderRadius: 10,
+  border: "1px solid rgba(148,163,184,0.6)",
+  padding: "7px 10px",
+  color: "#fff",
+  fontSize: 13,
+};
+
+const exportLabel = {
+  ...inputGlass,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  cursor: "pointer",
+  fontSize: 11.5,
+};
+
+const exportBtn = {
+  ...inputGlass,
+  cursor: "pointer",
+  fontSize: 11.5,
 };
 
 const labelStyle = { fontSize: 12, opacity: 0.8, marginBottom: 6 };
-
-const inputGlass = {
-  width: "100%",
-  padding: "10px 12px",
-  borderRadius: 10,
-  color: "#fff",
-  border: "1px solid rgba(168,85,247,0.35)",
-  background: "rgba(17,0,40,0.45)",
-};
-
-const topBar = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  padding: "4px 2px 10px 2px",
-};
 
 const btnBase = {
   borderRadius: 10,
@@ -941,6 +1199,56 @@ const btnBase = {
   border: "1px solid rgba(168,85,247,0.45)",
   background: "rgba(25,10,45,0.35)",
   color: "#fff",
+};
+
+const accordionRow = {
+  width: "100%",
+  borderRadius: 999,
+  padding: "6px 10px",
+  border: "1px solid rgba(129,140,248,0.55)",
+  background:
+    "radial-gradient(circle at top left, rgba(79,70,229,0.35), transparent 55%), rgba(15,23,42,0.96)",
+  color: "#fff",
+  cursor: "pointer",
+};
+
+const pillBase = {
+  padding: "3px 10px",
+  borderRadius: 999,
+  border: "1px solid rgba(148,163,184,0.6)",
+  background: "rgba(15,23,42,0.95)",
+  fontSize: 12,
+  whiteSpace: "nowrap",
+};
+
+const pillDate = {
+  ...pillBase,
+  border: "1px solid rgba(129,140,248,0.85)",
+};
+
+const pillTime = {
+  ...pillBase,
+  border: "1px solid rgba(94,234,212,0.8)",
+};
+
+const pillPhone = {
+  ...pillBase,
+  border: "1px solid rgba(96,165,250,0.85)",
+};
+
+const pillService = {
+  ...pillBase,
+  border: "1px solid rgba(244,114,182,0.85)",
+};
+
+const pillPrice = {
+  ...pillBase,
+  border: "1px solid rgba(34,197,94,0.9)",
+};
+
+const pillId = {
+  ...pillBase,
+  border: "1px solid rgba(251,146,60,0.9)",
 };
 
 const btnPrimary = {
@@ -967,9 +1275,14 @@ const segBtn = {
 
 const segActive = {
   background:
-    "linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))",
-  border: "1px solid rgba(180,95,255,0.7)",
-  boxShadow: "0 0 12px rgba(150,90,255,0.30)",
+    "linear-gradient(135deg, rgba(129,140,248,0.95), rgba(236,72,153,0.95))",
+  boxShadow: "0 0 14px rgba(168,85,247,0.6)",
+};
+
+const segInactive = {
+  background: "rgba(15,23,42,0.9)",
+  border: "1px solid rgba(148,163,184,0.45)",
+  opacity: 0.85,
 };
 
 const receiptBtn = {
@@ -1003,146 +1316,210 @@ const downloadReceipt = (b) => {
     const win = window.open("", "_blank", "width=700,height=900");
     if (!win) return;
 
-    const dateStr = fmtDate(b.start);
-    const timeStr = `${fmtTime(b.start)} – ${fmtTime(b.end)}`;
-    const createdStr = b.createdAt
-      ? new Date(b.createdAt).toLocaleString("lt-LT")
-      : new Date(b.start).toLocaleString("lt-LT");
-    const servicesStr = (b.services || []).join(", ") || "—";
-    const paidLabel = isPaid(b) ? "Оплачено" : "Не оплачено";
+    const date = new Date(b.start);
+    const dateStr = `${pad2(date.getDate())}.${pad2(
+      date.getMonth() + 1
+    )}.${date.getFullYear()}`;
+    const timeStr = `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
 
-    const vcard = [
-      "BEGIN:VCARD",
-      "VERSION:3.0",
-      "N:Žilina;Irina;;;",
-      "FN:Irina Žilina",
-      "ORG:IZ HAIR TREND",
-      "TEL;TYPE=CELL,VOICE:+37060128458",
-      "EMAIL;TYPE=WORK:info@izhairtrend.lt",
-      "URL:https://izhairtrend.lt",
-      "ADR;TYPE=WORK:;;Sodo g. 2a;Klaipeda;;;LT",
-      "NOTE:Šukuosenų meistrė",
-      "END:VCARD",
-    ].join("\n");
-
-    const qrUrl =
-      "https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=" +
-      encodeURIComponent(vcard);
-
-    const html = `<!doctype html>
-<html>
+    const html = `<!DOCTYPE html>
+<html lang="lt">
 <head>
-  <meta charSet="utf-8" />
-  <title>Квитанция #${b.id.slice(0, 6)}</title>
+  <meta charset="UTF-8" />
+  <title>Kvitancija</title>
   <style>
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0b0217;
-      color: #f9fafb;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        sans-serif;
       margin: 0;
-      padding: 24px;
+      padding: 0;
+      background: #0b1020;
+      color: #e5e7eb;
     }
-    .wrap {
-      max-width: 640px;
+
+    .page {
+      width: 100%;
+      max-width: 720px;
       margin: 0 auto;
-      border-radius: 16px;
-      border: 1px solid rgba(168,85,247,0.5);
-      background: radial-gradient(circle at top left, rgba(168,85,247,0.2), transparent 55%),
-                  radial-gradient(circle at bottom right, rgba(56,189,248,0.15), transparent 60%),
-                  rgba(15,23,42,0.95);
-      padding: 24px 28px 28px;
+      padding: 24px 24px 40px;
+      box-sizing: border-box;
     }
-    .sub {
-      font-size: 13px;
-      opacity: 0.75;
-    }
-    .title {
-      margin-top: 16px;
-      font-size: 20px;
-      font-weight: 700;
-    }
-    .top-row {
+
+    .header {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      gap: 16px;
+      align-items: center;
+      margin-bottom: 24px;
     }
-    .top-left {
-      text-align: left;
+
+    .logo {
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
-    .top-right {
+
+    .logo span {
+      background: linear-gradient(135deg, #c4b5fd, #f9a8d4);
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .meta {
       text-align: right;
-      font-size: 12px;
+      font-size: 13px;
       opacity: 0.9;
     }
-    .section {
-      margin-top: 16px;
-      padding-top: 10px;
-      border-top: 1px dashed rgba(148,163,184,0.5);
-      font-size: 14px;
+
+    .card {
+      border-radius: 18px;
+      border: 1px solid rgba(129, 140, 248, 0.45);
+      background: radial-gradient(
+          circle at top left,
+          rgba(129, 140, 248, 0.24),
+          transparent 55%
+        ),
+        #020617;
+      padding: 18px 18px 20px;
+      margin-bottom: 16px;
     }
+
     .row {
       display: flex;
       justify-content: space-between;
-      gap: 12px;
-      margin: 4px 0;
+      margin-bottom: 6px;
+      font-size: 14px;
     }
+
     .label {
-      opacity: 0.8;
+      opacity: 0.75;
     }
+
     .value {
       font-weight: 500;
-      text-align: right;
     }
-    .services {
-      margin-top: 8px;
+
+    .title {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 22px 0 12px;
+    }
+
+    .chips {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
+      margin-top: 4px;
     }
-    .tag {
-      padding: 4px 10px;
+
+    .chip {
       border-radius: 999px;
-      border: 1px solid rgba(168,85,247,0.7);
-      background: rgba(30,64,175,0.35);
+      padding: 4px 10px;
       font-size: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.9);
     }
+
     .footer {
+      margin-top: 24px;
+      font-size: 12px;
+      opacity: 0.8;
+      text-align: center;
+    }
+
+    .qr {
       margin-top: 18px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .qr-placeholder {
+      width: 84px;
+      height: 84px;
+      border-radius: 16px;
+      border: 1px dashed rgba(148, 163, 184, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-size: 11px;
       opacity: 0.75;
-      line-height: 1.5;
     }
+
     .qr-label {
+      margin-top: 6px;
       font-size: 11px;
-      margin-top: 4px;
-      opacity: 0.8;
+      opacity: 0.7;
+      text-align: right;
+    }
+
+    .strong {
+      font-weight: 600;
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-
-    <div class="top-row">
-      <div class="top-left">
-        <img src="/logo2.svg" style="height:100px; margin-bottom:6px;" />
-        <div class="sub">Kvitancija už rezervaciją</div>
+  <div class="page">
+    <div class="header">
+      <div class="logo"><span>IZ HAIR TREND</span></div>
+      <div class="meta">
+        <div>Kvitancijos Nr.: <span class="strong">#${String(
+          b.id
+        ).slice(0, 6)}</span></div>
+        <div>Data: ${dateStr}</div>
+        <div>Laikas: ${timeStr}</div>
       </div>
+    </div>
 
-      <div class="top-right">
-        Nr.: <b>#${b.id.slice(0, 6)}</b><br/>
-        Sukurta: ${createdStr}<br/>
+    <div class="card">
+      <div class="row">
+        <div class="label">Klientas:</div>
+        <div class="value">${b.userName || "-"}</div>
+      </div>
+      <div class="row">
+        <div class="label">Telefonas:</div>
+        <div class="value">${b.userPhone || "-"}</div>
+      </div>
+      <div class="row">
+        <div class="label">Instagram:</div>
+        <div class="value">${b.userInstagram || "-"}</div>
+      </div>
+      <div class="row">
+        <div class="label">Rezervacijos data:</div>
+        <div class="value">${fmtDate(b.start)}</div>
+      </div>
+      <div class="row">
+        <div class="label">Laikas:</div>
+        <div class="value">${fmtTime(b.start)} – ${fmtTime(b.end)}</div>
+      </div>
+    </div>
 
-        <img src="${qrUrl}" alt="IZ HAIR TREND vCard"
-             style="
-               margin-top:10px;
-               border-radius:10px;
-               border:1px solid rgba(148,163,184,0.6);
-               padding:6px;
-               background:rgba(15,23,42,0.9);
-               width:90px;
-               height:90px;
-             "/>
+    <div class="title">Paslaugos</div>
+    <div class="card">
+      <div class="row">
+        <div class="label">Paslaugos tipas:</div>
+        <div class="value">${
+          Array.isArray(b.services) && b.services.length
+            ? b.services.join(", ")
+            : "Šukuosena"
+        }</div>
+      </div>
+      <div class="row">
+        <div class="label">Apmokėjimo statusas:</div>
+        <div class="value">${
+          b.paid || b.status === "approved_paid" ? "Apmokėta" : "Neapmokėta"
+        }</div>
+      </div>
+      <div class="row">
+        <div class="label">Avansas:</div>
+        <div class="value">${b.price ? b.price.toFixed(2) : "0.00"} €</div>
+      </div>
+    </div>
+
+    <div class="qr">
+      <div>
+        <div class="qr-placeholder">
+          QR
+        </div>
 
         <div class="qr-label">
           Skenuokite ir išsaugokite kontaktą
@@ -1158,59 +1535,30 @@ const downloadReceipt = (b) => {
         <div class="value">${b.userName || "-"}</div>
       </div>
       <div class="row">
-        <div class="label">Telefonas:</div>
-        <div class="value">${b.userPhone || "-"}</div>
-      </div>
-      <div class="row">
-        <div class="label">El. paštas:</div>
-        <div class="value">${b.userEmail || "-"}</div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="row">
-        <div class="label">Data:</div>
-        <div class="value">${dateStr}</div>
-      </div>
-      <div class="row">
-        <div class="label">Laikas:</div>
-        <div class="value">${timeStr}</div>
-      </div>
-      <div class="row">
         <div class="label">Paslaugos:</div>
-        <div class="value">${servicesStr}</div>
-      </div>
-      <div class="services">
-        ${(b.services || [])
-          .map((s) => `<span class="tag">${s}</span>`)
-          .join("")}
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="row">
-        <div class="label">Avansas:</div>
         <div class="value">${
-          b.price ? `${b.price} €` : "—"
+          Array.isArray(b.services) && b.services.length
+            ? b.services.join(", ")
+            : "Šukuosena"
         }</div>
       </div>
       <div class="row">
-        <div class="label">Mokėjimo būsena:</div>
-        <div class="value">${paidLabel}</div>
+        <div class="label">Bendra suma:</div>
+        <div class="value">${b.price ? b.price.toFixed(2) : "0.00"} €</div>
       </div>
     </div>
 
     <div class="footer">
-      Ši kvitancija sugeneruota internetu ir galioja be parašo.<br/>
-      Jei reikia, galite ją išsisaugoti kaip PDF: naršyklėje pasirinkite \"Spausdinti\" → \"Save as PDF\".
+      Ši kvitancija sugeneruota elektroniniu būdu ir galioja be parašo.
     </div>
   </div>
 
   <script>
-    window.focus();
-    setTimeout(function(){
-      window.print();
-    }, 400);
+    window.addEventListener("load", function(){
+      setTimeout(function(){
+        window.print();
+      }, 400);
+    });
   </script>
 </body>
 </html>`;
@@ -1222,3 +1570,5 @@ const downloadReceipt = (b) => {
     console.error("Receipt error", e);
   }
 };
+
+export default Admin;
