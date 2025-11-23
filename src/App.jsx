@@ -1,4 +1,3 @@
-// FULL UPDATED App.jsx
 import Auth from './components/Auth.jsx'
 import Calendar from './components/Calendar.jsx'
 import Admin from './components/Admin.jsx'
@@ -51,45 +50,69 @@ export default function App() {
 
   return (
     <div className="container" style={containerStyle}>
-
+      
       {/* === Верхняя панель === */}
       <div style={navBar}>
         <div style={leftSide}>
-          <button onClick={() => setTab('calendar')} style={navButton(tab === 'calendar')}>
+          <button
+            onClick={() => setTab('calendar')}
+            style={navButton(tab === 'calendar')}
+          >
             {t('nav_calendar')}
           </button>
 
-          <button onClick={() => setTab('my')} style={navButton(tab === 'my')}>
+          <button
+            onClick={() => setTab('my')}
+            style={navButton(tab === 'my')}
+          >
             {t('nav_my')}
           </button>
 
+          {/* KAINAS */}
           <button
-            style={{ ...navButton(false), transform: kPress ? 'translateY(6px)' : 'translateY(0)', transition: 'transform .25s ease' }}
+            style={{
+              ...navButton(false),
+              transform: kPress ? 'translateY(6px)' : 'translateY(0)',
+              transition: 'transform .25s ease',
+            }}
             onClick={() => {
               setKPress(true)
               setTimeout(() => setKPress(false), 260)
 
               setTab('calendar')
+
               setTimeout(() => {
                 const section = document.getElementById('kainas-section')
                 section?.scrollIntoView({ behavior: 'smooth', block: 'start' })
               }, 150)
 
-              window.dispatchEvent(new CustomEvent('togglePrices'))
+              window.dispatchEvent(new CustomEvent("togglePrices"))
             }}
           >
             Kainas
           </button>
 
           {isAdmin && (
-            <button onClick={() => setTab('admin')} style={{ ...navButton(tab === 'admin'), animation: 'fadeInUp 0.4s ease-out' }}>
+            <button
+              onClick={() => setTab('admin')}
+              style={{
+                ...navButton(tab === 'admin'),
+                animation: 'fadeInUp 0.4s ease-out',
+              }}
+            >
               {t('nav_admin')}
             </button>
           )}
         </div>
 
         {/* === ЯЗЫКИ ТОЛЬКО ДЛЯ ПК === */}
-        <div className={`lang-switcher-top ${hiddenLang ? 'hidden-mobile' : ''}`} style={{ display: 'flex', gap: '8px' }}>
+        <div
+          className={`lang-switcher-top ${hiddenLang ? 'hidden-mobile' : ''}`}
+          style={{
+            display: 'flex',
+            gap: '8px',
+          }}
+        >
           <button onClick={() => setLang('lt')} className={`lang-btn ${lang === 'lt' ? 'active' : ''}`}>LT</button>
           <button onClick={() => setLang('ru')} className={`lang-btn ${lang === 'ru' ? 'active' : ''}`}>RU</button>
           <button onClick={() => setLang('en')} className={`lang-btn ${lang === 'en' ? 'active' : ''}`}>GB</button>
@@ -110,6 +133,7 @@ export default function App() {
 /* ============================================================
    СТИЛИ
    ============================================================ */
+
 const containerStyle = {
   minHeight: '100vh',
   background:
@@ -118,7 +142,7 @@ const containerStyle = {
     '#0b0a0f',
   color: '#fff',
   fontFamily: 'Inter, sans-serif',
-  animation: 'fadeIn 0.8s ease-in-out'
+  animation: 'fadeIn 0.8s ease-in-out',
 }
 
 const navBar = {
@@ -133,7 +157,7 @@ const navBar = {
   borderRadius: '0 0 16px 16px',
   position: 'sticky',
   top: 0,
-  zIndex: 1000
+  zIndex: 1000,
 }
 
 const leftSide = { display: 'flex', gap: '12px' }
@@ -156,62 +180,72 @@ const navButton = (active) => ({
     : '0 0 6px rgba(0,0,0,0.2)',
   textShadow: active ? '0 0 6px rgba(168,85,247,0.6)' : 'none',
   backdropFilter: 'blur(8px)',
-  transform: active ? 'translateY(-1px)' : 'translateY(0)'
+  transform: active ? 'translateY(-1px)' : 'translateY(0)',
 })
 
 const footerStyle = {
   marginTop: 40,
   textAlign: 'center',
   opacity: 0.4,
-  fontSize: '0.9rem'
+  fontSize: '0.9rem',
 }
 
 /* ============================================================
-   ДОБАВЛЯЕМ CSS ДЛЯ ЯЗЫКОВОГО МЕНЮ
+   ДОБАВЛЯЕМ CSS ДЛЯ ЯЗЫКОВОГО МЕНЮ (ПК + МОБИЛЬНЫЙ НИЗ)
    ============================================================ */
-const css = document.createElement('style')
+const css = document.createElement("style");
 css.innerHTML = `
 
-/* === ОБЪЕДИНЁННАЯ РАМКА === */
+/* === ОБЪЕДИНЁННАЯ РАМКА ДЛЯ ЯЗЫКОВ === */
 .lang-group {
   display: flex;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 16px;
-  background: rgba(20, 10, 45, 0.7);
-  border: 1.5px solid rgba(180, 120, 255, 0.55);
-  box-shadow: 0 0 18px rgba(160, 80, 240, 0.35);
-  backdrop-filter: blur(10px);
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: rgba(20, 10, 40, 0.65);
+  border: 1.5px solid rgba(150, 80, 255, 0.5);
+  box-shadow: 0 0 15px rgba(160, 80, 255, 0.3);
+  backdrop-filter: blur(8px);
 }
 
-/* === КОМПАКТНЫЕ КНОПКИ === */
+/* === УЗКИЕ КНОПКИ ЯЗЫКОВ === */
 .lang-btn {
-  border-radius: 10px;
-  padding: 4px 8px;
-  min-width: 42px;
+  border-radius: 8px;
+  padding: 4px 8px;       /* <- В ДВА РАЗА УЖЕ */
   font-size: 12px;
-  font-weight: 600;
-  background: linear-gradient(180deg, rgba(160,70,255,0.9), rgba(80,0,160,0.9));
-  border: 1.5px solid rgba(210,160,255,0.7);
+  min-width: 45px;        /* <- чтобы пальцем удобно нажимать */
+  text-align: center;
+
+  background: rgba(60, 20, 120, 0.65);
+  border: 1px solid rgba(180, 120, 255, 0.45);
   color: #fff;
+
   cursor: pointer;
+  transition: 0.25s;
+  backdrop-filter: blur(6px);
 }
 
 .lang-btn.active {
-  background: linear-gradient(180deg, rgba(200,120,255,1), rgba(120,20,220,1));
-  border: 2px solid rgba(255,230,255,0.9);
-  box-shadow: 0 0 16px rgba(200,120,255,0.9);
+  background: linear-gradient(180deg, rgba(190,90,255,1), rgba(120,20,220,1));
+  border: 2px solid rgba(255,240,255,0.9);
+  box-shadow: 0 0 14px rgba(200,120,255,0.85);
 }
 
+/* --- ПК: верхнее меню видно --- */
 @media (min-width: 768px) {
-  .lang-switcher-top { display:flex !important; }
-  .lang-switcher-bottom { display:none !important; }
+  .lang-switcher-top {
+    display: flex !important;
+  }
 }
 
+/* --- МОБИЛКА: верхнее меню скрыть --- */
 @media (max-width: 768px) {
-  .lang-switcher-top { display:none !important; }
+  .lang-switcher-top {
+    display: none !important;
+  }
 }
 
+/* --- МОБИЛКА: нижнее меню языков --- */
 .lang-switcher-bottom {
   position: fixed;
   bottom: 12px;
@@ -219,38 +253,50 @@ css.innerHTML = `
   right: 0;
   display: flex;
   justify-content: center;
+  gap: 8px;
   z-index: 9999;
   transition: 0.35s ease;
 }
-
 .lang-switcher-bottom.hidden-mobile {
   transform: translateY(150%);
   opacity: 0;
 }
-`;
+@media (min-width: 769px) {
+  .lang-switcher-bottom {
+    display: none !important;
+  }
+}
 
+`;
 document.head.appendChild(css);
 
-/* ===== СОЗДАЁМ МОБИЛЬНОЕ МЕНЮ ===== */
+/* ============================================================
+   СОЗДАЁМ МОБИЛЬНОЕ МЕНЮ ЯЗЫКОВ
+   ============================================================ */
 const bottomLang = document.createElement("div");
 bottomLang.className = "lang-switcher-bottom";
 bottomLang.innerHTML = `
-  <div class="lang-group">
-    <button class="lang-btn lang-bottom-lt">LT</button>
-    <button class="lang-btn lang-bottom-ru">RU</button>
-    <button class="lang-btn lang-bottom-en">GB</button>
-  </div>
+  <button class="lang-btn lang-bottom-lt">LT</button>
+  <button class="lang-btn lang-bottom-ru">RU</button>
+  <button class="lang-btn lang-bottom-en">GB</button>
 `;
 document.body.appendChild(bottomLang);
 
-document.querySelector(".lang-bottom-lt").onclick = () => window.setLang && window.setLang("lt");
-document.querySelector(".lang-bottom-ru").onclick = () => window.setLang && window.setLang("ru");
-document.querySelector(".lang-bottom-en").onclick = () => window.setLang && window.setLang("en");
+/* обработчики */
+document.querySelector(".lang-bottom-lt").onclick = () => window.setLang && window.setLang('lt');
+document.querySelector(".lang-bottom-ru").onclick = () => window.setLang && window.setLang('ru');
+document.querySelector(".lang-bottom-en").onclick = () => window.setLang && window.setLang('en');
 
+/* ============================================================
+   АВТО-СКРЫТИЕ НИЖНЕГО МЕНЮ ПРИ СКРОЛЛЕ
+   ============================================================ */
 window.addEventListener("scroll", () => {
   if (window.innerWidth > 768) return;
   if (!bottomLang) return;
 
-  if (window.scrollY > 40) bottomLang.classList.add("hidden-mobile");
-  else bottomLang.classList.remove("hidden-mobile");
+  if (window.scrollY > 40) {
+    bottomLang.classList.add("hidden-mobile");
+  } else {
+    bottomLang.classList.remove("hidden-mobile");
+  }
 });
