@@ -416,58 +416,78 @@ export default function Calendar(){
 
         @keyframes spin { to{ transform: rotate(360deg); } }
 
-        /* ============================================
-           MODAL LIKE FORGOT PASSWORD (CENTER + BLUR)
-           ============================================ */
-        .modal-backdrop {
-          position: relative;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.45);
-          backdrop-filter: blur(18px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 9999;
-          padding: 16px;
-          box-sizing: border-box;
-        }
+/* ============================================
+     МОБИЛЬНАЯ МОДАЛКА КАК FORGOT PASSWORD
+   ============================================ */
 
-        .modal {
-          position: relative;
-          width: 100%;
-          max-width: 420px;
-          padding: 24px 26px;
-          background: rgba(30, 0, 60, 0.78);
-          backdrop-filter: blur(14px);
-          border-radius: 20px;
-          border: 1px solid rgba(190, 140, 255, 0.55);
-          box-shadow:
-            0 0 32px rgba(140, 80, 255, 0.45),
-            0 0 18px rgba(100, 0, 180, 0.25) inset;
-          color: #fff;
-          animation: modalFadeIn 0.25s ease-out;
-        }
+.card {
+  position: relative; /* обязательно! модалка будет внутри card */
+}
 
-        @keyframes modalFadeIn {
-          0%   { opacity: 0; transform: scale(0.94); }
-          100% { opacity: 1; transform: scale(1); }
-        }
+/* затемнение поверх календаря */
+.modal-backdrop {
+  position: absolute !important;   /* КЛЮЧ! никакого fixed */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 
-        /* ОТКЛЮЧАЕМ iOS ZOOM ДЛЯ ИНПУТОВ */
-        @media (max-width: 768px) {
-          input, select, textarea, button {
-            font-size: 16px !important;
-          }
-        }
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(14px);
 
-        .loader {
-          width: 18px; height: 18px; border-radius: 50%;
-          border: 2px solid rgba(255,255,255,0.25);
-          border-top-color: rgba(168,85,247,0.9);
-          animation: spin .8s linear infinite;
-          display:inline-block; vertical-align:middle;
-        }
-      `}</style>
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 9999;
+  pointer-events: all;
+
+  animation: modalFadeIn 0.25s ease;
+}
+
+/* сама модалка */
+.modal {
+  position: relative !important;
+  transform: none !important;
+
+  width: 90%;
+  max-width: 420px;
+
+  background: rgba(17, 0, 40, 0.85);
+  border: 1px solid rgba(168,85,247,0.35);
+  border-radius: 18px;
+  padding: 22px;
+
+  color: #fff;
+  box-shadow: 0 8px 28px rgba(120,0,255,0.35);
+
+  animation: modalFadeIn 0.28s ease;
+}
+
+/* анимация появления */
+@keyframes modalFadeIn {
+  0%   { opacity: 0; transform: scale(0.94); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* отключаем iOS zoom */
+@media (max-width: 768px) {
+  input, select, textarea, button {
+    font-size: 16px !important;
+  }
+}
+
+/* loader */
+.loader {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.25);
+  border-top-color: rgba(168,85,247,0.9);
+  animation: spin .8s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
 
       {/* ------------------------- */}
       {/*         KAINAS           */}
