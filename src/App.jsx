@@ -16,16 +16,12 @@ const useMobileLangHide = () => {
     let last = window.scrollY
 
     const onScroll = () => {
-      // ПК → меню не скрывается
       if (window.innerWidth > 768) {
         setHidden(false)
         return
       }
 
-      // вниз → скрыть
       if (window.scrollY > last + 12) setHidden(true)
-
-      // вверх → показать
       if (window.scrollY < last - 12) setHidden(false)
 
       last = window.scrollY
@@ -44,10 +40,8 @@ export default function App() {
   const [user, setUser] = useState(getCurrentUser())
   const hiddenLang = useMobileLangHide()
 
-  // эффект нажатия кнопки Kainas
   const [kPress, setKPress] = useState(false)
 
-  // проверка админа
   const isAdmin =
     user?.role === 'admin' ||
     user?.isAdmin === true ||
@@ -56,11 +50,9 @@ export default function App() {
 
   return (
     <div className="container" style={containerStyle}>
-
+      
       {/* === Верхняя панель === */}
       <div style={navBar}>
-
-        {/* --- Левая сторона: Календарь, Мои записи, Kainas --- */}
         <div style={leftSide}>
           <button
             onClick={() => setTab('calendar')}
@@ -89,20 +81,17 @@ export default function App() {
 
               setTab('calendar')
 
-              // Автопрокрутка к Kainas
               setTimeout(() => {
                 const section = document.getElementById('kainas-section')
                 section?.scrollIntoView({ behavior: 'smooth', block: 'start' })
               }, 150)
 
-              // Авто-открытие аккордеона
               window.dispatchEvent(new CustomEvent("togglePrices"))
             }}
           >
             Kainas
           </button>
 
-          {/* Админ */}
           {isAdmin && (
             <button
               onClick={() => setTab('admin')}
@@ -116,7 +105,7 @@ export default function App() {
           )}
         </div>
 
-        {/* === Языковое меню: ПК сверху, мобилка — скрывается === */}
+        {/* === ЯЗЫКИ ТОЛЬКО ДЛЯ ПК === */}
         <div
           className={`lang-switcher-top ${hiddenLang ? 'hidden-mobile' : ''}`}
           style={{
@@ -136,14 +125,13 @@ export default function App() {
       {tab === 'my' && <MyBookings />}
       {tab === 'admin' && isAdmin && <Admin />}
 
-      {/* === Футер === */}
       <footer style={footerStyle}>© IZ HAIR TREND</footer>
-    </div> {/* /container */}
+    </div>
   )
 }
 
 /* ============================================================
-   СТИЛИ — ВКЛЮЧАЮТ МОБИЛЬНОЕ ЯЗЫКОВОЕ МЕНЮ
+   СТИЛИ
    ============================================================ */
 
 const containerStyle = {
@@ -195,13 +183,6 @@ const navButton = (active) => ({
   transform: active ? 'translateY(-1px)' : 'translateY(0)',
 })
 
-/* === ПК версия: меню сверху === */
-const langBlock = {
-  display: 'flex',
-  gap: '8px'
-}
-
-/* === Футер === */
 const footerStyle = {
   marginTop: 40,
   textAlign: 'center',
@@ -210,12 +191,12 @@ const footerStyle = {
 }
 
 /* ============================================================
-   ДОБАВЛЯЕМ CSS ДЛЯ ЯЗЫКОВОГО МЕНЮ
+   ДОБАВЛЯЕМ CSS ДЛЯ ЯЗЫКОВОГО МЕНЮ (ПК + МОБИЛЬНЫЙ НИЗ)
    ============================================================ */
 const css = document.createElement("style");
 css.innerHTML = `
 
-/* --- Кнопки языков (универсальный стиль) --- */
+/* --- унифицированный стиль кнопок --- */
 .lang-btn {
   border-radius: 10px;
   padding: 4px 10px;
@@ -234,21 +215,21 @@ css.innerHTML = `
   box-shadow: 0 0 12px rgba(150,85,247,0.4);
 }
 
-/* --- ПК: меню сверху --- */
+/* --- ПК: верхнее меню видно --- */
 @media (min-width: 768px) {
   .lang-switcher-top {
     display: flex !important;
   }
 }
 
-/* --- МОБИЛЬНЫЕ: скрыть верхнее меню --- */
+/* --- МОБИЛКА: верхнее меню скрыть --- */
 @media (max-width: 768px) {
   .lang-switcher-top {
     display: none !important;
   }
 }
 
-/* --- МОБИЛЬНОЕ ЯЗЫКОВОЕ МЕНЮ СНИЗУ --- */
+/* --- МОБИЛКА: нижнее меню языков --- */
 .lang-switcher-bottom {
   position: fixed;
   bottom: 12px;
@@ -274,7 +255,7 @@ css.innerHTML = `
 document.head.appendChild(css);
 
 /* ============================================================
-   ВСТАВЛЯЕМ МОБИЛЬНОЕ МЕНЮ В КОНЕЦ ДОКУМЕНТА
+   СОЗДАЁМ МОБИЛЬНОЕ МЕНЮ ЯЗЫКОВ
    ============================================================ */
 const bottomLang = document.createElement("div");
 bottomLang.className = "lang-switcher-bottom";
@@ -285,13 +266,13 @@ bottomLang.innerHTML = `
 `;
 document.body.appendChild(bottomLang);
 
-/* навешиваем обработчики */
+/* обработчики */
 document.querySelector(".lang-bottom-lt").onclick = () => window.setLang && window.setLang('lt');
 document.querySelector(".lang-bottom-ru").onclick = () => window.setLang && window.setLang('ru');
 document.querySelector(".lang-bottom-en").onclick = () => window.setLang && window.setLang('en');
 
 /* ============================================================
-   ВКЛЮЧАЕМ СКРЫТИЕ НИЖНЕГО МЕНЮ ПРИ СКРОЛЛЕ
+   АВТО-СКРЫТИЕ НИЖНЕГО МЕНЮ ПРИ СКРОЛЛЕ
    ============================================================ */
 window.addEventListener("scroll", () => {
   if (window.innerWidth > 768) return;
