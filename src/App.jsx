@@ -1,4 +1,5 @@
 // FULL UPDATED App.jsx
+
 import Auth from './components/Auth.jsx'
 import Calendar from './components/Calendar.jsx'
 import Admin from './components/Admin.jsx'
@@ -6,7 +7,7 @@ import MyBookings from './components/MyBookings.jsx'
 import { useState, useEffect } from 'react'
 import { getCurrentUser } from './lib/storage'
 import { useI18n } from './lib/i18n'
-const { lang, setLang, t } = useI18n()
+
 /* ============================================================
    МЕХАНИЗМ СКРЫТИЯ ЯЗЫКОВОГО МЕНЮ НА МОБИЛЬНОМ
    ============================================================ */
@@ -43,6 +44,26 @@ export default function App() {
 
   const [kPress, setKPress] = useState(false)
 
+  /* ============================================================
+     ПРОБРОС setLang ДЛЯ МОБИЛЬНЫХ КНОПОК + АКТИВНЫЕ КНОПКИ
+     ============================================================ */
+  useEffect(() => {
+    // React → window
+    window.setLang = setLang
+
+    // подсветка мобильных кнопок
+    const btnLT = document.querySelector('.lang-bottom-lt')
+    const btnRU = document.querySelector('.lang-bottom-ru')
+    const btnEN = document.querySelector('.lang-bottom-en')
+
+    const all = [btnLT, btnRU, btnEN]
+    all.forEach((btn) => btn?.classList.remove('active'))
+
+    if (lang === 'lt') btnLT?.classList.add('active')
+    if (lang === 'ru') btnRU?.classList.add('active')
+    if (lang === 'en') btnEN?.classList.add('active')
+  }, [lang, setLang])
+
   const isAdmin =
     user?.role === 'admin' ||
     user?.isAdmin === true ||
@@ -64,7 +85,11 @@ export default function App() {
           </button>
 
           <button
-            style={{ ...navButton(false), transform: kPress ? 'translateY(6px)' : 'translateY(0)', transition: 'transform .25s ease' }}
+            style={{
+              ...navButton(false),
+              transform: kPress ? 'translateY(6px)' : 'translateY(0)',
+              transition: 'transform .25s ease',
+            }}
             onClick={() => {
               setKPress(true)
               setTimeout(() => setKPress(false), 260)
@@ -82,14 +107,20 @@ export default function App() {
           </button>
 
           {isAdmin && (
-            <button onClick={() => setTab('admin')} style={{ ...navButton(tab === 'admin'), animation: 'fadeInUp 0.4s ease-out' }}>
+            <button
+              onClick={() => setTab('admin')}
+              style={{ ...navButton(tab === 'admin'), animation: 'fadeInUp 0.4s ease-out' }}
+            >
               {t('nav_admin')}
             </button>
           )}
         </div>
 
-        {/* === ЯЗЫКИ ТОЛЬКО ДЛЯ ПК === */}
-        <div className={`lang-switcher-top ${hiddenLang ? 'hidden-mobile' : ''}`} style={{ display: 'flex', gap: '8px' }}>
+        {/* === ЯЗЫКИ ДЛЯ ПК === */}
+        <div
+          className={`lang-switcher-top ${hiddenLang ? 'hidden-mobile' : ''}`}
+          style={{ display: 'flex', gap: '8px' }}
+        >
           <button onClick={() => setLang('lt')} className={`lang-btn ${lang === 'lt' ? 'active' : ''}`}>LT</button>
           <button onClick={() => setLang('ru')} className={`lang-btn ${lang === 'ru' ? 'active' : ''}`}>RU</button>
           <button onClick={() => setLang('en')} className={`lang-btn ${lang === 'en' ? 'active' : ''}`}>GB</button>
@@ -118,7 +149,7 @@ const containerStyle = {
     '#0b0a0f',
   color: '#fff',
   fontFamily: 'Inter, sans-serif',
-  animation: 'fadeIn 0.8s ease-in-out'
+  animation: 'fadeIn 0.8s ease-in-out',
 }
 
 const navBar = {
@@ -133,7 +164,7 @@ const navBar = {
   borderRadius: '0 0 16px 16px',
   position: 'sticky',
   top: 0,
-  zIndex: 1000
+  zIndex: 1000,
 }
 
 const leftSide = { display: 'flex', gap: '12px' }
@@ -146,9 +177,7 @@ const navButton = (active) => ({
   background: active
     ? 'linear-gradient(180deg, rgba(150,80,255,0.4), rgba(80,0,140,0.3))'
     : 'rgba(25,20,40,0.4)',
-  border: active
-    ? '1.5px solid rgba(168,85,247,0.85)'
-    : '1px solid rgba(140,90,200,0.25)',
+  border: active ? '1.5px solid rgba(168,85,247,0.85)' : '1px solid rgba(140,90,200,0.25)',
   color: '#fff',
   transition: 'all 0.25s ease',
   boxShadow: active
@@ -156,14 +185,14 @@ const navButton = (active) => ({
     : '0 0 6px rgba(0,0,0,0.2)',
   textShadow: active ? '0 0 6px rgba(168,85,247,0.6)' : 'none',
   backdropFilter: 'blur(8px)',
-  transform: active ? 'translateY(-1px)' : 'translateY(0)'
+  transform: active ? 'translateY(-1px)' : 'translateY(0)',
 })
 
 const footerStyle = {
   marginTop: 40,
   textAlign: 'center',
   opacity: 0.4,
-  fontSize: '0.9rem'
+  fontSize: '0.9rem',
 }
 
 /* ============================================================
@@ -172,7 +201,6 @@ const footerStyle = {
 const css = document.createElement('style')
 css.innerHTML = `
 
-/* === ОБЪЕДИНЁННАЯ РАМКА === */
 .lang-group {
   display: flex;
   gap: 6px;
@@ -184,7 +212,6 @@ css.innerHTML = `
   backdrop-filter: blur(10px);
 }
 
-/* === КОМПАКТНЫЕ КНОПКИ === */
 .lang-btn {
   border-radius: 10px;
   padding: 4px 8px;
@@ -227,50 +254,32 @@ css.innerHTML = `
   transform: translateY(150%);
   opacity: 0;
 }
-`;
-
-document.head.appendChild(css);
+`
+document.head.appendChild(css)
 
 /* ===== СОЗДАЁМ МОБИЛЬНОЕ МЕНЮ ===== */
-const bottomLang = document.createElement("div");
-bottomLang.className = "lang-switcher-bottom";
+const bottomLang = document.createElement('div')
+bottomLang.className = 'lang-switcher-bottom'
 bottomLang.innerHTML = `
   <div class="lang-group">
     <button class="lang-btn lang-bottom-lt">LT</button>
     <button class="lang-btn lang-bottom-ru">RU</button>
     <button class="lang-btn lang-bottom-en">GB</button>
   </div>
-`;
-document.body.appendChild(bottomLang);
+`
+document.body.appendChild(bottomLang)
 
-document.querySelector(".lang-bottom-lt").onclick = () => window.setLang && window.setLang("lt");
-document.querySelector(".lang-bottom-ru").onclick = () => window.setLang && window.setLang("ru");
-document.querySelector(".lang-bottom-en").onclick = () => window.setLang && window.setLang("en");
+document.querySelector('.lang-bottom-lt').onclick = () =>
+  window.setLang && window.setLang('lt')
+document.querySelector('.lang-bottom-ru').onclick = () =>
+  window.setLang && window.setLang('ru')
+document.querySelector('.lang-bottom-en').onclick = () =>
+  window.setLang && window.setLang('en')
 
-window.addEventListener("scroll", () => {
-  if (window.innerWidth > 768) return;
-  if (!bottomLang) return;
+window.addEventListener('scroll', () => {
+  if (window.innerWidth > 768) return
+  if (!bottomLang) return
 
-  if (window.scrollY > 40) bottomLang.classList.add("hidden-mobile");
-  else bottomLang.classList.remove("hidden-mobile");
-});
-// ============================================================
-// ПРОБРОС setLang В window + ПОДСВЕТКА МОБИЛЬНЫХ КНОПОК
-// ============================================================
-useEffect(() => {
-  // делаем setLang доступным для мобильных кнопок вне React
-  window.setLang = setLang
-
-  // подсветка мобильных кнопок
-  const btnLT = document.querySelector(".lang-bottom-lt")
-  const btnRU = document.querySelector(".lang-bottom-ru")
-  const btnEN = document.querySelector(".lang-bottom-en")
-
-  const all = [btnLT, btnRU, btnEN]
-  all.forEach(btn => btn?.classList.remove("active"))
-
-  if (lang === "lt") btnLT?.classList.add("active")
-  if (lang === "ru") btnRU?.classList.add("active")
-  if (lang === "en") btnEN?.classList.add("active")
-
-}, [lang, setLang])
+  if (window.scrollY > 40) bottomLang.classList.add('hidden-mobile')
+  else bottomLang.classList.remove('hidden-mobile')
+})
