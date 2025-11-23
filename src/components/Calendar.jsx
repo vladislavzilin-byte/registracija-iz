@@ -39,10 +39,10 @@ export default function Calendar(){
   // Автоматическое открытие Kainas из App.jsx
   useEffect(() => {
     const handler = () => {
-      setOpenPrices(prev => !prev)   // ← переключение!
+      setOpenPrices(prev => !prev)
     }
-    window.addEventListener("togglePrices", handler)
-    return () => window.removeEventListener("togglePrices", handler)
+    window.addEventListener('togglePrices', handler)
+    return () => window.removeEventListener('togglePrices', handler)
   }, [])
 
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()))
@@ -71,15 +71,14 @@ export default function Calendar(){
   const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
 
   const days = useMemo(()=>{
-    const arr=[]; let d=new Date(gridStart); 
-    while(d<=gridEnd){ arr.push(new Date(d)); d=addDays(d,1) } 
+    const arr=[]; let d=new Date(gridStart)
+    while(d<=gridEnd){ arr.push(new Date(d)); d=addDays(d,1) }
     return arr
   }, [currentMonth, gridStart, gridEnd])
 
   const bookings = getBookings()
 
   const slotsForDay = (d) => {
-    // прошлые даты — вообще не показываем слоты
     if(toDateOnly(d) < today) return []
 
     const [sh, sm] = settings.workStart.split(':').map(Number)
@@ -110,7 +109,7 @@ export default function Calendar(){
     const byBookings = active.some(b => {
       const bs = new Date(b.start)
       const be = new Date(b.end)
-      return t >= bs && t < be     // попадает в интервал брони
+      return t >= bs && t < be
     })
 
     const isProc = processingISO && isSameMinute(processingISO, t)
@@ -128,7 +127,6 @@ export default function Calendar(){
     return !active.some(b => {
       const bs = new Date(b.start)
       const be = new Date(b.end)
-      // пересечение интервалов
       return bs < end && be > start
     })
   }
@@ -148,7 +146,6 @@ export default function Calendar(){
 
   // открываем модалку при клике по времени
   const openTimeModal = (tSel) => {
-    // защита: прошлые даты и прошлое время (сегодня)
     if(
       toDateOnly(tSel) < today ||
       (isSameDay(tSel, now) && tSel < now)
@@ -188,7 +185,7 @@ export default function Calendar(){
     }
 
     const start = pendingTime
-    // ещё раз проверим «не прошлое»
+
     if (
       toDateOnly(start) < today ||
       (isSameDay(start, now) && start < now)
@@ -205,7 +202,6 @@ export default function Calendar(){
     const { duration, price } = calcTotals(selectedServices)
     const durationMinutes = duration || settings.slotMinutes
 
-    // проверяем, свободен ли весь интервал
     if (!isRangeFree(start, durationMinutes)) {
       alert(t('already_booked') || 'Šiuo metu jau yra rezervacija.')
       return
@@ -231,7 +227,6 @@ export default function Calendar(){
       paid: false
     }
 
-    // локально отмечаем все слоты в интервале как занятые
     const newLocalSlots = []
     let cur = new Date(start)
     while (cur < end) {
@@ -303,7 +298,7 @@ export default function Calendar(){
 
     if(isPast){
       base.opacity = 0.45
-      base.filter = "grayscale(30%)"
+      base.filter = 'grayscale(30%)'
     }
 
     if(hoverIdx === idx && !isPast){
@@ -317,16 +312,13 @@ export default function Calendar(){
       base.fontWeight = 700
     }
 
-    if(isPast){
-      base.position = "relative"
-    }
-
     return base
   }
 
   return (
     <div className="card" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
 
+      {/* ГЛОБАЛЬНЫЕ СТИЛИ КАЛЕНДАРЯ + МОДАЛКИ */}
       <style>{`
         /* Точка под прошлыми днями */
         .past-day-dot::after {
@@ -369,18 +361,15 @@ export default function Calendar(){
           100% { text-shadow: 0 0 0px rgba(168,85,247,0.0); }
         }
 
-        /* Кнопка слота времени — базовый класс */
         .time-slot-btn {
           position: relative;
         }
 
-        /* Приглушённый стиль для прошедших слотов */
         .time-past {
           opacity: 0.55;
           filter: grayscale(35%);
         }
 
-        /* Мобильная адаптация календаря + навигации */
         @media(max-width: 600px){
           .calendar-nav {
             display: flex;
@@ -409,7 +398,6 @@ export default function Calendar(){
           .muted { font-size: 13px !important; }
         }
 
-        /* Немного стабилизируем поведение на тач-экранах */
         html, body, .card, button {
           touch-action: manipulation;
         }
@@ -417,35 +405,41 @@ export default function Calendar(){
         @keyframes spin { to{ transform: rotate(360deg); } }
 
         /* ============================================
-           MODAL LIKE FORGOT PASSWORD (CENTER + BLUR)
+             МОБИЛЬНАЯ МОДАЛКА КАК FORGOT PASSWORD
            ============================================ */
+
+        .card {
+          position: relative;
+        }
+
         .modal-backdrop {
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.45);
-          backdrop-filter: blur(18px);
+          position: absolute !important;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0,0,0,0.55);
+          backdrop-filter: blur(14px);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 9999;
-          padding: 16px;
-          box-sizing: border-box;
+          pointer-events: all;
+          animation: modalFadeIn 0.25s ease;
         }
 
         .modal {
-          position: relative;
-          width: 100%;
+          position: relative !important;
+          transform: none !important;
+          width: 90%;
           max-width: 420px;
-          padding: 24px 26px;
-          background: rgba(30, 0, 60, 0.78);
-          backdrop-filter: blur(14px);
-          border-radius: 20px;
-          border: 1px solid rgba(190, 140, 255, 0.55);
-          box-shadow:
-            0 0 32px rgba(140, 80, 255, 0.45),
-            0 0 18px rgba(100, 0, 180, 0.25) inset;
+          background: rgba(17,0,40,0.85);
+          border: 1px solid rgba(168,85,247,0.35);
+          border-radius: 18px;
+          padding: 22px;
           color: #fff;
-          animation: modalFadeIn 0.25s ease-out;
+          box-shadow: 0 8px 28px rgba(120,0,255,0.35);
+          animation: modalFadeIn 0.28s ease;
         }
 
         @keyframes modalFadeIn {
@@ -453,7 +447,6 @@ export default function Calendar(){
           100% { opacity: 1; transform: scale(1); }
         }
 
-        /* ОТКЛЮЧАЕМ iOS ZOOM ДЛЯ ИНПУТОВ */
         @media (max-width: 768px) {
           input, select, textarea, button {
             font-size: 16px !important;
@@ -461,11 +454,14 @@ export default function Calendar(){
         }
 
         .loader {
-          width: 18px; height: 18px; border-radius: 50%;
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
           border: 2px solid rgba(255,255,255,0.25);
           border-top-color: rgba(168,85,247,0.9);
           animation: spin .8s linear infinite;
-          display:inline-block; vertical-align:middle;
+          display: inline-block;
+          vertical-align: middle;
         }
       `}</style>
 
@@ -475,25 +471,25 @@ export default function Calendar(){
 
       <div
         style={{
-          width: "100%",
-          border: "1px solid rgba(170, 90, 255, 0.22)",
+          width: '100%',
+          border: '1px solid rgba(170, 90, 255, 0.22)',
           background:
-            "linear-gradient(180deg, rgba(18,18,30,0.96) 0%, rgba(12,12,22,0.92) 100%)",
+            'linear-gradient(180deg, rgba(18,18,30,0.96) 0%, rgba(12,12,22,0.92) 100%)',
           borderRadius: 20,
-          padding: "22px 24px 26px",
+          padding: '22px 24px 26px',
           marginTop: 0,
           marginBottom: 32,
-          backdropFilter: "blur(22px)",
-          boxShadow: "0 0 28px rgba(170, 90, 255, 0.18)",
+          backdropFilter: 'blur(22px)',
+          boxShadow: '0 0 28px rgba(170, 90, 255, 0.18)'
         }}
       >
         <h2
           style={{
-            margin: "0 0 18px 0",
+            margin: '0 0 18px 0',
             fontSize: 25,
             fontWeight: 700,
-            color: "#ffffff",
-            letterSpacing: "0.3px",
+            color: '#ffffff',
+            letterSpacing: '0.3px'
           }}
         >
           Kainas
@@ -502,31 +498,31 @@ export default function Calendar(){
         <div
           onClick={() => setOpenPrices(!openPrices)}
           style={{
-            border: "1px solid rgba(180, 90, 255, 0.32)",
-            background: "rgba(22, 22, 35, 0.90)",
+            border: '1px solid rgba(180, 90, 255, 0.32)',
+            background: 'rgba(22, 22, 35, 0.90)',
             borderRadius: 16,
-            padding: "14px 16px",
-            display: "flex",
-            alignItems: "center",
+            padding: '14px 16px',
+            display: 'flex',
+            alignItems: 'center',
             gap: 12,
-            cursor: "pointer",
-            transition: ".28s ease",
+            cursor: 'pointer',
+            transition: '.28s ease',
             boxShadow: openPrices
-              ? "0 0 20px rgba(180, 90, 255, 0.35)"
-              : "0 0 12px rgba(180, 90, 255, 0.15)",
+              ? '0 0 20px rgba(180, 90, 255, 0.35)'
+              : '0 0 12px rgba(180, 90, 255, 0.15)'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(210, 120, 255, 0.55)";
+            e.currentTarget.style.borderColor = 'rgba(210, 120, 255, 0.55)'
             e.currentTarget.style.boxShadow =
-              "0 0 22px rgba(200, 110, 255, 0.48)";
-            e.currentTarget.style.background = "rgba(30, 24, 50, 0.92)";
+              '0 0 22px rgba(200, 110, 255, 0.48)'
+            e.currentTarget.style.background = 'rgba(30, 24, 50, 0.92)'
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(180, 90, 255, 0.32)";
+            e.currentTarget.style.borderColor = 'rgba(180, 90, 255, 0.32)'
             e.currentTarget.style.boxShadow = openPrices
-              ? "0 0 20px rgba(180, 90, 255, 0.35)"
-              : "0 0 12px rgba(180, 90, 255, 0.15)";
-            e.currentTarget.style.background = "rgba(22,22,35,0.90)";
+              ? '0 0 20px rgba(180, 90, 255, 0.35)'
+              : '0 0 12px rgba(180, 90, 255, 0.15)'
+            e.currentTarget.style.background = 'rgba(22,22,35,0.90)'
           }}
         >
           <svg
@@ -534,95 +530,87 @@ export default function Calendar(){
             height="18"
             viewBox="0 0 24 24"
             style={{
-              transform: openPrices ? "rotate(180deg)" : "rotate(0deg)",
-              transition: "0.25s ease",
-              fill: "#e3b8ff",
-              filter: "drop-shadow(0 0 4px rgba(200,120,255,0.55))",
+              transform: openPrices ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: '0.25s ease',
+              fill: '#e3b8ff',
+              filter: 'drop-shadow(0 0 4px rgba(200,120,255,0.55))'
             }}
           >
             <path d="M7 10l5 5 5-5z" />
           </svg>
 
-          <span style={{ fontSize: 17, color: "#fff" }}>Žiūrėti kainas</span>
+          <span style={{ fontSize: 17, color: '#fff' }}>Žiūrėti kainas</span>
         </div>
 
         <div
           style={{
             maxHeight: openPrices ? 2000 : 0,
-            overflow: "hidden",
-            transition: "max-height .55s cubic-bezier(.25,.8,.25,1)",
+            overflow: 'hidden',
+            transition: 'max-height .55s cubic-bezier(.25,.8,.25,1)',
             marginTop: openPrices ? 20 : 0,
-            opacity: openPrices ? 1 : 0,
+            opacity: openPrices ? 1 : 0
           }}
         >
           <div
             style={{
-              border: "1px solid rgba(170, 90, 255, 0.22)",
-              background: "rgba(15,15,28,0.90)",
+              border: '1px solid rgba(170, 90, 255, 0.22)',
+              background: 'rgba(15,15,28,0.90)',
               borderRadius: 18,
-              padding: "22px 20px",
-              backdropFilter: "blur(16px)",
-              boxShadow: "0 0 20px rgba(150, 70, 255, 0.18)",
-              animation: openPrices ? "fadeIn .45s ease" : "none",
+              padding: '22px 20px',
+              backdropFilter: 'blur(16px)',
+              boxShadow: '0 0 20px rgba(150, 70, 255, 0.18)',
+              animation: openPrices ? 'fadeIn .45s ease' : 'none'
             }}
           >
-            <style>
-              {`
-                @keyframes fadeIn {
-                  0% { opacity: 0; transform: translateY(6px); }
-                  100% { opacity: 1; transform: translateY(0); }
-                }
-              `}
-            </style>
-
+            {/* анимация fadeIn уже описана в CSS через @keyframes fadeIn */}
             {[
               {
-                price: "80–130 €",
-                title: "Šukuosenos kaina",
-                text: "Priklauso nuo darbo apimties",
+                price: '80–130 €',
+                title: 'Šukuosenos kaina',
+                text: 'Priklauso nuo darbo apimties'
               },
               {
-                price: "25 €",
-                title: "Konsultacija",
-                text: "Užtrunkame nuo 30 min. iki valandos",
+                price: '25 €',
+                title: 'Konsultacija',
+                text: 'Užtrunkame nuo 30 min. iki valandos'
               },
               {
-                price: "50 € užstatas / 100 €",
-                title: "Plaukų Tresų nuoma",
+                price: '50 € užstatas / 100 €',
+                title: 'Plaukų Tresų nuoma',
                 text:
-                  "Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžину užstatą",
+                  'Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžinu užstatą'
               },
               {
-                price: "Iki 20 €",
-                title: "Papuošalų nuoma",
-                text: "",
+                price: 'Iki 20 €',
+                title: 'Papuošalų nuома',
+                text: ''
               },
               {
-                price: "130 €",
-                title: "Atvykimas Klaipėdoje",
+                price: '130 €',
+                title: 'Atvykimas Klaipėdoje',
                 text:
-                  "Daiktų краустymai, važiavimai — per tą laiką galiu priimti kitą klientę.",
-              },
+                  'Daiktų kraustymai, važiavimai — per tą laiką galiu priimti kitą klientę.'
+              }
             ].map((item, i) => (
               <div
                 key={i}
                 style={{
-                  border: "1px solid rgba(150, 80, 255, 0.28)",
+                  border: '1px solid rgba(150, 80, 255, 0.28)',
                   borderRadius: 16,
-                  padding: "16px 18px",
+                  padding: '16px 18px',
                   marginBottom: 16,
-                  background: "rgba(22, 18, 38, 0.92)",
-                  boxShadow: "0 0 12px rgba(150, 70, 255, 0.18)",
+                  background: 'rgba(22, 18, 38, 0.92)',
+                  boxShadow: '0 0 12px rgba(150, 70, 255, 0.18)'
                 }}
               >
-                <p style={{ margin: 0, fontSize: 18, color: "#fff" }}>
+                <p style={{ margin: 0, fontSize: 18, color: '#fff' }}>
                   <b>{item.price}</b>
                 </p>
-                <p style={{ margin: "4px 0 0 0", color: "#d6caff" }}>
+                <p style={{ margin: '4px 0 0 0', color: '#d6caff' }}>
                   {item.title}
                 </p>
                 {item.text && (
-                  <p style={{ margin: "3px 0 0 0", color: "#a898ce" }}>
+                  <p style={{ margin: '3px 0 0 0', color: '#a898ce' }}>
                     {item.text}
                   </p>
                 )}
@@ -711,7 +699,7 @@ export default function Calendar(){
       {/* SLOTS */}
       <div>
         <div className="slots-title">
-          {t('slots_for')}{" "}
+          {t('slots_for')}{' '}
           <span className="flash-date">
             {format(selectedDate,'dd.MM.yyyy')}
           </span>
@@ -724,7 +712,6 @@ export default function Calendar(){
             const isLocal = bookedISO.some(x => isSameMinute(x, ti))
             const disabledLike = taken || busy || isProcessing
 
-            // прошедшее время СЕГОДНЯ
             const isPastTime =
               isSameDay(ti, now) && ti < now
 
