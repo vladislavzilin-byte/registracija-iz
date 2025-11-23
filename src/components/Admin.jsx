@@ -1311,7 +1311,7 @@ const accordionRow = {
 };
 
 const pillBase = {
-  padding: "3px 6px",
+  padding: "4px 8px",
   borderRadius: 999,
   border: "1px solid rgba(148,163,184,0.6)",
   background: "rgba(15,23,42,0.95)",
