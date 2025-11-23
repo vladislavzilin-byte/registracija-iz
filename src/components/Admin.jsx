@@ -1305,8 +1305,7 @@ const accordionRow = {
   borderRadius: 999,
   padding: "3px 6px",
   border: "none",
-  background:
-    "radial-gradient(circle at top left, rgba(79,70,229,0.35), transparent 55%), rgba(15,23,42,0.96)",
+  background: "transparent",
   color: "#fff",
   cursor: "pointer",
 };
