@@ -5,85 +5,83 @@ export default function LanguageSwitcher() {
   const { lang, setLang } = useI18n();
   const [hidden, setHidden] = useState(false);
 
-  // === логика появления / скрытия на мобильных ===
+  // скрытие на скролле (только мобилка)
   useEffect(() => {
-    let lastY = window.scrollY;
+    let last = window.scrollY;
 
-    const onScroll = () => {
-      const currentY = window.scrollY;
-      const isMobile = window.innerWidth < 768;
-
-      if (!isMobile) {
+    const scroll = () => {
+      if (window.innerWidth > 768) {
         setHidden(false);
         return;
       }
 
-      if (currentY > lastY + 10) setHidden(true);
-      else if (currentY < lastY - 10) setHidden(false);
+      if (window.scrollY > last + 10) setHidden(true);
+      if (window.scrollY < last - 10) setHidden(false);
 
-      lastY = currentY;
+      last = window.scrollY;
     };
 
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
+    window.addEventListener("scroll", scroll);
+    return () => window.removeEventListener("scroll", scroll);
   }, []);
 
-  const btn = (code) => ({
-    padding: "8px 12px",
-    borderRadius: 12,
+  const button = (code) => ({
+    padding: "4px 10px",            // ← в 2 РАЗА МЕНЬШЕ
+    borderRadius: 10,
+    fontSize: "12px",               // ← в 2 РАЗА МЕНЬШЕ
     border: lang === code
       ? "1.5px solid rgba(168,85,247,0.9)"
-      : "1px solid rgba(168,85,247,0.4)",
+      : "1px solid rgba(168,85,247,0.35)",
     background: lang === code
-      ? "linear-gradient(180deg, rgba(94,0,165,1), rgba(54,0,95,1))"
-      : "rgba(17,0,40,0.45)",
+      ? "rgba(140,60,250,0.65)"
+      : "rgba(35,0,75,0.55)",
     color: "#fff",
     cursor: "pointer",
-    fontWeight: 600,
+    transition: ".25s",
     boxShadow: lang === code
-      ? "0 0 18px rgba(168,85,247,0.55)"
-      : "0 0 0 rgba(0,0,0,0)",
-    transition: "0.25s",
+      ? "0 0 12px rgba(168,85,247,0.55)"
+      : "none"
   });
 
   return (
     <>
       <style>{`
-        /* === LANG FOOTER (mobile only) === */
+        /* PC версия — обычный вид */
+        @media (min-width: 768px) {
+          .lang-bar {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 10px;
+          }
+        }
+
+        /* МОБИЛЬНАЯ */
         @media (max-width: 768px) {
-          .lang-footer {
+          .lang-bar {
             position: fixed;
-            bottom: 14px;
+            bottom: 12px;
             left: 0;
             right: 0;
             display: flex;
             justify-content: center;
-            gap: 12px;
-            z-index: 999;
-            transition: opacity 0.35s ease, transform 0.35s ease;
-            opacity: 1;
-            transform: translateY(0);
-          }
-          .lang-footer.hidden {
-            opacity: 0;
-            transform: translateY(120%);
-          }
-        }
-        /* desktop — как есть */
-        @media (min-width: 768px) {
-          .lang-footer {
-            display: flex;
-            justify-content: center;
             gap: 8px;
-            margin-bottom: 12px;
+            z-index: 999;
+            transform: translateY(0);
+            opacity: 1;
+            transition: .35s ease;
+          }
+          .lang-bar.hidden {
+            transform: translateY(150%);
+            opacity: 0;
           }
         }
       `}</style>
 
-      <div className={`lang-footer ${hidden ? "hidden" : ""}`}>
-        <button style={btn("LT")} onClick={() => setLang("LT")}>LT</button>
-        <button style={btn("RU")} onClick={() => setLang("RU")}>RU</button>
-        <button style={btn("GB")} onClick={() => setLang("GB")}>GB</button>
+      <div className={`lang-bar ${hidden ? "hidden" : ""}`}>
+        <button style={button("LT")} onClick={() => setLang("LT")}>LT</button>
+        <button style={button("RU")} onClick={() => setLang("RU")}>RU</button>
+        <button style={button("GB")} onClick={() => setLang("GB")}>GB</button>
       </div>
     </>
   );
