@@ -420,7 +420,7 @@ export default function Calendar(){
            MODAL LIKE FORGOT PASSWORD (CENTER + BLUR)
            ============================================ */
         .modal-backdrop {
-          position: fixed;
+          position: relative;
           inset: 0;
           background: rgba(0, 0, 0, 0.45);
           backdrop-filter: blur(18px);
