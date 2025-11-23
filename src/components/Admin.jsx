@@ -715,42 +715,64 @@ export default function Admin() {
                           {/* ID */}
                           <span style={pillId}>#{b.id.slice(0, 6)}</span>
 
-                          {/* справа: оплата + стрелка */}
-                          <span
-                            style={{
-                              marginLeft: "auto",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                            }}
-                          >
-                            <span
-                              style={{
-                                fontSize: 11,
-                                padding: "3px 8px",
-                                borderRadius: 999,
-                                border: paid
-                                  ? "1px solid rgba(34,197,94,0.85)"
-                                  : "1px solid rgba(248,113,113,0.9)",
-                                background: paid
-                                  ? "rgba(22,163,74,0.25)"
-                                  : "rgba(127,29,29,0.6)",
-                              }}
-                            >
-                              {paid ? "Оплачено" : "Не оплачено"}
-                            </span>
+                        {/* справа: подтверждение + оплата + стрелка */}
+<span
+  style={{
+    marginLeft: "auto",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  }}
+>
 
-                            <div
-                              style={{
-                                transform: isOpen
-                                  ? "rotate(180deg)"
-                                  : "rotate(0deg)",
-                                transition: "transform .25s ease",
-                              }}
-                            >
-                              <Chevron open={isOpen} />
-                            </div>
-                          </span>
+  {/* 🔵 СТАТУС ПОДТВЕРЖДЕНИЯ */}
+  <span
+    style={{
+      fontSize: 11,
+      padding: "3px 8px",
+      borderRadius: 999,
+      border:
+        b.status === "approved" || b.status === "approved_paid"
+          ? "1px solid rgba(34,197,94,0.85)"
+          : "1px solid rgba(248,113,113,0.9)",
+      background:
+        b.status === "approved" || b.status === "approved_paid"
+          ? "rgba(22,163,74,0.25)"
+          : "rgba(127,29,29,0.6)",
+    }}
+  >
+    {b.status === "approved" || b.status === "approved_paid"
+      ? "Подтверждено"
+      : "Неподтверждено"}
+  </span>
+
+  {/* 🟢 ОПЛАТА */}
+  <span
+    style={{
+      fontSize: 11,
+      padding: "3px 8px",
+      borderRadius: 999,
+      border: paid
+        ? "1px solid rgba(34,197,94,0.85)"
+        : "1px solid rgba(248,113,113,0.9)",
+      background: paid
+        ? "rgba(22,163,74,0.25)"
+        : "rgba(127,29,29,0.6)",
+    }}
+  >
+    {paid ? "Оплачено" : "Не оплачено"}
+  </span>
+
+  {/* стрелка */}
+  <div
+    style={{
+      transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+      transition: "transform .25s ease",
+    }}
+  >
+    <Chevron open={isOpen} />
+  </div>
+</span>
                         </div>
                       </button>
 
