@@ -194,6 +194,19 @@ const footerStyle = {
   opacity: 0.4,
   fontSize: '0.9rem',
 }
+/* === ФИКС ДЛЯ МОБИЛЬНОГО МЕНЮ === */
+
+.lang-switcher-bottom .lang-group {
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+.lang-switcher-bottom .lang-btn {
+  width: auto !important;
+  display: inline-flex !important;
+  justify-content: center;
+  align-items: center;
+}
 
 /* ============================================================
    ДОБАВЛЯЕМ CSS ДЛЯ ЯЗЫКОВОГО МЕНЮ
