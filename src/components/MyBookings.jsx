@@ -1,374 +1,240 @@
-import { useEffect, useState } from "react";
-import { getBookings, getCurrentUser, fmtDate, fmtTime } from "../lib/storage";
+import { useState, useMemo } from "react";
+import { getCurrentUser, getBookings, saveBookings, fmtDate, fmtTime } from "../lib/storage";
 import { useI18n } from "../lib/i18n";
 
-/* --------------------------------------------
-   Мобильные FIX'ы: отключение zoom + модалка
----------------------------------------------*/
-
-const globalMobileStyles = `
-  /* Отключаем zoom на iOS */
-  @media (max-width: 768px) {
-    input, select, textarea, button {
-      font-size: 16px !important;
-    }
-  }
-
-  /* Обёртка для модалок — фиксируется к экрану */
-  .mobile-modal-wrapper {
-    position: fixed !important;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    z-index: 99999;
-    background: rgba(0,0,0,0.55);
-    backdrop-filter: blur(12px);
-  }
-
-  /* Сама модалка — центрируется */
-  .mobile-modal {
-    width: 92%;
-    max-width: 420px;
-    background: rgba(17,0,40,0.9);
-    border: 1px solid rgba(168,85,247,0.35);
-    border-radius: 18px;
-    padding: 20px;
-    color: #fff;
-    animation: fadeIn .25s ease;
-  }
-
-  @keyframes fadeIn {
-    from { opacity:0; transform:scale(0.95); }
-    to   { opacity:1; transform:scale(1); }
-  }
-`;
-
 export default function MyBookings() {
-
-  /* Вставляем мобильные глобальные стили один раз */
-  useEffect(() => {
-    const tag = document.createElement("style");
-    tag.innerHTML = globalMobileStyles;
-    document.head.appendChild(tag);
-    return () => tag.remove();
-  }, []);
-
-  const me = getCurrentUser();
   const { t } = useI18n();
+  const me = getCurrentUser();
+  const all = getBookings();
 
-  const [bookings, setBookings] = useState([]);
-  const [selected, setSelected] = useState(null);   // выбранная запись
-  const [confirmCancel, setConfirmCancel] = useState(null);
+  // мои записи
+  const my = useMemo(() => {
+    if (!me?.email) return [];
+    return all
+      .filter((b) => b.userEmail === me.email)
+      .sort((a, b) => new Date(a.start) - new Date(b.start));
+  }, [all, me]);
 
-  useEffect(() => {
-    setBookings(getBookings().filter((b) => b.userId === me?.id));
-  }, [me]);
-  // Открыть модалку записи
-  const openModal = (b) => {
-    setSelected(b);
-  };
+  // фильтр: все / активные / архив
+  const [filter, setFilter] = useState("all");
 
-  // Закрыть модалку
-  const closeModal = () => {
-    setSelected(null);
-  };
+  const filtered = useMemo(() => {
+    const now = new Date();
+    return my.filter((b) => {
+      if (filter === "active") {
+        return (
+          (b.status === "approved" ||
+            b.status === "approved_paid" ||
+            b.status === "pending") &&
+          new Date(b.end || b.start) >= now
+        );
+      }
+      if (filter === "history") {
+        return (
+          b.status.includes("canceled") ||
+          new Date(b.end || b.start) < now
+        );
+      }
+      return true;
+    });
+  }, [my, filter]);
 
-  // Подтверждение отмены
-  const requestCancel = (b) => {
-    setConfirmCancel(b);
-  };
-
-  const closeConfirm = () => {
-    setConfirmCancel(null);
-  };
-
-  const doCancel = () => {
-    if (!confirmCancel) return;
-    const id = confirmCancel.id;
-    const all = getBookings();
-    const next = all.map((b) =>
-      b.id === id ? { ...b, status: "canceled_client" } : b
+  const cancel = (id) => {
+    if (!confirm(t("cancel_confirm"))) return;
+    const updated = all.map((b) =>
+      b.id === id
+        ? { ...b, status: "canceled_client", canceledAt: new Date().toISOString() }
+        : b
     );
-    localStorage.setItem("bookings", JSON.stringify(next));
-    setBookings(next.filter((b) => b.userId === me?.id));
-    setConfirmCancel(null);
+    saveBookings(updated);
+    location.reload();
   };
 
   return (
-    <div className="col" style={{ gap: 14 }}>
+    <div style={container}>
 
-      <h2 style={{ marginBottom: 4 }}>{t("my_bookings")}</h2>
+      {/* ========================  
+          🔥 АНТИ-ZOOM ПАТЧ ДЛЯ МОБИЛОК
+          ======================== */}
+      <style>
+        {`
+          @media (max-width: 768px) {
+            input, select, textarea, button {
+              font-size: 16px !important;
+            }
+          }
+        `}
+      </style>
 
-      {!bookings.length && (
-        <div className="card" style={{ textAlign: "center", opacity: 0.8 }}>
-          {t("no_records")}
-        </div>
-      )}
+      <h2 style={{ marginBottom: 16 }}>{t("my_bookings")}</h2>
 
-      <div className="col" style={{ gap: 12 }}>
-        {bookings
-          .sort((a, b) => new Date(a.start) - new Date(b.start))
-          .map((b) => {
-            const d = new Date(b.start);
+      {/* ФИЛЬТРЫ */}
+      <div style={filters}>
+        <button
+          style={filter === "all" ? fActive : fBtn}
+          onClick={() => setFilter("all")}
+        >
+          {t("all")}
+        </button>
 
-            return (
-              <div
-                key={b.id}
-                className="card"
-                style={{
-                  padding: 14,
-                  borderRadius: 16,
-                  border: "1px solid rgba(148,85,247,0.35)",
-                  background:
-                    "radial-gradient(circle at top left, rgba(79,70,229,0.25), transparent 55%), rgba(15,23,42,0.9)",
-                  cursor: "pointer",
-                }}
-                onClick={() => openModal(b)}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <div style={{ fontWeight: 600, fontSize: 15 }}>
-                    {fmtDate(b.start)}
-                  </div>
-                  <div style={{ fontSize: 13, opacity: 0.8 }}>
-                    {fmtTime(b.start)} – {fmtTime(b.end)}
-                  </div>
-                </div>
+        <button
+          style={filter === "active" ? fActive : fBtn}
+          onClick={() => setFilter("active")}
+        >
+          {t("active")}
+        </button>
 
-                <div style={{ marginTop: 6, color: "#d9e2ff" }}>
-                  {(b.services || []).join(", ")}
-                </div>
-
-                <div style={{ marginTop: 6, display: "flex", gap: 8 }}>
-                  {/* Статус подтверждения */}
-                  <span
-                    style={{
-                      padding: "4px 10px",
-                      borderRadius: 999,
-                      fontSize: 12,
-                      background:
-                        b.status === "approved"
-                          ? "rgba(34,197,94,0.18)"
-                          : "rgba(127,29,29,0.45)",
-                      border:
-                        b.status === "approved"
-                          ? "1px solid rgba(34,197,94,0.9)"
-                          : "1px solid rgba(248,113,113,0.9)",
-                      color:
-                        b.status === "approved" ? "#86efac" : "#fecaca",
-                    }}
-                  >
-                    {b.status === "approved" ? "Подтверждено" : "Неподтверждено"}
-                  </span>
-
-                  {/* Статус оплаты */}
-                  <span
-                    style={{
-                      padding: "4px 10px",
-                      borderRadius: 999,
-                      fontSize: 12,
-                      background: b.paid
-                        ? "rgba(22,163,74,0.18)"
-                        : "rgba(127,29,29,0.45)",
-                      border: b.paid
-                        ? "1px solid rgba(34,197,94,0.9)"
-                        : "1px solid rgba(248,113,113,0.9)",
-                      color: b.paid ? "#86efac" : "#fecaca",
-                    }}
-                  >
-                    {b.paid ? "Оплачено" : "Не оплачено"}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+        <button
+          style={filter === "history" ? fActive : fBtn}
+          onClick={() => setFilter("history")}
+        >
+          {t("history")}
+        </button>
       </div>
 
-      {/* ======================== */}
-      {/*      МОДАЛКА ЗАПИСИ      */}
-      {/* ======================== */}
-      {selected && (
-        <div className="mobile-modal-wrapper" onClick={closeModal}>
-          <div className="mobile-modal" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>{fmtDate(selected.start)}</h3>
+      {/* СПИСОК */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 10 }}>
+        {filtered.map((b) => {
+          const canceled = b.status.includes("canceled");
+          const paid = b.paid || b.status === "approved_paid";
+          const confirmed = b.status === "approved" || b.status === "approved_paid";
 
-            <div style={{ opacity: 0.9, marginBottom: 12 }}>
-              {fmtTime(selected.start)} – {fmtTime(selected.end)}
-            </div>
-
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>Услуги:</div>
-              <div>{(selected.services || []).join(", ")}</div>
-            </div>
-
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              <span
+          return (
+            <div key={b.id} style={card}>
+              {/* ДАТА + ВРЕМЯ */}
+              <div
                 style={{
-                  padding: "6px 12px",
-                  borderRadius: 999,
-                  fontSize: 13,
-                  background:
-                    selected.status === "approved"
-                      ? "rgba(34,197,94,0.18)"
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 6,
+                }}
+              >
+                <div style={{ fontWeight: 600, opacity: 0.9 }}>
+                  {fmtDate(b.start)}
+                </div>
+
+                <div style={{ fontSize: 13, opacity: 0.8 }}>
+                  {fmtTime(b.start)} – {fmtTime(b.end)}
+                </div>
+              </div>
+
+              {/* УСЛУГИ */}
+              <div style={{ fontSize: 14, marginBottom: 8 }}>
+                {Array.isArray(b.services) ? b.services.join(", ") : ""}
+              </div>
+
+              {/* СТАТУСЫ */}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {/* подтверждение */}
+                <span
+                  style={{
+                    ...tag,
+                    background: confirmed
+                      ? "rgba(22,163,74,0.25)"
                       : "rgba(127,29,29,0.45)",
-                  border:
-                    selected.status === "approved"
+                    border: confirmed
                       ? "1px solid rgba(34,197,94,0.9)"
                       : "1px solid rgba(248,113,113,0.9)",
-                }}
-              >
-                {selected.status === "approved"
-                  ? "Подтверждено"
-                  : "Неподтверждено"}
-              </span>
+                  }}
+                >
+                  {confirmed ? "Подтверждено" : "Неподтверждено"}
+                </span>
 
-              <span
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 999,
-                  fontSize: 13,
-                  background: selected.paid
-                    ? "rgba(22,163,74,0.18)"
-                    : "rgba(127,29,29,0.45)",
-                  border: selected.paid
-                    ? "1px solid rgba(34,197,94,0.9)"
-                    : "1px solid rgba(248,113,113,0.9)",
-                }}
-              >
-                {selected.paid ? "Оплачено" : "Не оплачено"}
-              </span>
+                {/* оплата */}
+                <span
+                  style={{
+                    ...tag,
+                    background: paid
+                      ? "rgba(22,163,74,0.25)"
+                      : "rgba(127,29,29,0.45)",
+                    border: paid
+                      ? "1px solid rgba(34,197,94,0.9)"
+                      : "1px solid rgba(248,113,113,0.9)",
+                  }}
+                >
+                  {paid ? t("paid") : t("not_paid")}
+                </span>
+              </div>
+
+              {/* КНОПКА ОТМЕНЫ */}
+              {!canceled && (
+                <button style={cancelBtn} onClick={() => cancel(b.id)}>
+                  {t("cancel")}
+                </button>
+              )}
             </div>
+          );
+        })}
 
-            {selected.status !== "canceled_client" && (
-              <button
-                style={{
-                  marginTop: 20,
-                  width: "100%",
-                  padding: 10,
-                  borderRadius: 12,
-                  background: "rgba(110,20,30,.35)",
-                  border: "1px solid rgba(239,68,68,.7)",
-                  color: "#fff",
-                  fontWeight: 600,
-                }}
-                onClick={() => requestCancel(selected)}
-              >
-                Отменить запись
-              </button>
-            )}
-
-            <button
-              onClick={closeModal}
-              style={{
-                marginTop: 12,
-                width: "100%",
-                padding: 10,
-                borderRadius: 12,
-                border: "1px solid rgba(148,163,184,0.35)",
-                background: "rgba(255,255,255,0.05)",
-                color: "#fff",
-              }}
-            >
-              Закрыть
-            </button>
+        {filtered.length === 0 && (
+          <div style={{ opacity: 0.6, fontSize: 14, marginTop: 20 }}>
+            {t("no_records")}
           </div>
-        </div>
-      )}
-      {/* ======================== */}
-      {/*     CONFIRM CANCEL       */}
-      {/* ======================== */}
-      {confirmCancel && (
-        <div className="mobile-modal-wrapper" onClick={closeConfirm}>
-          <div className="mobile-modal" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>Отменить запись?</h3>
+        )}
+      </div>
 
-            <p style={{ opacity: 0.9 }}>
-              {fmtDate(confirmCancel.start)} • {fmtTime(confirmCancel.start)} –{" "}
-              {fmtTime(confirmCancel.end)}
-            </p>
-
-            <button
-              style={{
-                marginTop: 20,
-                width: "100%",
-                padding: 10,
-                borderRadius: 12,
-                background: "rgba(110,20,30,.35)",
-                border: "1px solid rgba(239,68,68,.7)",
-                color: "#fff",
-                fontWeight: 600,
-              }}
-              onClick={doCancel}
-            >
-              Да, отменить
-            </button>
-
-            <button
-              onClick={closeConfirm}
-              style={{
-                marginTop: 12,
-                width: "100%",
-                padding: 10,
-                borderRadius: 12,
-                border: "1px solid rgba(148,163,184,0.35)",
-                background: "rgba(255,255,255,0.05)",
-                color: "#fff",
-              }}
-            >
-              Закрыть
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ======================== */}
-      {/*        MOBILE STYLE      */}
-      {/* ======================== */}
-      <style>{`
-        /* ОТКЛЮЧАЕМ iOS ZOOM НА INPUT */
-        @supports (-webkit-touch-callout: none) {
-          input, button {
-            font-size: 16px !important;
-          }
-        }
-
-        /* ОБЩИЙ МОБИЛЬНЫЙ BACKDROP */
-        .mobile-modal-wrapper {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100vw;
-          height: 100vh;
-          background: rgba(0,0,0,0.55);
-          backdrop-filter: blur(12px);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          padding: 20px;
-          z-index: 9999;
-        }
-
-        /* МОДАЛКА */
-        .mobile-modal {
-          width: 100%;
-          max-width: 420px;
-          background: rgba(15, 10, 30, 0.95);
-          border-radius: 18px;
-          padding: 22px;
-          border: 1px solid rgba(168,85,247,0.35);
-          box-shadow: 0 6px 28px rgba(0,0,0,0.35);
-          animation: modalFadeIn .25s ease;
-        }
-
-        @keyframes modalFadeIn {
-          0% { opacity: 0; transform: scale(0.94); }
-          100% { opacity: 1; transform: scale(1); }
-        }
-      `}</style>
+      <div style={{ marginTop: 30, textAlign: "center", opacity: 0.4 }}>
+        © IZ HAIR TREND
+      </div>
     </div>
   );
 }
+
+/* ===== С Т И Л И ===== */
+
+const container = {
+  width: "100%",
+  maxWidth: 1000,
+  margin: "0 auto",
+  padding: "16px",
+  color: "#fff",
+};
+
+const filters = {
+  display: "flex",
+  gap: 10,
+  marginBottom: 14,
+};
+
+const fBtn = {
+  padding: "8px 16px",
+  borderRadius: 10,
+  background: "rgba(17,0,40,0.45)",
+  border: "1px solid rgba(168,85,247,0.25)",
+  color: "#fff",
+  cursor: "pointer",
+};
+
+const fActive = {
+  ...fBtn,
+  background: "linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))",
+  border: "1px solid rgba(180,95,255,0.7)",
+  boxShadow: "0 0 12px rgba(150,90,255,0.30)",
+};
+
+const card = {
+  borderRadius: 16,
+  border: "1px solid rgba(88,28,135,0.7)",
+  background: "rgba(10,6,25,0.9)",
+  padding: 14,
+  boxShadow: "0 0 16px rgba(88,28,135,0.55)",
+};
+
+const tag = {
+  padding: "4px 10px",
+  borderRadius: 999,
+  fontSize: 12,
+  fontWeight: 500,
+};
+
+const cancelBtn = {
+  marginTop: 12,
+  width: "100%",
+  padding: 10,
+  borderRadius: 10,
+  border: "1px solid rgba(239,68,68,0.6)",
+  background: "rgba(110,20,30,.35)",
+  color: "#fff",
+  cursor: "pointer",
+};
