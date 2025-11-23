@@ -679,7 +679,7 @@ export default function Admin() {
                           style={{
                             display: "flex",
                             alignItems: "center",
-                            gap: 8,
+                            gap: 4,
                             flexWrap: "wrap",
                             width: "100%",
                           }}
@@ -1313,11 +1313,11 @@ const accordionRow = {
 };
 
 const pillBase = {
-  padding: "3px 10px",
+  padding: "2px 4px",
   borderRadius: 999,
   border: "1px solid rgba(148,163,184,0.6)",
   background: "rgba(15,23,42,0.95)",
-  fontSize: 12,
+  fontSize: 11,
   whiteSpace: "nowrap",
 };
 
