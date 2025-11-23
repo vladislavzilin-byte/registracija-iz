@@ -1304,7 +1304,7 @@ const receiptBtn = {
 const accordionRow = {
   width: "100%",
   borderRadius: 999,
-  padding: "6px 10px",
+  padding: "3px 6px",
   border: "1px solid rgba(129,140,248,0.55)",
   background:
     "radial-gradient(circle at top left, rgba(79,70,229,0.35), transparent 55%), rgba(15,23,42,0.96)",
@@ -1317,7 +1317,7 @@ const pillBase = {
   borderRadius: 999,
   border: "1px solid rgba(148,163,184,0.6)",
   background: "rgba(15,23,42,0.95)",
-  fontSize: 11,
+  fontSize: 11.5,
   whiteSpace: "nowrap",
 };
 
