@@ -504,15 +504,17 @@ const list = useMemo(() => {
     <div style={container}>
 
       {/* ==== MOBILE NO-ZOOM PATCH ==== */}
-      <style>
-        @media (max-width: 768px) {
-          input, select, textarea, button {
-            font-size: 16px !important;
-          }
+      <style
+  dangerouslySetInnerHTML={{
+    __html: `
+      @media (max-width: 768px) {
+        input, select, textarea, button {
+          font-size: 16px !important;
         }
-      </style>
-
-
+      }
+    `
+  }}
+/>
 
       {/* === ПРОФИЛЬ === */}
       <div style={outerCard}>
