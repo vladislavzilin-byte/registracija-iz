@@ -239,6 +239,22 @@ css.innerHTML = `
   .lang-switcher-top { display:none !important; }
 }
 
+/* === КНОПКИ ЯЗЫКОВ ДЛЯ ПК (ТОЛЬКО МЕНЯЕМ ЦВЕТ) === */
+@media (min-width: 768px) {
+  .lang-btn {
+    background: rgba(25,20,40,0.4);
+    border: 1px solid rgba(140,90,200,0.25);
+    box-shadow: 0 0 6px rgba(0,0,0,0.2);
+  }
+
+  .lang-btn.active {
+    background: linear-gradient(180deg, rgba(150,80,255,0.4), rgba(80,0,140,0.3));
+    border: 1.5px solid rgba(168,85,247,0.85);
+    box-shadow: 0 0 12px rgba(168,85,247,0.6), inset 0 0 8px rgba(168,85,247,0.25);
+    text-shadow: 0 0 6px rgba(168,85,247,0.6);
+  }
+}
+
 .lang-switcher-bottom {
   position: fixed;
   bottom: 12px;
