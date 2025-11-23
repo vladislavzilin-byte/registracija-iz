@@ -9,10 +9,14 @@ import {
 } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
 
-function dayISO(d){ return new Date(d).toISOString().slice(0,10) }
-function toDateOnly(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()) }
+function dayISO(d) {
+  return new Date(d).toISOString().slice(0, 10)
+}
+function toDateOnly(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+}
 
-// дефолтные услуги на случай, если в settings ещё нет serviceList
+// дефолтные услуги, если в settings ещё нет serviceList
 const DEFAULT_SERVICES = [
   { name: 'Šukuosena', duration: 60, deposit: 50 },
   { name: 'Tresų nuoma', duration: 15, deposit: 25 },
@@ -21,28 +25,26 @@ const DEFAULT_SERVICES = [
   { name: 'Konsultacija', duration: 30, deposit: 10 }
 ]
 
-export default function Calendar(){
+export default function Calendar() {
   const { t } = useI18n()
   const settings = getSettings()
 
-  // список услуг из настроек
+  // услуги из настроек или дефолтные
   const serviceList =
     Array.isArray(settings.serviceList) && settings.serviceList.length
       ? settings.serviceList
       : DEFAULT_SERVICES
 
-  // -------------------------
   // KAINAS — accordion state
-  // -------------------------
   const [openPrices, setOpenPrices] = useState(false)
 
-  // Автоматическое открытие Kainas из App.jsx
+  // Автооткрытие Kainas из App.jsx
   useEffect(() => {
     const handler = () => {
-      setOpenPrices(prev => !prev)   // ← переключение!
+      setOpenPrices(prev => !prev)
     }
-    window.addEventListener("togglePrices", handler)
-    return () => window.removeEventListener("togglePrices", handler)
+    window.addEventListener('togglePrices', handler)
+    return () => window.removeEventListener('togglePrices', handler)
   }, [])
 
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()))
@@ -53,7 +55,6 @@ export default function Calendar(){
   const [modal, setModal] = useState(null)
 
   const [hoverIdx, setHoverIdx] = useState(-1)
-  const [animDir, setAnimDir] = useState(0) // пока не используется, но оставим
   const touchStartX = useRef(null)
 
   // услуги, выбранные в модалке
@@ -61,7 +62,7 @@ export default function Calendar(){
   const [selectedServices, setSelectedServices] = useState([])
 
   const today = toDateOnly(new Date())
-  const now = new Date() // текущее время для сравнения слотов
+  const now = new Date()
   const minDate = today
   const maxDate = addMonths(new Date(), 24)
 
@@ -70,38 +71,42 @@ export default function Calendar(){
   const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 })
   const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
 
-  const days = useMemo(()=>{
-    const arr=[]; let d=new Date(gridStart); 
-    while(d<=gridEnd){ arr.push(new Date(d)); d=addDays(d,1) } 
+  const days = useMemo(() => {
+    const arr = []
+    let d = new Date(gridStart)
+    while (d <= gridEnd) {
+      arr.push(new Date(d))
+      d = addDays(d, 1)
+    }
     return arr
   }, [currentMonth, gridStart, gridEnd])
 
   const bookings = getBookings()
 
   const slotsForDay = (d) => {
-    // прошлые даты — вообще не показываем слоты
-    if(toDateOnly(d) < today) return []
+    // прошлые даты — без слотов
+    if (toDateOnly(d) < today) return []
 
     const [sh, sm] = settings.workStart.split(':').map(Number)
     const [eh, em] = settings.workEnd.split(':').map(Number)
     const start = new Date(d); start.setHours(sh, sm, 0, 0)
-    const end   = new Date(d); end.setHours(eh, em, 0, 0)
+    const end = new Date(d); end.setHours(eh, em, 0, 0)
     const slots = []
     let cur = new Date(start)
 
-    while(cur <= end){
+    while (cur <= end) {
       slots.push(new Date(cur))
-      cur = new Date(cur.getTime() + settings.slotMinutes*60000)
+      cur = new Date(cur.getTime() + settings.slotMinutes * 60000)
     }
 
     const blocked = settings.blockedDates.includes(dayISO(d))
-    if(blocked) return []
-    if(toDateOnly(d) < minDate || toDateOnly(d) > maxDate) return []
+    if (blocked) return []
+    if (toDateOnly(d) < minDate || toDateOnly(d) > maxDate) return []
 
     return slots
   }
 
-  // проверка: занято ли ВРЕМЯ t существующими бронями (учитываем всю длительность)
+  // проверка: занято ли время (учитываем всю длительность)
   const isTaken = (t) => {
     const active = bookings.filter(
       b => b.status === 'approved' || b.status === 'pending'
@@ -110,7 +115,7 @@ export default function Calendar(){
     const byBookings = active.some(b => {
       const bs = new Date(b.start)
       const be = new Date(b.end)
-      return t >= bs && t < be     // попадает в интервал брони
+      return t >= bs && t < be
     })
 
     const isProc = processingISO && isSameMinute(processingISO, t)
@@ -119,7 +124,7 @@ export default function Calendar(){
     return byBookings || isProc || isLocal
   }
 
-  // проверка: свободен ли весь интервал [start, start+duration]
+  // проверка: свободен ли интервал [start, start+duration]
   const isRangeFree = (start, durationMinutes) => {
     const end = new Date(start.getTime() + durationMinutes * 60000)
     const active = getBookings().filter(
@@ -128,12 +133,11 @@ export default function Calendar(){
     return !active.some(b => {
       const bs = new Date(b.start)
       const be = new Date(b.end)
-      // пересечение интервалов
       return bs < end && be > start
     })
   }
 
-  // helper: считаем общую длительность и залог по выбранным услугам
+  // считаем длительность и залог по выбранным услугам
   const calcTotals = (servicesNames) => {
     let duration = 0
     let price = 0
@@ -146,20 +150,20 @@ export default function Calendar(){
     return { duration, price }
   }
 
-  // открываем модалку при клике по времени
+  // открываем модалку при выборе времени
   const openTimeModal = (tSel) => {
-    // защита: прошлые даты и прошлое время (сегодня)
-    if(
+    // защита от прошлого времени
+    if (
       toDateOnly(tSel) < today ||
       (isSameDay(tSel, now) && tSel < now)
-    ){
+    ) {
       alert(t('cannot_book_past') || 'Нельзя записываться на прошедшее время')
       return
     }
 
     const user = getCurrentUser()
-    if(!user) { alert(t('login_or_register')); return }
-    if(isTaken(tSel)) { alert(t('already_booked')); return }
+    if (!user) { alert(t('login_or_register')); return }
+    if (isTaken(tSel)) { alert(t('already_booked')); return }
 
     const endPreview = new Date(tSel)
     endPreview.setMinutes(endPreview.getMinutes() + settings.slotMinutes)
@@ -169,8 +173,8 @@ export default function Calendar(){
 
     setModal({
       title: 'Kokias paslaugas norėtumėte pasirinkti?',
-      dateStr: format(tSel,'dd.MM.yyyy'),
-      timeStr: format(tSel,'HH:mm') + ' – ' + format(endPreview,'HH:mm'),
+      dateStr: format(tSel, 'dd.MM.yyyy'),
+      timeStr: `${format(tSel, 'HH:mm')} – ${format(endPreview, 'HH:mm')}`,
       caption: 'Trukmė ir suma priklauso nuo pasirinktų paslaugų.'
     })
   }
@@ -188,7 +192,8 @@ export default function Calendar(){
     }
 
     const start = pendingTime
-    // ещё раз проверим «не прошлое»
+
+    // ещё раз проверим, что не прошлое
     if (
       toDateOnly(start) < today ||
       (isSameDay(start, now) && start < now)
@@ -205,7 +210,7 @@ export default function Calendar(){
     const { duration, price } = calcTotals(selectedServices)
     const durationMinutes = duration || settings.slotMinutes
 
-    // проверяем, свободен ли весь интервал
+    // проверяем весь интервал
     if (!isRangeFree(start, durationMinutes)) {
       alert(t('already_booked') || 'Šiuo metu jau yra rezervacija.')
       return
@@ -231,7 +236,7 @@ export default function Calendar(){
       paid: false
     }
 
-    // локально отмечаем все слоты в интервале как занятые
+    // локально помечаем все слоты как занятые
     const newLocalSlots = []
     let cur = new Date(start)
     while (cur < end) {
@@ -239,9 +244,9 @@ export default function Calendar(){
       cur = new Date(cur.getTime() + settings.slotMinutes * 60000)
     }
 
-    setTimeout(()=>{
+    setTimeout(() => {
       const current = getBookings()
-      saveBookings([ ...current, newB ])
+      saveBookings([...current, newB])
       setBookedISO(prev => [...prev, ...newLocalSlots])
       setBusy(false)
       setProcessingISO(null)
@@ -258,38 +263,56 @@ export default function Calendar(){
     setSelectedServices([])
   }
 
-  const goPrev = () => { setAnimDir(-1); setCurrentMonth(m => addMonths(m,-1)) }
-  const goNext = () => { setAnimDir(+1); setCurrentMonth(m => addMonths(m, 1)) }
+  const goPrev = () => {
+    setCurrentMonth(m => addMonths(m, -1))
+  }
+  const goNext = () => {
+    setCurrentMonth(m => addMonths(m, 1))
+  }
 
-  const onTouchStart = (e) => { touchStartX.current = e.touches[0].clientX }
+  const onTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX
+  }
   const onTouchEnd = (e) => {
-    if(touchStartX.current == null) return
+    if (touchStartX.current == null) return
     const dx = e.changedTouches[0].clientX - touchStartX.current
-    if(Math.abs(dx) > 50){
-      if(dx > 0) goPrev(); else goNext();
+    if (Math.abs(dx) > 50) {
+      if (dx > 0) goPrev()
+      else goNext()
     }
     touchStartX.current = null
   }
 
-  const monthLabelRaw = format(currentMonth,'LLLL yyyy')
-  const monthLabel = monthLabelRaw.charAt(0).toUpperCase()+monthLabelRaw.slice(1)
+  const monthLabelRaw = format(currentMonth, 'LLLL yyyy')
+  const monthLabel = monthLabelRaw.charAt(0).toUpperCase() + monthLabelRaw.slice(1)
 
   const navBtnStyle = {
-    width: 130, height: 46, borderRadius: 14,
+    width: 130,
+    height: 46,
+    borderRadius: 14,
     border: '1px solid rgba(168,85,247,0.40)',
     background: 'rgba(31, 0, 63, 0.55)',
     backdropFilter: 'blur(8px)',
-    color: '#fff', fontSize: 22, cursor: 'pointer',
-    display:'flex', alignItems:'center', justifyContent:'center'
+    color: '#fff',
+    fontSize: 22,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
   }
 
   const centerPillStyle = {
-    width: 130, height: 46, borderRadius: 14,
-    display: 'flex', justifyContent: 'center', alignItems: 'center',
+    width: 130,
+    height: 46,
+    borderRadius: 14,
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
     border: '1px solid rgba(168,85,247,0.40)',
     background: 'linear-gradient(145deg, rgba(66,0,145,0.55), rgba(20,0,40,0.60))',
     backdropFilter: 'blur(8px)',
-    color: '#fff', fontWeight: 600
+    color: '#fff',
+    fontWeight: 600
   }
 
   const dateCellStyle = (d, idx, active, isPast) => {
@@ -301,34 +324,30 @@ export default function Calendar(){
       position: 'relative'
     }
 
-    if(isPast){
+    if (isPast) {
       base.opacity = 0.45
-      base.filter = "grayscale(30%)"
+      base.filter = 'grayscale(30%)'
     }
 
-    if(hoverIdx === idx && !isPast){
+    if (hoverIdx === idx && !isPast) {
       base.boxShadow = '0 0 18px rgba(168,85,247,0.40)'
       base.background = 'rgba(98,0,180,0.18)'
     }
 
-    if(active){
+    if (active) {
       base.boxShadow = '0 0 24px rgba(168,85,247,0.55)'
       base.background = 'rgba(98,0,180,0.22)'
       base.fontWeight = 700
-    }
-
-    if(isPast){
-      base.position = "relative"
     }
 
     return base
   }
 
   return (
-    <div className="card" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-
+    <>
+      {/* Глобальные стили для календаря и модалки */}
       <style>{`
-        /* Точка под прошлыми днями */
+        /* точка под прошлыми днями */
         .past-day-dot::after {
           content: '';
           width: 6px;
@@ -369,18 +388,15 @@ export default function Calendar(){
           100% { text-shadow: 0 0 0px rgba(168,85,247,0.0); }
         }
 
-        /* Кнопка слота времени — базовый класс */
         .time-slot-btn {
           position: relative;
         }
 
-        /* Приглушённый стиль для прошедших слотов */
         .time-past {
           opacity: 0.55;
           filter: grayscale(35%);
         }
 
-        /* Мобильная адаптация календаря + навигации */
         @media(max-width: 600px){
           .calendar-nav {
             display: flex;
@@ -409,375 +425,376 @@ export default function Calendar(){
           .muted { font-size: 13px !important; }
         }
 
-        /* Немного стабилизируем поведение на тач-экранах */
         html, body, .card, button {
           touch-action: manipulation;
         }
 
-        @keyframes spin { to{ transform: rotate(360deg); } }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
 
-        /* ============================================
-           MODAL LIKE FORGOT PASSWORD (CENTER + BLUR)
-           ============================================ */
-        .modal-backdrop {
+        /* Kainas fadeIn */
+        @keyframes fadeIn {
+          0% { opacity: 0; transform: translateY(6px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* МОДАЛКА КАК Forgot Password — поверх всего экрана */
+        .calendar-modal-backdrop {
           position: fixed;
           inset: 0;
-          background: rgba(0, 0, 0, 0.45);
-          backdrop-filter: blur(18px);
+          width: 100vw;
+          height: 100vh;
           display: flex;
           align-items: center;
           justify-content: center;
+          background: rgba(0,0,0,0.55);
+          backdrop-filter: blur(14px);
           z-index: 9999;
-          padding: 16px;
-          box-sizing: border-box;
+          animation: modalFadeIn 0.25s ease;
         }
 
-        .modal {
-          position: relative;
-          width: 100%;
+        .calendar-modal {
+          width: 92%;
           max-width: 420px;
-          padding: 24px 26px;
-          background: rgba(30, 0, 60, 0.78);
-          backdrop-filter: blur(14px);
-          border-radius: 20px;
-          border: 1px solid rgba(190, 140, 255, 0.55);
-          box-shadow:
-            0 0 32px rgba(140, 80, 255, 0.45),
-            0 0 18px rgba(100, 0, 180, 0.25) inset;
+          background: rgba(17,0,40,0.9);
+          border-radius: 18px;
+          border: 1px solid rgba(168,85,247,0.45);
+          padding: 22px;
           color: #fff;
-          animation: modalFadeIn 0.25s ease-out;
+          box-shadow: 0 8px 32px rgba(120,0,255,0.4);
+          animation: modalFadeIn 0.25s ease;
         }
 
         @keyframes modalFadeIn {
-          0%   { opacity: 0; transform: scale(0.94); }
+          0%   { opacity: 0; transform: scale(0.9); }
           100% { opacity: 1; transform: scale(1); }
         }
 
-        /* ОТКЛЮЧАЕМ iOS ZOOM ДЛЯ ИНПУТОВ */
+        /* iOS zoom fix */
         @media (max-width: 768px) {
           input, select, textarea, button {
             font-size: 16px !important;
           }
         }
 
-        .loader {
-          width: 18px; height: 18px; border-radius: 50%;
+        .calendar-loader {
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
           border: 2px solid rgba(255,255,255,0.25);
           border-top-color: rgba(168,85,247,0.9);
           animation: spin .8s linear infinite;
-          display:inline-block; vertical-align:middle;
+          display: inline-block;
+          vertical-align: middle;
         }
       `}</style>
 
-      {/* ------------------------- */}
-      {/*         KAINAS           */}
-      {/* ------------------------- */}
-
       <div
-        style={{
-          width: "100%",
-          border: "1px solid rgba(170, 90, 255, 0.22)",
-          background:
-            "linear-gradient(180deg, rgba(18,18,30,0.96) 0%, rgba(12,12,22,0.92) 100%)",
-          borderRadius: 20,
-          padding: "22px 24px 26px",
-          marginTop: 0,
-          marginBottom: 32,
-          backdropFilter: "blur(22px)",
-          boxShadow: "0 0 28px rgba(170, 90, 255, 0.18)",
-        }}
+        className="card"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
       >
-        <h2
-          style={{
-            margin: "0 0 18px 0",
-            fontSize: 25,
-            fontWeight: 700,
-            color: "#ffffff",
-            letterSpacing: "0.3px",
-          }}
-        >
-          Kainas
-        </h2>
-
-        <div
-          onClick={() => setOpenPrices(!openPrices)}
-          style={{
-            border: "1px solid rgba(180, 90, 255, 0.32)",
-            background: "rgba(22, 22, 35, 0.90)",
-            borderRadius: 16,
-            padding: "14px 16px",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            cursor: "pointer",
-            transition: ".28s ease",
-            boxShadow: openPrices
-              ? "0 0 20px rgba(180, 90, 255, 0.35)"
-              : "0 0 12px rgba(180, 90, 255, 0.15)",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(210, 120, 255, 0.55)";
-            e.currentTarget.style.boxShadow =
-              "0 0 22px rgba(200, 110, 255, 0.48)";
-            e.currentTarget.style.background = "rgba(30, 24, 50, 0.92)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(180, 90, 255, 0.32)";
-            e.currentTarget.style.boxShadow = openPrices
-              ? "0 0 20px rgba(180, 90, 255, 0.35)"
-              : "0 0 12px rgba(180, 90, 255, 0.15)";
-            e.currentTarget.style.background = "rgba(22,22,35,0.90)";
-          }}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            style={{
-              transform: openPrices ? "rotate(180deg)" : "rotate(0deg)",
-              transition: "0.25s ease",
-              fill: "#e3b8ff",
-              filter: "drop-shadow(0 0 4px rgba(200,120,255,0.55))",
-            }}
-          >
-            <path d="M7 10l5 5 5-5z" />
-          </svg>
-
-          <span style={{ fontSize: 17, color: "#fff" }}>Žiūrėti kainas</span>
-        </div>
-
+        {/* --------- KAINAS ---------- */}
         <div
           style={{
-            maxHeight: openPrices ? 2000 : 0,
-            overflow: "hidden",
-            transition: "max-height .55s cubic-bezier(.25,.8,.25,1)",
-            marginTop: openPrices ? 20 : 0,
-            opacity: openPrices ? 1 : 0,
+            width: '100%',
+            border: '1px solid rgba(170, 90, 255, 0.22)',
+            background:
+              'linear-gradient(180deg, rgba(18,18,30,0.96) 0%, rgba(12,12,22,0.92) 100%)',
+            borderRadius: 20,
+            padding: '22px 24px 26px',
+            marginTop: 0,
+            marginBottom: 32,
+            backdropFilter: 'blur(22px)',
+            boxShadow: '0 0 28px rgba(170, 90, 255, 0.18)'
           }}
         >
-          <div
+          <h2
             style={{
-              border: "1px solid rgba(170, 90, 255, 0.22)",
-              background: "rgba(15,15,28,0.90)",
-              borderRadius: 18,
-              padding: "22px 20px",
-              backdropFilter: "blur(16px)",
-              boxShadow: "0 0 20px rgba(150, 70, 255, 0.18)",
-              animation: openPrices ? "fadeIn .45s ease" : "none",
+              margin: '0 0 18px 0',
+              fontSize: 25,
+              fontWeight: 700,
+              color: '#ffffff',
+              letterSpacing: '0.3px'
             }}
           >
-            <style>
-              {`
-                @keyframes fadeIn {
-                  0% { opacity: 0; transform: translateY(6px); }
-                  100% { opacity: 1; transform: translateY(0); }
-                }
-              `}
-            </style>
+            Kainas
+          </h2>
 
-            {[
-              {
-                price: "80–130 €",
-                title: "Šukuosenos kaina",
-                text: "Priklauso nuo darbo apimties",
-              },
-              {
-                price: "25 €",
-                title: "Konsultacija",
-                text: "Užtrunkame nuo 30 min. iki valandos",
-              },
-              {
-                price: "50 € užstatas / 100 €",
-                title: "Plaukų Tresų nuoma",
-                text:
-                  "Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžину užstatą",
-              },
-              {
-                price: "Iki 20 €",
-                title: "Papuošalų nuoma",
-                text: "",
-              },
-              {
-                price: "130 €",
-                title: "Atvykimas Klaipėdoje",
-                text:
-                  "Daiktų краустymai, važiavimai — per tą laiką galiu priimti kitą klientę.",
-              },
-            ].map((item, i) => (
-              <div
-                key={i}
-                style={{
-                  border: "1px solid rgba(150, 80, 255, 0.28)",
-                  borderRadius: 16,
-                  padding: "16px 18px",
-                  marginBottom: 16,
-                  background: "rgba(22, 18, 38, 0.92)",
-                  boxShadow: "0 0 12px rgba(150, 70, 255, 0.18)",
-                }}
-              >
-                <p style={{ margin: 0, fontSize: 18, color: "#fff" }}>
-                  <b>{item.price}</b>
-                </p>
-                <p style={{ margin: "4px 0 0 0", color: "#d6caff" }}>
-                  {item.title}
-                </p>
-                {item.text && (
-                  <p style={{ margin: "3px 0 0 0", color: "#a898ce" }}>
-                    {item.text}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* NAVIGATION + MONTH */}
-      <div
-        className="calendar-nav"
-        style={{
-          display:'flex',
-          gap:12,
-          alignItems:'center',
-          justifyContent:'center',
-          marginBottom:12,
-          flexWrap:'wrap'
-        }}
-      >
-        <button
-          style={navBtnStyle}
-          onClick={goPrev}
-        >
-          ←
-        </button>
-
-        <div className="month-pill" style={centerPillStyle}>
-          {monthLabel}
-        </div>
-
-        <button
-          style={navBtnStyle}
-          onClick={goNext}
-        >
-          →
-        </button>
-      </div>
-
-      <div className="hr" />
-
-      {/* CALENDAR GRID */}
-      <div className="grid">
-        {['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map((w,i)=>(
           <div
-            key={i}
-            className="muted"
-            style={{textAlign:'center',fontWeight:600}}
+            onClick={() => setOpenPrices(!openPrices)}
+            style={{
+              border: '1px solid rgba(180, 90, 255, 0.32)',
+              background: 'rgba(22, 22, 35, 0.90)',
+              borderRadius: 16,
+              padding: '14px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              cursor: 'pointer',
+              transition: '.28s ease',
+              boxShadow: openPrices
+                ? '0 0 20px rgba(180, 90, 255, 0.35)'
+                : '0 0 12px rgba(180, 90, 255, 0.15)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(210, 120, 255, 0.55)'
+              e.currentTarget.style.boxShadow =
+                '0 0 22px rgba(200, 110, 255, 0.48)'
+              e.currentTarget.style.background = 'rgba(30, 24, 50, 0.92)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(180, 90, 255, 0.32)'
+              e.currentTarget.style.boxShadow = openPrices
+                ? '0 0 20px rgba(180, 90, 255, 0.35)'
+                : '0 0 12px rgba(180, 90, 255, 0.15)'
+              e.currentTarget.style.background = 'rgba(22,22,35,0.90)'
+            }}
           >
-            {w}
-          </div>
-        ))}
-
-        {days.map((d,idx)=>{
-          const inMonth = isSameMonth(d,monthStart)
-          const active  = isSameDay(d,selectedDate)
-          const isPast = toDateOnly(d) < today
-          const disabled = isPast || toDateOnly(d) > maxDate
-
-          return (
-            <div
-              key={idx}
-              className={
-                'datebtn' +
-                (active ? ' active' : '') +
-                (isPast ? ' past-day-dot' : '')
-              }
-              onMouseEnter={()=>setHoverIdx(idx)}
-              onMouseLeave={()=>setHoverIdx(-1)}
-              onClick={()=>!disabled && setSelectedDate(d)}
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
               style={{
-                ...dateCellStyle(d, idx, active, isPast),
-                opacity: inMonth ? 1 : 0.4,
-                cursor: disabled ? 'default' : 'pointer'
+                transform: openPrices ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: '0.25s ease',
+                fill: '#e3b8ff',
+                filter: 'drop-shadow(0 0 4px rgba(200,120,255,0.55))'
               }}
             >
-              {format(d,'d')}
+              <path d="M7 10l5 5 5-5z" />
+            </svg>
+
+            <span style={{ fontSize: 17, color: '#fff' }}>Žiūrėti kainas</span>
+          </div>
+
+          <div
+            style={{
+              maxHeight: openPrices ? 2000 : 0,
+              overflow: 'hidden',
+              transition: 'max-height .55s cubic-bezier(.25,.8,.25,1)',
+              marginTop: openPrices ? 20 : 0,
+              opacity: openPrices ? 1 : 0
+            }}
+          >
+            <div
+              style={{
+                border: '1px solid rgba(170, 90, 255, 0.22)',
+                background: 'rgba(15,15,28,0.90)',
+                borderRadius: 18,
+                padding: '22px 20px',
+                backdropFilter: 'blur(16px)',
+                boxShadow: '0 0 20px rgba(150, 70, 255, 0.18)',
+                animation: openPrices ? 'fadeIn .45s ease' : 'none'
+              }}
+            >
+              {[
+                {
+                  price: '80–130 €',
+                  title: 'Šukuosenos kaina',
+                  text: 'Priklauso nuo darbo apimties'
+                },
+                {
+                  price: '25 €',
+                  title: 'Konsultacija',
+                  text: 'Užtrunkame nuo 30 min. iki valandos'
+                },
+                {
+                  price: '50 € užstatas / 100 €',
+                  title: 'Plaukų Tresų nuoma',
+                  text:
+                    'Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžinu užstatą'
+                },
+                {
+                  price: 'Iki 20 €',
+                  title: 'Papuošalų nuoma',
+                  text: ''
+                },
+                {
+                  price: '130 €',
+                  title: 'Atvykimas Klaipėdoje',
+                  text:
+                    'Daiktų kraustymai, važiavimai — per tą laiką galiu priimti kitą klientę.'
+                }
+              ].map((item, i) => (
+                <div
+                  key={i}
+                  style={{
+                    border: '1px solid rgba(150, 80, 255, 0.28)',
+                    borderRadius: 16,
+                    padding: '16px 18px',
+                    marginBottom: 16,
+                    background: 'rgba(22, 18, 38, 0.92)',
+                    boxShadow: '0 0 12px rgba(150, 70, 255, 0.18)'
+                  }}
+                >
+                  <p style={{ margin: 0, fontSize: 18, color: '#fff' }}>
+                    <b>{item.price}</b>
+                  </p>
+                  <p style={{ margin: '4px 0 0 0', color: '#d6caff' }}>
+                    {item.title}
+                  </p>
+                  {item.text && (
+                    <p style={{ margin: '3px 0 0 0', color: '#a898ce' }}>
+                      {item.text}
+                    </p>
+                  )}
+                </div>
+              ))}
             </div>
-          )
-        })}
-      </div>
-
-      <div className="hr" />
-
-      {/* SLOTS */}
-      <div>
-        <div className="slots-title">
-          {t('slots_for')}{" "}
-          <span className="flash-date">
-            {format(selectedDate,'dd.MM.yyyy')}
-          </span>
+          </div>
         </div>
 
-        <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:8}}>
-          {slotsForDay(selectedDate).map(ti=>{
-            const taken = isTaken(ti)
-            const isProcessing = processingISO && isSameMinute(processingISO, ti)
-            const isLocal = bookedISO.some(x => isSameMinute(x, ti))
-            const disabledLike = taken || busy || isProcessing
+        {/* NAV + MONTH */}
+        <div
+          className="calendar-nav"
+          style={{
+            display: 'flex',
+            gap: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 12,
+            flexWrap: 'wrap'
+          }}
+        >
+          <button
+            style={navBtnStyle}
+            onClick={goPrev}
+          >
+            ←
+          </button>
 
-            // прошедшее время СЕГОДНЯ
-            const isPastTime =
-              isSameDay(ti, now) && ti < now
+          <div className="month-pill" style={centerPillStyle}>
+            {monthLabel}
+          </div>
 
-            let label = format(ti,'HH:mm')
-            if(isProcessing) label = t('processing')
-            else if(taken || isLocal) label = t('reserved_label')
+          <button
+            style={navBtnStyle}
+            onClick={goNext}
+          >
+            →
+          </button>
+        </div>
+
+        <div className="hr" />
+
+        {/* CALENDAR GRID */}
+        <div className="grid">
+          {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((w, i) => (
+            <div
+              key={i}
+              className="muted"
+              style={{ textAlign: 'center', fontWeight: 600 }}
+            >
+              {w}
+            </div>
+          ))}
+
+          {days.map((d, idx) => {
+            const inMonth = isSameMonth(d, monthStart)
+            const active = isSameDay(d, selectedDate)
+            const isPast = toDateOnly(d) < today
+            const disabled = isPast || toDateOnly(d) > maxDate
 
             return (
-              <button
-                key={ti.toISOString()}
-                disabled={disabledLike || isPastTime}
-                onClick={()=>openTimeModal(ti)}
+              <div
+                key={idx}
                 className={
-                  'time-slot-btn ' +
-                  (isPastTime ? 'time-past' : '')
+                  'datebtn' +
+                  (active ? ' active' : '') +
+                  (isPast ? ' past-day-dot' : '')
                 }
+                onMouseEnter={() => setHoverIdx(idx)}
+                onMouseLeave={() => setHoverIdx(-1)}
+                onClick={() => !disabled && setSelectedDate(d)}
                 style={{
-                  borderRadius:10,
-                  padding:'8px 12px',
-                  border: '1px solid ' + (
-                    disabledLike || isPastTime
-                      ? 'rgba(180,180,200,0.25)'
-                      : 'rgba(168,85,247,0.45)'
-                  ),
-                  background: (disabledLike || isPastTime)
-                    ? 'rgba(255,255,255,0.04)'
-                    : 'rgba(98,0,180,0.18)',
-                  color:'#fff',
-                  cursor: (disabledLike || isPastTime) ? 'default' : 'pointer',
-                  backdropFilter:'blur(6px)',
-                  transition:'0.2s'
+                  ...dateCellStyle(d, idx, active, isPast),
+                  opacity: inMonth ? 1 : 0.4,
+                  cursor: disabled ? 'default' : 'pointer'
                 }}
               >
-                {busy && isProcessing
-                  ? <span className="loader" />
-                  : label}
-              </button>
+                {format(d, 'd')}
+              </div>
             )
           })}
+        </div>
 
-          {slotsForDay(selectedDate).length === 0 && (
-            <small className="muted">
-              {t('no_slots') || 'Нет доступных слотов'}
-            </small>
-          )}
+        <div className="hr" />
+
+        {/* SLOTS */}
+        <div>
+          <div className="slots-title">
+            {t('slots_for')}{' '}
+            <span className="flash-date">
+              {format(selectedDate, 'dd.MM.yyyy')}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+            {slotsForDay(selectedDate).map(ti => {
+              const taken = isTaken(ti)
+              const isProcessing = processingISO && isSameMinute(processingISO, ti)
+              const isLocal = bookedISO.some(x => isSameMinute(x, ti))
+              const disabledLike = taken || busy || isProcessing
+
+              const isPastTime =
+                isSameDay(ti, now) && ti < now
+
+              let label = format(ti, 'HH:mm')
+              if (isProcessing) label = t('processing')
+              else if (taken || isLocal) label = t('reserved_label')
+
+              return (
+                <button
+                  key={ti.toISOString()}
+                  disabled={disabledLike || isPastTime}
+                  onClick={() => openTimeModal(ti)}
+                  className={
+                    'time-slot-btn ' +
+                    (isPastTime ? 'time-past' : '')
+                  }
+                  style={{
+                    borderRadius: 10,
+                    padding: '8px 12px',
+                    border: '1px solid ' + (
+                      disabledLike || isPastTime
+                        ? 'rgba(180,180,200,0.25)'
+                        : 'rgba(168,85,247,0.45)'
+                    ),
+                    background: (disabledLike || isPastTime)
+                      ? 'rgba(255,255,255,0.04)'
+                      : 'rgba(98,0,180,0.18)',
+                    color: '#fff',
+                    cursor: (disabledLike || isPastTime) ? 'default' : 'pointer',
+                    backdropFilter: 'blur(6px)',
+                    transition: '0.2s'
+                  }}
+                >
+                  {busy && isProcessing
+                    ? <span className="calendar-loader" />
+                    : label}
+                </button>
+              )
+            })}
+
+            {slotsForDay(selectedDate).length === 0 && (
+              <small className="muted">
+                {t('no_slots') || 'Нет доступных слотов'}
+              </small>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* MODAL */}
+      {/* MODAL — поверх всего экрана */}
       {modal && (
-        <div className="modal-backdrop" onClick={closeModal}>
-          <div className="modal" onClick={e=>e.stopPropagation()}>
-            <h3 style={{marginTop:0, marginBottom: 10}}>
+        <div className="calendar-modal-backdrop" onClick={closeModal}>
+          <div
+            className="calendar-modal"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: 10 }}>
               {modal.title}
             </h3>
 
@@ -818,7 +835,7 @@ export default function Calendar(){
                     >
                       <span>{s.name}</span>
                       <span style={{ fontSize: 13, opacity: 0.9 }}>
-                        {s.duration || 0} min • Avansas {s.deposit || 0} €
+                        {(s.duration || 0)} min • Avansas {(s.deposit || 0)} €
                       </span>
                     </button>
                   ))}
@@ -827,33 +844,39 @@ export default function Calendar(){
             )}
 
             {modal.dateStr && (
-              <p style={{margin:'6px 0', opacity:.9}}>
+              <p style={{ margin: '6px 0', opacity: .9 }}>
                 {modal.dateStr}
               </p>
             )}
 
             {modal.timeStr && (
-              <p style={{margin:'6px 0', fontWeight:700}}>
+              <p style={{ margin: '6px 0', fontWeight: 700 }}>
                 {modal.timeStr}
               </p>
             )}
 
             {modal.caption && (
-              <p style={{margin:'6px 0', opacity:.95}}>
+              <p style={{ margin: '6px 0', opacity: .95 }}>
                 {modal.caption}
               </p>
             )}
 
-            <div style={{marginTop:14, textAlign:'right', display:'flex', justifyContent:'flex-end', gap:8}}>
+            <div style={{
+              marginTop: 14,
+              textAlign: 'right',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: 8
+            }}>
               <button
                 onClick={closeModal}
                 style={{
-                  borderRadius:10,
-                  padding:'8px 14px',
-                  border:'1px solid rgba(148,163,184,0.6)',
-                  background:'rgba(15,23,42,0.9)',
-                  color:'#e5e7eb',
-                  cursor:'pointer'
+                  borderRadius: 10,
+                  padding: '8px 14px',
+                  border: '1px solid rgba(148,163,184,0.6)',
+                  background: 'rgba(15,23,42,0.9)',
+                  color: '#e5e7eb',
+                  cursor: 'pointer'
                 }}
               >
                 Atšaukti
@@ -861,13 +884,13 @@ export default function Calendar(){
               <button
                 onClick={confirmBooking}
                 style={{
-                  borderRadius:10,
-                  padding:'8px 14px',
-                  border:'1px solid rgba(168,85,247,0.45)',
-                  background:'rgba(98,0,180,0.55)',
-                  color:'#fff',
-                  backdropFilter:'blur(6px)',
-                  cursor:'pointer'
+                  borderRadius: 10,
+                  padding: '8px 14px',
+                  border: '1px solid rgba(168,85,247,0.45)',
+                  background: 'rgba(98,0,180,0.55)',
+                  color: '#fff',
+                  backdropFilter: 'blur(6px)',
+                  cursor: 'pointer'
                 }}
               >
                 Patvirtinti
@@ -876,7 +899,6 @@ export default function Calendar(){
           </div>
         </div>
       )}
-
-    </div>
+    </>
   )
 }
