@@ -201,27 +201,26 @@ const footerStyle = {
 const css = document.createElement('style')
 css.innerHTML = `
 
-.lang-group {
-  display: flex;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 16px;
-  background: rgba(20, 10, 45, 0.7);
-  border: 1.5px solid rgba(180, 120, 255, 0.55);
-  box-shadow: 0 0 18px rgba(160, 80, 240, 0.35);
-  backdrop-filter: blur(10px);
-}
-
+/* Кнопки языка на ПК — тот же стиль, что navButton */
 .lang-btn {
   border-radius: 10px;
-  padding: 4px 8px;
-  min-width: 42px;
+  padding: 4px 10px;
   font-size: 12px;
   font-weight: 600;
-  background: linear-gradient(180deg, rgba(160,70,255,0.9), rgba(80,0,160,0.9));
-  border: 1.5px solid rgba(210,160,255,0.7);
   color: #fff;
   cursor: pointer;
+  background: rgba(25,20,40,0.4); /* как неактивные navButton */
+  border: 1px solid rgba(140,90,200,0.25);
+  box-shadow: 0 0 6px rgba(0,0,0,0.2);
+  backdrop-filter: blur(8px);
+  transition: all 0.25s ease;
+}
+
+.lang-btn.active {
+  background: linear-gradient(180deg, rgba(150,80,255,0.4), rgba(80,0,140,0.3));
+  border: 1.5px solid rgba(168,85,247,0.85);
+  box-shadow: 0 0 12px rgba(168,85,247,0.6), inset 0 0 8px rgba(168,85,247,0.25);
+  text-shadow: 0 0 6px rgba(168,85,247,0.6);
 }
 
 .lang-btn.active {
