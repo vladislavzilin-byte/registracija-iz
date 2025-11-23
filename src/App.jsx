@@ -196,24 +196,39 @@ const footerStyle = {
 const css = document.createElement("style");
 css.innerHTML = `
 
-/* --- унифицированный стиль кнопок --- */
+/* === ОБЪЕДИНЁННАЯ РАМКА ДЛЯ ЯЗЫКОВ === */
+.lang-group {
+  display: flex;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: rgba(20, 10, 40, 0.65);
+  border: 1.5px solid rgba(150, 80, 255, 0.5);
+  box-shadow: 0 0 15px rgba(160, 80, 255, 0.3);
+  backdrop-filter: blur(8px);
+}
+
+/* === УЗКИЕ КНОПКИ ЯЗЫКОВ === */
 .lang-btn {
-  border-radius: 12px;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  background: linear-gradient(180deg, rgba(160,70,255,0.9), rgba(80,0,160,0.9));
-  border: 1.5px solid rgba(210,160,255,0.7);
+  border-radius: 8px;
+  padding: 4px 8px;       /* <- В ДВА РАЗА УЖЕ */
+  font-size: 12px;
+  min-width: 45px;        /* <- чтобы пальцем удобно нажимать */
+  text-align: center;
+
+  background: rgba(60, 20, 120, 0.65);
+  border: 1px solid rgba(180, 120, 255, 0.45);
   color: #fff;
+
   cursor: pointer;
   transition: 0.25s;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 0 12px rgba(150,80,240,0.6);
+  backdrop-filter: blur(6px);
 }
+
 .lang-btn.active {
-  background: linear-gradient(180deg, rgba(200,120,255,1), rgba(120,20,220,1));
-  border: 2px solid rgba(255,230,255,0.9);
-  box-shadow: 0 0 18px rgba(200,120,255,0.9);
+  background: linear-gradient(180deg, rgba(190,90,255,1), rgba(120,20,220,1));
+  border: 2px solid rgba(255,240,255,0.9);
+  box-shadow: 0 0 14px rgba(200,120,255,0.85);
 }
 
 /* --- ПК: верхнее меню видно --- */
