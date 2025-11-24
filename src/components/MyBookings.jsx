@@ -8,7 +8,7 @@ import {
   getUsers,
   saveUsers,
   setCurrentUser,
-  getSettings          // ← ОБЯЗАТЕЛЬНО!
+  getSettings   // ← ДОБАВЛЕНО, ЭТО ГЛАВНОЕ
 } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
 
@@ -39,7 +39,7 @@ export default function MyBookings() {
     descriptionPrefix: "Rezervacija",
   }
 
-  // Авто-обновление настроек из Admin.jsx
+  // Авто-обновление настроек из Admin.jsx (без refresh страницы)
   useEffect(() => {
     const onStorage = (e) => {
       if (e.key === "iz.settings") {
@@ -49,6 +49,34 @@ export default function MyBookings() {
     window.addEventListener("storage", onStorage)
     return () => window.removeEventListener("storage", onStorage)
   }, [])
+
+  const [form, setForm] = useState({
+    name: user?.name || '',
+    instagram: user?.instagram || '',
+    phone: user?.phone || '',
+    email: user?.email || '',
+    password: user?.password || ''
+  })
+
+  const [errors, setErrors] = useState({})
+  const [filter, setFilter] = useState('all') // all | active | history
+  const [confirmId, setConfirmId] = useState(null)
+  const [version, setVersion] = useState(0)
+  const [modal, setModal] = useState(false)
+  const [approvedModal, setApprovedModal] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
+
+  // модалка оплаты
+  const [paymentBooking, setPaymentBooking] = useState(null)
+  const [paymentLoading, setPaymentLoading] = useState(false)
+  const [paymentError, setPaymentError] = useState('')
+
+  // читаем брони при каждом рендере (обновление через version)
+  const bookingsAll = getBookings()
+  const all = bookingsAll
+    .filter(b => user && b.userPhone === user.phone)
+    .sort((a, b) => new Date(a.start) - new Date(b.start))
+
 
 
     // обновляем записи пользователя
