@@ -295,31 +295,46 @@ export default function Admin() {
             }}
           >
             <div style={{ paddingTop: 10 }}>
-              {/* ОСНОВНЫЕ НАСТРОЙКИ */}
-              <div className="row" style={{ gap: 12 }}>
-                <div className="col">
-                  <label style={labelStyle}>{t("master_name")}</label>
-                  <input
-                    style={inputGlass}
-                    value={settings.masterName}
-                    onChange={(e) =>
-                      updateSettings({ masterName: e.target.value })
-                    }
-                  />
-                </div>
+   {/* ОСНОВНЫЕ НАСТРОЙКИ */}
+<div className="row" style={{ gap: 12 }}>
+  
+  {/* Имя мастера */}
+  <div className="col">
+    <label style={labelStyle}>{t("master_name")}</label>
+    <input
+      style={inputGlass}
+      value={settings.masterName}
+      onChange={(e) =>
+        updateSettings({ masterName: e.target.value })
+      }
+    />
+  </div>
 
-                <div className="col">
-                  <label style={labelStyle}>{t("admin_phone")}</label>
-                  <input
-                    style={inputGlass}
-                    value={settings.adminPhone}
-                    onChange={(e) =>
-                      updateSettings({ adminPhone: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
+  {/* Телефон администратора */}
+  <div className="col">
+    <label style={labelStyle}>{t("admin_phone")}</label>
+    <input
+      style={inputGlass}
+      value={settings.adminPhone}
+      onChange={(e) =>
+        updateSettings({ adminPhone: e.target.value })
+      }
+    />
+  </div>
 
+  {/* IBAN администратора */}
+  <div className="col">
+    <label style={labelStyle}>IBAN (EUR)</label>
+    <input
+      style={inputGlass}
+      value={settings.adminIban || ""}
+      onChange={(e) =>
+        updateSettings({ adminIban: e.target.value })
+      }
+      placeholder="LT00 0000 0000 0000 0000"
+    />
+  </div>
+</div>
               {/* РАБОЧЕЕ ВРЕМЯ */}
               <div
                 className="row"
