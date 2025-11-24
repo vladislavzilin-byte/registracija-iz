@@ -410,53 +410,89 @@ export default function Admin() {
                     marginTop: 6,
                   }}
                 >
-                  {services.map((s, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1.4fr .7fr .7fr auto",
-                        gap: 8,
-                        alignItems: "center",
-                      }}
-                    >
-                      <input
-                        style={inputGlass}
-                        value={s.name}
-                        onChange={(e) =>
-                          updateServiceField(idx, "name", e.target.value)
-                        }
-                      />
-                      <input
-                        style={inputGlass}
-                        type="number"
-                        value={s.duration}
-                        onChange={(e) =>
-                          updateServiceField(idx, "duration", e.target.value)
-                        }
-                      />
-                      <input
-                        style={inputGlass}
-                        type="number"
-                        value={s.deposit}
-                        onChange={(e) =>
-                          updateServiceField(idx, "deposit", e.target.value)
-                        }
-                      />
-                      <button
-                        onClick={() => removeService(idx)}
-                        style={{
-                          padding: "8px 10px",
-                          borderRadius: 10,
-                          background: "rgba(110,20,30,.35)",
-                          border: "1px solid rgba(239,68,68,.7)",
-                          color: "#fff",
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
+{services.map((s, idx) => (
+  <div
+    key={idx}
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1.4fr .7fr .7fr auto",
+      gap: 8,
+      alignItems: "center",
+    }}
+  >
+    {/* Название */}
+    <input
+      style={inputGlass}
+      value={s.name}
+      onChange={(e) =>
+        updateServiceField(idx, "name", e.target.value)
+      }
+    />
+
+    {/* Длительность + "min" */}
+    <div style={{ position: "relative" }}>
+      <input
+        style={{ ...inputGlass, paddingRight: 34 }}
+        type="number"
+        value={s.duration}
+        onChange={(e) =>
+          updateServiceField(idx, "duration", e.target.value)
+        }
+      />
+      <span
+        style={{
+          position: "absolute",
+          right: 10,
+          top: "50%",
+          transform: "translateY(-50%)",
+          fontSize: 12,
+          opacity: 0.75,
+          pointerEvents: "none",
+        }}
+      >
+        min
+      </span>
+    </div>
+
+    {/* Депозит + "€" */}
+    <div style={{ position: "relative" }}>
+      <input
+        style={{ ...inputGlass, paddingRight: 34 }}
+        type="number"
+        value={s.deposit}
+        onChange={(e) =>
+          updateServiceField(idx, "deposit", e.target.value)
+        }
+      />
+      <span
+        style={{
+          position: "absolute",
+          right: 10,
+          top: "50%",
+          transform: "translateY(-50%)",
+          fontSize: 12,
+          opacity: 0.75,
+          pointerEvents: "none",
+        }}
+      >
+        €
+      </span>
+    </div>
+
+    <button
+      onClick={() => removeService(idx)}
+      style={{
+        padding: "8px 10px",
+        borderRadius: 10,
+        background: "rgba(110,20,30,.35)",
+        border: "1px solid rgba(239,68,68,.7)",
+        color: "#fff",
+      }}
+    >
+      ✕
+    </button>
+  </div>
+))}                
                 </div>
               </div>
             </div>
