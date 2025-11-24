@@ -19,10 +19,10 @@ const tagColors = {
   'Atvykimas': '#facc15',
   'Konsultacija': '#34d399'
 }
-// Загружаем настройки из админки
-const settings = JSON.parse(localStorage.getItem("settings") || "{}");
+// грузим правильный ключ, тот что использует Admin.jsx
+const settings = JSON.parse(localStorage.getItem("iz.settings.v1") || "{}");
 
-// Реквизиты для банковского перевода
+// теперь данные точно подставятся
 const BANK_DETAILS = {
   receiver: settings.masterName || '—',
   iban: settings.adminIban || '—',
