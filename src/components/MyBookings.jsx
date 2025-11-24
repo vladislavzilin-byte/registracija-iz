@@ -10,7 +10,7 @@ import {
   setCurrentUser
 } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
-import { getSettings } from "../lib/storage";
+
 // Цвета для тегов услуг
 const tagColors = {
   'Šukuosena': '#c084fc',
@@ -19,15 +19,13 @@ const tagColors = {
   'Atvykimas': '#facc15',
   'Konsultacija': '#34d399'
 }
-// грузим правильный ключ, тот что использует Admin.jsx
-const [settings, setSettings] = useState(getSettings());
 
-// теперь данные точно подставятся
+// Реквизиты для банковского перевода
 const BANK_DETAILS = {
-  receiver: settings.masterName || "—",
-  iban: settings.adminIban || "—",
-  descriptionPrefix: "Rezervacija",
-};
+  iban: 'LT00 0000 0000 0000 0000',
+  receiver: 'IZ HAIR TREND',
+  descriptionPrefix: 'Rezervacija'
+}
 
 // helper: бронь считается оплаченной,
 // если флаг paid = true или старый статус 'approved_paid'
@@ -119,18 +117,7 @@ const list = useMemo(() => {
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [])
-// 🔥 Авто-обновление настроек из Admin.jsx (masterName, IBAN)
-useEffect(() => {
-  const onStorage = (e) => {
-    if (e.key && e.key.startsWith("iz.settings")) {
-      setSettings(getSettings());
-    }
-  };
 
-  window.addEventListener("storage", onStorage);
-  return () => window.removeEventListener("storage", onStorage);
-}, [])
-  
   const validate = () => {
     const e = {}
     if (!form.phone && !form.email) e.contact = 'Нужен телефон или email'
@@ -516,19 +503,6 @@ useEffect(() => {
   return (
     <div style={container}>
 
-      {/* ==== MOBILE NO-ZOOM PATCH ==== */}
-      <style
-  dangerouslySetInnerHTML={{
-    __html: `
-      @media (max-width: 768px) {
-        input, select, textarea, button {
-          font-size: 16px !important;
-        }
-      }
-    `
-  }}
-/>
-
       {/* === ПРОФИЛЬ === */}
       <div style={outerCard}>
         <h3 style={{ margin: 0, padding: '10px 20px' }}>Профиль</h3>
@@ -913,9 +887,9 @@ useEffect(() => {
             <div style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>
               <b>Banko duomenys:</b>
               <br />
-           Gavėjas: {BANK_DETAILS.receiver || '—'}
-<br />
-IBAN: {BANK_DETAILS.iban || '—'}
+              Gavėjas: {BANK_DETAILS.receiver}
+              <br />
+              IBAN: {BANK_DETAILS.iban}
               <br />
               Paskirtis: {BANK_DETAILS.descriptionPrefix} #{paymentBooking.id.slice(0, 6)}
             </div>
