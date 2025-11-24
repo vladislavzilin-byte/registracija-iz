@@ -7,11 +7,10 @@ import {
   fmtTime,
   getUsers,
   saveUsers,
-  setCurrentUser,
-  getSettings
+  setCurrentUser
 } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
-
+import { getSettings } from "../lib/storage";
 // Цвета для тегов услуг
 const tagColors = {
   'Šukuosena': '#c084fc',
@@ -20,32 +19,16 @@ const tagColors = {
   'Atvykimas': '#facc15',
   'Konsultacija': '#34d399'
 }
+// грузим правильный ключ, тот что использует Admin.jsx
+const settings = getSettings();
 
-export default function MyBookings() {
-  const { t } = useI18n()
-  const user = getCurrentUser()
+// теперь данные точно подставятся
+const BANK_DETAILS = {
+  receiver: settings.masterName || "—",
+  iban: settings.adminIban || "—",
+  descriptionPrefix: "Rezervacija",
+};
 
-  // === Настройки мастера (state) ===
-  const [settings, setSettings] = useState(getSettings());
-
-  // Реквизиты для модалки оплаты
-  const BANK_DETAILS = {
-    receiver: settings.masterName || "—",
-    iban: settings.adminIban || "—",
-    descriptionPrefix: "Rezervacija",
-  };
-
-  // Авто-обновление настроек из Admin.jsx
-  useEffect(() => {
-    const onStorage = (e) => {
-      if (e.key === "iz.settings") {
-        setSettings(getSettings());
-      }
-    };
-
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
 // helper: бронь считается оплаченной,
 // если флаг paid = true или старый статус 'approved_paid'
 const isPaid = (b) => !!(b?.paid || b?.status === 'approved_paid')
