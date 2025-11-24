@@ -7,10 +7,11 @@ import {
   fmtTime,
   getUsers,
   saveUsers,
-  setCurrentUser
+  setCurrentUser,
+  getSettings
 } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
-import { getSettings } from "../lib/storage";
+
 // Цвета для тегов услуг
 const tagColors = {
   'Šukuosena': '#c084fc',
@@ -20,29 +21,31 @@ const tagColors = {
   'Konsultacija': '#34d399'
 }
 
+export default function MyBookings() {
+  const { t } = useI18n()
+  const user = getCurrentUser()
 
-// === Настройки мастера (в state) ===
-const [settings, setSettings] = useState(getSettings());
+  // === Настройки мастера (state) ===
+  const [settings, setSettings] = useState(getSettings());
 
-// Реквизиты для модалки оплаты (зависят от state)
-const BANK_DETAILS = {
-  receiver: settings.masterName || "—",
-  iban: settings.adminIban || "—",
-  descriptionPrefix: "Rezervacija",
-};
-
-// Авто-обновление настроек из Admin.jsx без перезагрузки
-useEffect(() => {
-  const onStorage = (e) => {
-    // Admin.jsx вызывает saveSettings(), значит ключ iz.settings изменяется
-    if (e.key === "iz.settings") {
-      setSettings(getSettings());  // ← обновляем state
-    }
+  // Реквизиты для модалки оплаты
+  const BANK_DETAILS = {
+    receiver: settings.masterName || "—",
+    iban: settings.adminIban || "—",
+    descriptionPrefix: "Rezervacija",
   };
-  window.addEventListener("storage", onStorage);
-  return () => window.removeEventListener("storage", onStorage);
-}, []);
 
+  // Авто-обновление настроек из Admin.jsx
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === "iz.settings") {
+        setSettings(getSettings());
+      }
+    };
+
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 // helper: бронь считается оплаченной,
 // если флаг paid = true или старый статус 'approved_paid'
 const isPaid = (b) => !!(b?.paid || b?.status === 'approved_paid')
