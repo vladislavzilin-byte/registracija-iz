@@ -7,7 +7,8 @@ import {
   fmtTime,
   getUsers,
   saveUsers,
-  setCurrentUser
+  setCurrentUser,
+  getSettings          // ← ОБЯЗАТЕЛЬНО!
 } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
 
@@ -19,6 +20,7 @@ const tagColors = {
   'Atvykimas': '#facc15',
   'Konsultacija': '#34d399'
 }
+
 // helper: бронь считается оплаченной,
 // если флаг paid = true или старый статус 'approved_paid'
 const isPaid = (b) => !!(b?.paid || b?.status === 'approved_paid')
@@ -26,134 +28,28 @@ const isPaid = (b) => !!(b?.paid || b?.status === 'approved_paid')
 export default function MyBookings() {
   const { t } = useI18n()
   const user = getCurrentUser()
- // === Настройки мастера (авто-обновление) ===
-  const [settings, setSettings] = useState(getSettings());
+
+  // === Настройки мастера (авто-обновление) ===
+  const [settings, setSettings] = useState(getSettings())
+
   // Реквизиты для модалки оплаты
   const BANK_DETAILS = {
     receiver: settings.masterName || "—",
     iban: settings.adminIban || "—",
     descriptionPrefix: "Rezervacija",
-  };
+  }
 
-  // Авто-обновление настроек из Admin.jsx (без обновления страницы)
+  // Авто-обновление настроек из Admin.jsx
   useEffect(() => {
     const onStorage = (e) => {
       if (e.key === "iz.settings") {
-        setSettings(getSettings());
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
-
- 
-  const [form, setForm] = useState({
-    name: user?.name || '',
-    instagram: user?.instagram || '',
-    phone: user?.phone || '',
-    email: user?.email || '',
-    password: user?.password || ''
-  })
-  const [errors, setErrors] = useState({})
-  const [filter, setFilter] = useState('all') // all | active | history
-  const [confirmId, setConfirmId] = useState(null)
-  const [version, setVersion] = useState(0)
-  const [modal, setModal] = useState(false)
-  const [approvedModal, setApprovedModal] = useState(false)
-  const [showProfile, setShowProfile] = useState(false)
-
-  // модалка оплаты
-  const [paymentBooking, setPaymentBooking] = useState(null)
-  const [paymentLoading, setPaymentLoading] = useState(false)
-  const [paymentError, setPaymentError] = useState('')
-
-// читаем брони при каждом рендере (обновление через version)
-const bookingsAll = getBookings()
-const all = bookingsAll
-  .filter(b => user && b.userPhone === user.phone)
-  .sort((a, b) => new Date(a.start) - new Date(b.start))
-
-// === ФИЛЬТРЫ: Все / Активные / История ===
-const list = useMemo(() => {
-  const now = new Date()
-
-  // АКТИВНЫЕ — только будущие и не отменённые
-  if (filter === 'active') {
-    return all.filter(b => {
-      const end = new Date(b.end)
-      const canceled =
-        b.status === 'canceled_client' || b.status === 'canceled_admin'
-      return end > now && !canceled
-    })
-  }
-
-  // ИСТОРИЯ — только прошедшие записи (без отменённых)
-  if (filter === 'history') {
-    return all.filter(b => {
-      const end = new Date(b.end)
-      const canceled =
-        b.status === 'canceled_client' || b.status === 'canceled_admin'
-      return end < now && !canceled
-    })
-  }
-
-  // ВСЕ
-  return all
-}, [filter, version, bookingsAll.length])
-
-  // пуш-уведомление когда бронь подтверждена админом
-  useEffect(() => {
-    const prev = JSON.parse(localStorage.getItem('prevBookings') || '[]')
-    const approvedNow = all.find(
-      b =>
-        (b.status === 'approved' || b.status === 'approved_paid') &&
-        !prev.find(p =>
-          p.id === b.id &&
-          (p.status === 'approved' || p.status === 'approved_paid')
-        )
-    )
-    if (approvedNow) {
-      setApprovedModal(true)
-      setTimeout(() => setApprovedModal(false), 2500)
-    }
-    localStorage.setItem('prevBookings', JSON.stringify(all))
-  }, [all])
-
-  // авто-синхронизация с админкой
-  useEffect(() => {
-    const onStorage = (e) => {
-      if (!e.key || e.key === 'iz.bookings.v7') {
-        setVersion(v => v + 1)
+        setSettings(getSettings())
       }
     }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
   }, [])
 
-  const validate = () => {
-    const e = {}
-    if (!form.phone && !form.email) e.contact = 'Нужен телефон или email'
-    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) e.email = 'Некорректный email'
-    if (form.phone && !/^[+\d][\d\s\-()]{5,}$/.test(form.phone)) e.phone = 'Некорректный телефон'
-    setErrors(e)
-    return Object.keys(e).length === 0
-  }
-
-  const saveProfile = (ev) => {
-    ev.preventDefault()
-    if (!validate()) return
-
-    const users = getUsers()
-    const idx = users.findIndex(u =>
-      (u.phone && u.phone === user.phone) ||
-      (u.email && u.email === user.email)
-    )
-
-    const updated = { ...user, ...form }
-    if (idx >= 0) users[idx] = updated
-    else users.push(updated)
-    saveUsers(users)
-    setCurrentUser(updated)
 
     // обновляем записи пользователя
     const bookings = getBookings().map(b =>
