@@ -24,8 +24,8 @@ const settings = JSON.parse(localStorage.getItem("settings") || "{}");
 
 // Реквизиты для банковского перевода
 const BANK_DETAILS = {
-  iban: settings.adminIban || '—',
   receiver: settings.masterName || '—',
+  iban: settings.adminIban || '—',
   descriptionPrefix: 'Rezervacija'
 };
 
@@ -902,9 +902,9 @@ const list = useMemo(() => {
             <div style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>
               <b>Banko duomenys:</b>
               <br />
-              Gavėjas: {BANK_DETAILS.receiver}
-              <br />
-              IBAN: {BANK_DETAILS.iban}
+           Gavėjas: {BANK_DETAILS.receiver || '—'}
+<br />
+IBAN: {BANK_DETAILS.iban || '—'}
               <br />
               Paskirtis: {BANK_DETAILS.descriptionPrefix} #{paymentBooking.id.slice(0, 6)}
             </div>
