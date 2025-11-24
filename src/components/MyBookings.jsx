@@ -19,15 +19,29 @@ const tagColors = {
   'Atvykimas': '#facc15',
   'Konsultacija': '#34d399'
 }
-// грузим правильный ключ, тот что использует Admin.jsx
-const settings = getSettings();
 
-// теперь данные точно подставятся
+
+// === Настройки мастера (в state) ===
+const [settings, setSettings] = useState(getSettings());
+
+// Реквизиты для модалки оплаты (зависят от state)
 const BANK_DETAILS = {
   receiver: settings.masterName || "—",
   iban: settings.adminIban || "—",
   descriptionPrefix: "Rezervacija",
 };
+
+// Авто-обновление настроек из Admin.jsx без перезагрузки
+useEffect(() => {
+  const onStorage = (e) => {
+    // Admin.jsx вызывает saveSettings(), значит ключ iz.settings изменяется
+    if (e.key === "iz.settings") {
+      setSettings(getSettings());  // ← обновляем state
+    }
+  };
+  window.addEventListener("storage", onStorage);
+  return () => window.removeEventListener("storage", onStorage);
+}, []);
 
 // helper: бронь считается оплаченной,
 // если флаг paid = true или старый статус 'approved_paid'
