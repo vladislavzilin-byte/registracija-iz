@@ -10,7 +10,7 @@ import {
   setCurrentUser
 } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
-
+import { getSettings } from "../lib/storage";
 // Цвета для тегов услуг
 const tagColors = {
   'Šukuosena': '#c084fc',
@@ -20,13 +20,13 @@ const tagColors = {
   'Konsultacija': '#34d399'
 }
 // грузим правильный ключ, тот что использует Admin.jsx
-const settings = JSON.parse(localStorage.getItem("iz.settings.v1") || "{}");
+const settings = getSettings();
 
 // теперь данные точно подставятся
 const BANK_DETAILS = {
-  receiver: settings.masterName || '—',
-  iban: settings.adminIban || '—',
-  descriptionPrefix: 'Rezervacija'
+  receiver: settings.masterName || "—",
+  iban: settings.adminIban || "—",
+  descriptionPrefix: "Rezervacija",
 };
 
 // helper: бронь считается оплаченной,
