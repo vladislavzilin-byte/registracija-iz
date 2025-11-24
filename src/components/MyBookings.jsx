@@ -19,13 +19,15 @@ const tagColors = {
   'Atvykimas': '#facc15',
   'Konsultacija': '#34d399'
 }
+// Загружаем настройки из админки
+const settings = JSON.parse(localStorage.getItem("settings") || "{}");
 
 // Реквизиты для банковского перевода
 const BANK_DETAILS = {
-  iban: 'LT00 0000 0000 0000 0000',
-  receiver: 'IZ HAIR TREND',
+  iban: settings.adminIban || '—',
+  receiver: settings.masterName || '—',
   descriptionPrefix: 'Rezervacija'
-}
+};
 
 // helper: бронь считается оплаченной,
 // если флаг paid = true или старый статус 'approved_paid'
