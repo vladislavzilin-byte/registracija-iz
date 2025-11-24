@@ -20,7 +20,7 @@ const tagColors = {
   'Konsultacija': '#34d399'
 }
 // грузим правильный ключ, тот что использует Admin.jsx
-const settings = getSettings();
+const [settings, setSettings] = useState(getSettings());
 
 // теперь данные точно подставятся
 const BANK_DETAILS = {
@@ -119,7 +119,18 @@ const list = useMemo(() => {
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [])
+// 🔥 Авто-обновление настроек из Admin.jsx (masterName, IBAN)
+useEffect(() => {
+  const onStorage = (e) => {
+    if (e.key && e.key.startsWith("iz.settings")) {
+      setSettings(getSettings());
+    }
+  };
 
+  window.addEventListener("storage", onStorage);
+  return () => window.removeEventListener("storage", onStorage);
+}, [])
+  
   const validate = () => {
     const e = {}
     if (!form.phone && !form.email) e.contact = 'Нужен телефон или email'
