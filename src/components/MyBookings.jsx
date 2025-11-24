@@ -19,14 +19,6 @@ const tagColors = {
   'Atvykimas': '#facc15',
   'Konsultacija': '#34d399'
 }
-
-// Реквизиты для банковского перевода
-const BANK_DETAILS = {
-  iban: 'LT00 0000 0000 0000 0000',
-  receiver: 'IZ HAIR TREND',
-  descriptionPrefix: 'Rezervacija'
-}
-
 // helper: бронь считается оплаченной,
 // если флаг paid = true или старый статус 'approved_paid'
 const isPaid = (b) => !!(b?.paid || b?.status === 'approved_paid')
@@ -34,7 +26,27 @@ const isPaid = (b) => !!(b?.paid || b?.status === 'approved_paid')
 export default function MyBookings() {
   const { t } = useI18n()
   const user = getCurrentUser()
+ // === Настройки мастера (авто-обновление) ===
+  const [settings, setSettings] = useState(getSettings());
+  // Реквизиты для модалки оплаты
+  const BANK_DETAILS = {
+    receiver: settings.masterName || "—",
+    iban: settings.adminIban || "—",
+    descriptionPrefix: "Rezervacija",
+  };
 
+  // Авто-обновление настроек из Admin.jsx (без обновления страницы)
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === "iz.settings") {
+        setSettings(getSettings());
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+ 
   const [form, setForm] = useState({
     name: user?.name || '',
     instagram: user?.instagram || '',
