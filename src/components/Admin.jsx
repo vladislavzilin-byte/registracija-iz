@@ -729,12 +729,7 @@ export default function Admin() {
                             {fmtTime(b.start)} – {fmtTime(b.end)}
                           </span>
 
-                          {/* телефон */}
-                          {b.userPhone && (
-                            <span style={pillPhone}>{b.userPhone}</span>
-                          )}
-
-                          {/* услуги */}
+                         {/* услуги */}
                           {servicesArr.length > 0 && (
                             <span style={pillService}>
                               {servicesArr.join(", ")}
