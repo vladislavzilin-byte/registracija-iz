@@ -7,11 +7,10 @@ import {
   fmtTime,
   getUsers,
   saveUsers,
-  setCurrentUser,
-  getSettings   // ← ДОБАВЛЕНО, ЭТО ГЛАВНОЕ
+  setCurrentUser
 } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
-
+import { getSettings } from "../lib/storage";
 // Цвета для тегов услуг
 const tagColors = {
   'Šukuosena': '#c084fc',
@@ -20,6 +19,15 @@ const tagColors = {
   'Atvykimas': '#facc15',
   'Konsultacija': '#34d399'
 }
+// грузим правильный ключ, тот что использует Admin.jsx
+const settings = getSettings();
+
+// теперь данные точно подставятся
+const BANK_DETAILS = {
+  receiver: settings.masterName || "—",
+  iban: settings.adminIban || "—",
+  descriptionPrefix: "Rezervacija",
+};
 
 // helper: бронь считается оплаченной,
 // если флаг paid = true или старый статус 'approved_paid'
@@ -29,27 +37,6 @@ export default function MyBookings() {
   const { t } = useI18n()
   const user = getCurrentUser()
 
-  // === Настройки мастера (авто-обновление) ===
-  const [settings, setSettings] = useState(getSettings())
-
-  // Реквизиты для модалки оплаты
-  const BANK_DETAILS = {
-    receiver: settings.masterName || "—",
-    iban: settings.adminIban || "—",
-    descriptionPrefix: "Rezervacija",
-  }
-
-  // Авто-обновление настроек из Admin.jsx (без refresh страницы)
-  useEffect(() => {
-    const onStorage = (e) => {
-      if (e.key === "iz.settings") {
-        setSettings(getSettings())
-      }
-    }
-    window.addEventListener("storage", onStorage)
-    return () => window.removeEventListener("storage", onStorage)
-  }, [])
-
   const [form, setForm] = useState({
     name: user?.name || '',
     instagram: user?.instagram || '',
@@ -57,7 +44,6 @@ export default function MyBookings() {
     email: user?.email || '',
     password: user?.password || ''
   })
-
   const [errors, setErrors] = useState({})
   const [filter, setFilter] = useState('all') // all | active | history
   const [confirmId, setConfirmId] = useState(null)
@@ -71,13 +57,93 @@ export default function MyBookings() {
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [paymentError, setPaymentError] = useState('')
 
-  // читаем брони при каждом рендере (обновление через version)
-  const bookingsAll = getBookings()
-  const all = bookingsAll
-    .filter(b => user && b.userPhone === user.phone)
-    .sort((a, b) => new Date(a.start) - new Date(b.start))
+// читаем брони при каждом рендере (обновление через version)
+const bookingsAll = getBookings()
+const all = bookingsAll
+  .filter(b => user && b.userPhone === user.phone)
+  .sort((a, b) => new Date(a.start) - new Date(b.start))
 
+// === ФИЛЬТРЫ: Все / Активные / История ===
+const list = useMemo(() => {
+  const now = new Date()
 
+  // АКТИВНЫЕ — только будущие и не отменённые
+  if (filter === 'active') {
+    return all.filter(b => {
+      const end = new Date(b.end)
+      const canceled =
+        b.status === 'canceled_client' || b.status === 'canceled_admin'
+      return end > now && !canceled
+    })
+  }
+
+  // ИСТОРИЯ — только прошедшие записи (без отменённых)
+  if (filter === 'history') {
+    return all.filter(b => {
+      const end = new Date(b.end)
+      const canceled =
+        b.status === 'canceled_client' || b.status === 'canceled_admin'
+      return end < now && !canceled
+    })
+  }
+
+  // ВСЕ
+  return all
+}, [filter, version, bookingsAll.length])
+
+  // пуш-уведомление когда бронь подтверждена админом
+  useEffect(() => {
+    const prev = JSON.parse(localStorage.getItem('prevBookings') || '[]')
+    const approvedNow = all.find(
+      b =>
+        (b.status === 'approved' || b.status === 'approved_paid') &&
+        !prev.find(p =>
+          p.id === b.id &&
+          (p.status === 'approved' || p.status === 'approved_paid')
+        )
+    )
+    if (approvedNow) {
+      setApprovedModal(true)
+      setTimeout(() => setApprovedModal(false), 2500)
+    }
+    localStorage.setItem('prevBookings', JSON.stringify(all))
+  }, [all])
+
+  // авто-синхронизация с админкой
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (!e.key || e.key === 'iz.bookings.v7') {
+        setVersion(v => v + 1)
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
+  const validate = () => {
+    const e = {}
+    if (!form.phone && !form.email) e.contact = 'Нужен телефон или email'
+    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) e.email = 'Некорректный email'
+    if (form.phone && !/^[+\d][\d\s\-()]{5,}$/.test(form.phone)) e.phone = 'Некорректный телефон'
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  const saveProfile = (ev) => {
+    ev.preventDefault()
+    if (!validate()) return
+
+    const users = getUsers()
+    const idx = users.findIndex(u =>
+      (u.phone && u.phone === user.phone) ||
+      (u.email && u.email === user.email)
+    )
+
+    const updated = { ...user, ...form }
+    if (idx >= 0) users[idx] = updated
+    else users.push(updated)
+    saveUsers(users)
+    setCurrentUser(updated)
 
     // обновляем записи пользователя
     const bookings = getBookings().map(b =>
@@ -438,6 +504,19 @@ export default function MyBookings() {
 
   return (
     <div style={container}>
+
+      {/* ==== MOBILE NO-ZOOM PATCH ==== */}
+      <style
+  dangerouslySetInnerHTML={{
+    __html: `
+      @media (max-width: 768px) {
+        input, select, textarea, button {
+          font-size: 16px !important;
+        }
+      }
+    `
+  }}
+/>
 
       {/* === ПРОФИЛЬ === */}
       <div style={outerCard}>
@@ -823,9 +902,9 @@ export default function MyBookings() {
             <div style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>
               <b>Banko duomenys:</b>
               <br />
-              Gavėjas: {BANK_DETAILS.receiver}
-              <br />
-              IBAN: {BANK_DETAILS.iban}
+           Gavėjas: {BANK_DETAILS.receiver || '—'}
+<br />
+IBAN: {BANK_DETAILS.iban || '—'}
               <br />
               Paskirtis: {BANK_DETAILS.descriptionPrefix} #{paymentBooking.id.slice(0, 6)}
             </div>
