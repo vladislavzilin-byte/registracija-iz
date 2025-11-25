@@ -609,6 +609,10 @@ export const dict = {
 export function useI18n() {
   const [lang, setLangState] = React.useState(getLang());
 
+  /** 
+   * Следим за языком. При смене — обновляем state,
+   * чтобы весь интерфейс перерисовался.
+   */
   React.useEffect(() => {
     const stored = getLang();
     if (stored !== lang) {
@@ -616,18 +620,32 @@ export function useI18n() {
     }
   }, [lang]);
 
-  const t = React.useCallback((key, vars = {}) => {
-    const str = (dict[lang] && dict[lang][key]) || dict['ru'][key] || key;
-    return Object.keys(vars).reduce(
-      (s, k) => s.replaceAll(`{${k}}`, vars[k]),
-      str
-    );
-  }, [lang]);
+  /**
+   * Функция перевода.
+   * Берёт строку из dict[lang], если нет — fallback → RU.
+   */
+  const t = React.useCallback(
+    (key, vars = {}) => {
+      const langDict = dict[lang] || dict['ru'];
+      let str = langDict[key] || dict['ru'][key] || key;
 
+      return Object.keys(vars).reduce(
+        (s, k) => s.replaceAll(`{${k}}`, vars[k]),
+        str
+      );
+    },
+    [lang]
+  );
+
+  /**
+   * Установка языка:
+   * - сохраняем в localStorage
+   * - заставляем React обновить UI мгновенно
+   */
   const setLangUI = (l) => {
     setLang(l);       // save to storage
-    setLangState(l);  // force React re-render
-  }
+    setLangState(l);  // force UI re-render
+  };
 
   return { lang, t, setLang: setLangUI };
 }
