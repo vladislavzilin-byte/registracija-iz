@@ -108,6 +108,7 @@ export default function Admin() {
     const next = { ...settings, ...patch };
     setSettings(next);
     saveSettings(next);
+    window.dispatchEvent(new Event("settingsUpdated")); // 🔥 Событие авто-обновления
   };
 
   // синк записей при обновлении профиля
