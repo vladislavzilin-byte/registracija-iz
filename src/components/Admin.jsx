@@ -10,6 +10,7 @@ import {
 } from "../lib/storage";
 import { useI18n } from "../lib/i18n";
 import FinancePanel from "./FinancePanel";
+
 const ADMINS = ["irina.abramova7@gmail.com", "vladislavzilin@gmail.com"];
 
 const DEFAULT_SERVICES = [
@@ -82,14 +83,14 @@ export default function Admin() {
   const { t } = useI18n();
 
   // === НАСТРОЙКИ И СОСТОЯНИЯ ===
-const [settings, setSettings] = useState(() => {
-  const s = getSettings();
-  if (!Array.isArray(s.serviceList) || !s.serviceList.length) {
-    s.serviceList = [...DEFAULT_SERVICES];
-    saveSettings(s);
-  }
-  return s;
-});
+  const [settings, setSettings] = useState(() => {
+    const s = getSettings();
+    if (!Array.isArray(s.serviceList) || !s.serviceList.length) {
+      s.serviceList = [...DEFAULT_SERVICES];
+      saveSettings(s);
+    }
+    return s;
+  });
 
   const [bookings, setBookings] = useState(getBookings());
   const [showSettings, setShowSettings] = useState(false);
@@ -108,19 +109,20 @@ const [settings, setSettings] = useState(() => {
     const next = { ...settings, ...patch };
     setSettings(next);
     saveSettings(next);
-    window.dispatchEvent(new Event("settingsUpdated")); // 🔥 Событие авто-обновления
+    // кастомное событие, если где-то ещё захочешь слушать настройки
+    window.dispatchEvent(new Event("settingsUpdated"));
   };
 
-// авто-обновление каждые 5 секунд
-useEffect(() => {
-  const interval = setInterval(() => {
-    setSettings(getSettings());   // обновление настроек
-    setBookings(getBookings());   // обновление записей
-  }, 5000);
+  // 🔁 АВТО-ОБНОВЛЕНИЕ КАЖДЫЕ 5 СЕКУНД
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSettings(getSettings());
+      setBookings(getBookings());
+    }, 5000);
 
-  return () => clearInterval(interval);
-}, []);
-  
+    return () => clearInterval(interval);
+  }, []);
+
   // синк записей при обновлении профиля
   useEffect(() => {
     const handler = () => setBookings(getBookings());
@@ -283,8 +285,6 @@ useEffect(() => {
     setTimeout(() => setToast(null), 2200);
   };
 
-
-  
   return (
     <div className="col" style={{ gap: 16 }}>
       {/* === НАСТРОЙКИ (ГАРМОШКА) === */}
@@ -308,46 +308,46 @@ useEffect(() => {
             }}
           >
             <div style={{ paddingTop: 10 }}>
-   {/* ОСНОВНЫЕ НАСТРОЙКИ */}
-<div className="row" style={{ gap: 12 }}>
-  
-  {/* Имя мастера */}
-  <div className="col">
-    <label style={labelStyle}>{t("master_name")}</label>
-    <input
-      style={inputGlass}
-      value={settings.masterName}
-      onChange={(e) =>
-        updateSettings({ masterName: e.target.value })
-      }
-    />
-  </div>
+              {/* ОСНОВНЫЕ НАСТРОЙКИ */}
+              <div className="row" style={{ gap: 12 }}>
+                {/* Имя мастера */}
+                <div className="col">
+                  <label style={labelStyle}>{t("master_name")}</label>
+                  <input
+                    style={inputGlass}
+                    value={settings.masterName}
+                    onChange={(e) =>
+                      updateSettings({ masterName: e.target.value })
+                    }
+                  />
+                </div>
 
-  {/* Телефон администратора */}
-  <div className="col">
-    <label style={labelStyle}>{t("admin_phone")}</label>
-    <input
-      style={inputGlass}
-      value={settings.adminPhone}
-      onChange={(e) =>
-        updateSettings({ adminPhone: e.target.value })
-      }
-    />
-  </div>
+                {/* Телефон администратора */}
+                <div className="col">
+                  <label style={labelStyle}>{t("admin_phone")}</label>
+                  <input
+                    style={inputGlass}
+                    value={settings.adminPhone}
+                    onChange={(e) =>
+                      updateSettings({ adminPhone: e.target.value })
+                    }
+                  />
+                </div>
 
-  {/* IBAN администратора */}
-  <div className="col">
-    <label style={labelStyle}>IBAN (EUR)</label>
-    <input
-      style={inputGlass}
-      value={settings.adminIban || ""}
-      onChange={(e) =>
-        updateSettings({ adminIban: e.target.value })
-      }
-      placeholder="LT00 0000 0000 0000 0000"
-    />
-  </div>
-</div>
+                {/* IBAN администратора */}
+                <div className="col">
+                  <label style={labelStyle}>IBAN (EUR)</label>
+                  <input
+                    style={inputGlass}
+                    value={settings.adminIban || ""}
+                    onChange={(e) =>
+                      updateSettings({ adminIban: e.target.value })
+                    }
+                    placeholder="LT00 0000 0000 0000 0000"
+                  />
+                </div>
+              </div>
+
               {/* РАБОЧЕЕ ВРЕМЯ */}
               <div
                 className="row"
@@ -438,89 +438,89 @@ useEffect(() => {
                     marginTop: 6,
                   }}
                 >
-{services.map((s, idx) => (
-  <div
-    key={idx}
-    style={{
-      display: "grid",
-      gridTemplateColumns: "1.4fr .7fr .7fr auto",
-      gap: 8,
-      alignItems: "center",
-    }}
-  >
-    {/* Название */}
-    <input
-      style={inputGlass}
-      value={s.name}
-      onChange={(e) =>
-        updateServiceField(idx, "name", e.target.value)
-      }
-    />
+                  {services.map((s, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1.4fr .7fr .7fr auto",
+                        gap: 8,
+                        alignItems: "center",
+                      }}
+                    >
+                      {/* Название */}
+                      <input
+                        style={inputGlass}
+                        value={s.name}
+                        onChange={(e) =>
+                          updateServiceField(idx, "name", e.target.value)
+                        }
+                      />
 
-    {/* Длительность + "min" */}
-    <div style={{ position: "relative" }}>
-      <input
-        style={{ ...inputGlass, paddingRight: 34 }}
-        type="number"
-        value={s.duration}
-        onChange={(e) =>
-          updateServiceField(idx, "duration", e.target.value)
-        }
-      />
-      <span
-        style={{
-          position: "absolute",
-          right: 10,
-          top: "50%",
-          transform: "translateY(-50%)",
-          fontSize: 12,
-          opacity: 0.75,
-          pointerEvents: "none",
-        }}
-      >
-        min
-      </span>
-    </div>
+                      {/* Длительность + "min" */}
+                      <div style={{ position: "relative" }}>
+                        <input
+                          style={{ ...inputGlass, paddingRight: 34 }}
+                          type="number"
+                          value={s.duration}
+                          onChange={(e) =>
+                            updateServiceField(idx, "duration", e.target.value)
+                          }
+                        />
+                        <span
+                          style={{
+                            position: "absolute",
+                            right: 10,
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            fontSize: 12,
+                            opacity: 0.75,
+                            pointerEvents: "none",
+                          }}
+                        >
+                          min
+                        </span>
+                      </div>
 
-    {/* Депозит + "€" */}
-    <div style={{ position: "relative" }}>
-      <input
-        style={{ ...inputGlass, paddingRight: 34 }}
-        type="number"
-        value={s.deposit}
-        onChange={(e) =>
-          updateServiceField(idx, "deposit", e.target.value)
-        }
-      />
-      <span
-        style={{
-          position: "absolute",
-          right: 10,
-          top: "50%",
-          transform: "translateY(-50%)",
-          fontSize: 12,
-          opacity: 0.75,
-          pointerEvents: "none",
-        }}
-      >
-        €
-      </span>
-    </div>
+                      {/* Депозит + "€" */}
+                      <div style={{ position: "relative" }}>
+                        <input
+                          style={{ ...inputGlass, paddingRight: 34 }}
+                          type="number"
+                          value={s.deposit}
+                          onChange={(e) =>
+                            updateServiceField(idx, "deposit", e.target.value)
+                          }
+                        />
+                        <span
+                          style={{
+                            position: "absolute",
+                            right: 10,
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            fontSize: 12,
+                            opacity: 0.75,
+                            pointerEvents: "none",
+                          }}
+                        >
+                          €
+                        </span>
+                      </div>
 
-    <button
-      onClick={() => removeService(idx)}
-      style={{
-        padding: "8px 10px",
-        borderRadius: 10,
-        background: "rgba(110,20,30,.35)",
-        border: "1px solid rgba(239,68,68,.7)",
-        color: "#fff",
-      }}
-    >
-      ✕
-    </button>
-  </div>
-))}                
+                      <button
+                        onClick={() => removeService(idx)}
+                        style={{
+                          padding: "8px 10px",
+                          borderRadius: 10,
+                          background: "rgba(110,20,30,.35)",
+                          border: "1px solid rgba(239,68,68,.7)",
+                          color: "#fff",
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -679,7 +679,10 @@ useEffect(() => {
             }}
           >
             {groupedByDate.map(({ key, label, items }) => (
-              <div key={key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div
+                key={key}
+                style={{ display: "flex", flexDirection: "column", gap: 6 }}
+              >
                 {/* заголовок дня */}
                 <div
                   style={{
@@ -757,7 +760,7 @@ useEffect(() => {
                             {fmtTime(b.start)} – {fmtTime(b.end)}
                           </span>
 
-                         {/* услуги */}
+                          {/* услуги */}
                           {servicesArr.length > 0 && (
                             <span style={pillService}>
                               {servicesArr.join(", ")}
@@ -772,64 +775,68 @@ useEffect(() => {
                           {/* ID */}
                           <span style={pillId}>#{b.id.slice(0, 6)}</span>
 
-                        {/* справа: подтверждение + оплата + стрелка */}
-<span
-  style={{
-    marginLeft: "auto",
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-  }}
->
+                          {/* справа: подтверждение + оплата + стрелка */}
+                          <span
+                            style={{
+                              marginLeft: "auto",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                            }}
+                          >
+                            {/* 🔵 СТАТУС ПОДТВЕРЖДЕНИЯ */}
+                            <span
+                              style={{
+                                fontSize: 11,
+                                padding: "3px 8px",
+                                borderRadius: 999,
+                                border:
+                                  b.status === "approved" ||
+                                  b.status === "approved_paid"
+                                    ? "1px solid rgba(34,197,94,0.85)"
+                                    : "1px solid rgba(248,113,113,0.9)",
+                                background:
+                                  b.status === "approved" ||
+                                  b.status === "approved_paid"
+                                    ? "rgba(22,163,74,0.25)"
+                                    : "rgba(127,29,29,0.6)",
+                              }}
+                            >
+                              {b.status === "approved" ||
+                              b.status === "approved_paid"
+                                ? "Подтверждено"
+                                : "Неподтверждено"}
+                            </span>
 
-  {/* 🔵 СТАТУС ПОДТВЕРЖДЕНИЯ */}
-  <span
-    style={{
-      fontSize: 11,
-      padding: "3px 8px",
-      borderRadius: 999,
-      border:
-        b.status === "approved" || b.status === "approved_paid"
-          ? "1px solid rgba(34,197,94,0.85)"
-          : "1px solid rgba(248,113,113,0.9)",
-      background:
-        b.status === "approved" || b.status === "approved_paid"
-          ? "rgba(22,163,74,0.25)"
-          : "rgba(127,29,29,0.6)",
-    }}
-  >
-    {b.status === "approved" || b.status === "approved_paid"
-      ? "Подтверждено"
-      : "Неподтверждено"}
-  </span>
+                            {/* 🟢 ОПЛАТА */}
+                            <span
+                              style={{
+                                fontSize: 11,
+                                padding: "3px 8px",
+                                borderRadius: 999,
+                                border: paid
+                                  ? "1px solid rgba(34,197,94,0.85)"
+                                  : "1px solid rgba(248,113,113,0.9)",
+                                background: paid
+                                  ? "rgba(22,163,74,0.25)"
+                                  : "rgba(127,29,29,0.6)",
+                              }}
+                            >
+                              {paid ? "Оплачено" : "Не оплачено"}
+                            </span>
 
-  {/* 🟢 ОПЛАТА */}
-  <span
-    style={{
-      fontSize: 11,
-      padding: "3px 8px",
-      borderRadius: 999,
-      border: paid
-        ? "1px solid rgba(34,197,94,0.85)"
-        : "1px solid rgba(248,113,113,0.9)",
-      background: paid
-        ? "rgba(22,163,74,0.25)"
-        : "rgba(127,29,29,0.6)",
-    }}
-  >
-    {paid ? "Оплачено" : "Не оплачено"}
-  </span>
-
-  {/* стрелка */}
-  <div
-    style={{
-      transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-      transition: "transform .25s ease",
-    }}
-  >
-    <Chevron open={isOpen} />
-  </div>
-</span>
+                            {/* стрелка */}
+                            <div
+                              style={{
+                                transform: isOpen
+                                  ? "rotate(180deg)"
+                                  : "rotate(0deg)",
+                                transition: "transform .25s ease",
+                              }}
+                            >
+                              <Chevron open={isOpen} />
+                            </div>
+                          </span>
                         </div>
                       </button>
 
@@ -991,8 +998,7 @@ useEffect(() => {
                                   marginTop: 4,
                                 }}
                               >
-                                Nr. kvitancii:{" "}
-                                <b>#{b.id.slice(0, 6)}</b>
+                                Nr. kvitancii: <b>#{b.id.slice(0, 6)}</b>
                               </div>
                             </div>
                           </div>
@@ -1007,10 +1013,7 @@ useEffect(() => {
                             }}
                           >
                             {servicesArr.map((s, i) => (
-                              <span
-                                key={i}
-                                style={serviceTagStyle(s)}
-                              >
+                              <span key={i} style={serviceTagStyle(s)}>
                                 {s}
                               </span>
                             ))}
@@ -1019,9 +1022,7 @@ useEffect(() => {
                           {/* Клиент */}
                           <div style={{ marginTop: 6 }}>
                             <b>{b.userName}</b>
-                            <div style={{ opacity: 0.8 }}>
-                              {b.userPhone}
-                            </div>
+                            <div style={{ opacity: 0.8 }}>{b.userPhone}</div>
                             {b.userInstagram && (
                               <div style={{ opacity: 0.8 }}>
                                 @{b.userInstagram}
@@ -1035,8 +1036,7 @@ useEffect(() => {
                               marginTop: 6,
                               padding: "10px 12px",
                               borderRadius: 10,
-                              border:
-                                "1px solid rgba(148,163,184,0.25)",
+                              border: "1px solid rgba(148,163,184,0.25)",
                               background: "rgba(30,20,40,0.55)",
                               display: "flex",
                               flexDirection: "column",
@@ -1055,9 +1055,7 @@ useEffect(() => {
                                   width: 10,
                                   height: 10,
                                   borderRadius: "50%",
-                                  background: b.paid
-                                    ? "#22c55e"
-                                    : "#ef4444",
+                                  background: b.paid ? "#22c55e" : "#ef4444",
                                   boxShadow: b.paid
                                     ? "0 0 8px rgba(34,197,94,0.9)"
                                     : "0 0 8px rgba(248,113,113,0.9)",
@@ -1065,15 +1063,11 @@ useEffect(() => {
                               />
                               <span
                                 style={{
-                                  color: b.paid
-                                    ? "#bbf7d0"
-                                    : "#fecaca",
+                                  color: b.paid ? "#bbf7d0" : "#fecaca",
                                   fontWeight: 600,
                                 }}
                               >
-                                {b.paid
-                                  ? "Apmokėta"
-                                  : "Neapmokėta"}
+                                {b.paid ? "Apmokėta" : "Neapmokėta"}
                               </span>
                             </div>
 
@@ -1100,10 +1094,7 @@ useEffect(() => {
                                   const v = e.target.value;
                                   updateBooking(b.id, (orig) => ({
                                     ...orig,
-                                    price:
-                                      v === ""
-                                        ? null
-                                        : Number(v),
+                                    price: v === "" ? null : Number(v),
                                   }));
                                 }}
                               />
@@ -1116,15 +1107,12 @@ useEffect(() => {
                                 width: "100%",
                                 padding: 8,
                                 borderRadius: 8,
-                                border:
-                                  "1px solid rgba(148,163,184,0.5)",
+                                border: "1px solid rgba(148,163,184,0.5)",
                                 background: "rgba(0,0,0,0.25)",
                                 color: "#fff",
                               }}
                             >
-                              {b.paid
-                                ? "Снять оплату"
-                                : "Пометить оплаченной"}
+                              {b.paid ? "Снять оплату" : "Пометить оплаченной"}
                             </button>
                           </div>
 
@@ -1171,9 +1159,7 @@ useEffect(() => {
                                 marginLeft: 6,
                               }}
                             >
-                              {b.paid
-                                ? "Оплачено"
-                                : "Не оплачено"}
+                              {b.paid ? "Оплачено" : "Не оплачено"}
                             </span>
                           </div>
 
@@ -1188,33 +1174,26 @@ useEffect(() => {
                           >
                             {b.status === "pending" && (
                               <button
-                                onClick={() =>
-                                  approveByAdmin(b.id)
-                                }
+                                onClick={() => approveByAdmin(b.id)}
                                 style={btnPrimary}
                               >
                                 {t("approve")}
                               </button>
                             )}
 
-                            {!b.status.includes("canceled") &&
-                              inFuture && (
-                                <button
-                                  onClick={() =>
-                                    cancelByAdmin(b.id)
-                                  }
-                                  style={{
-                                    ...btnBase,
-                                    background:
-                                      "rgba(110,20,30,.35)",
-                                    border:
-                                      "1px solid rgba(239,68,68,.6)",
-                                    color: "#fff",
-                                  }}
-                                >
-                                  {t("rejected")}
-                                </button>
-                              )}
+                            {!b.status.includes("canceled") && inFuture && (
+                              <button
+                                onClick={() => cancelByAdmin(b.id)}
+                                style={{
+                                  ...btnBase,
+                                  background: "rgba(110,20,30,.35)",
+                                  border: "1px solid rgba(239,68,68,.6)",
+                                  color: "#fff",
+                                }}
+                              >
+                                {t("rejected")}
+                              </button>
+                            )}
                           </div>
                         </div>
                       )}
@@ -1347,7 +1326,7 @@ const segActive = {
   background:
     "linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))",
   border: "1px solid rgba(180,95,255,0.7)",
-  boxShadow: "0 0 12px rgba(150,90,255,0.30)",
+  boxShadow: "0 0 12px rgba(150,90,255,0.3)",
 };
 
 const receiptBtn = {
@@ -1386,11 +1365,6 @@ const pillDate = {
 const pillTime = {
   ...pillBase,
   border: "1px solid rgba(94,234,212,0.8)",
-};
-
-const pillPhone = {
-  ...pillBase,
-  border: "1px solid rgba(96,165,250,0.85)",
 };
 
 const pillService = {
