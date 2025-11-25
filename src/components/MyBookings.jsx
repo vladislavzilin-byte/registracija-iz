@@ -11,24 +11,6 @@ import {
 } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
 import { getSettings } from "../lib/storage";
-
-// === РЕАКТИВНЫЕ НАСТРОЙКИ БАНКА (автообновление) ===
-const [bank, setBank] = useState(() => getSettings());
-
-// ловим событие от Admin.jsx
-useEffect(() => {
-  const handler = () => setBank(getSettings());
-  window.addEventListener("settingsUpdated", handler);
-  return () => window.removeEventListener("settingsUpdated", handler);
-}, []);
-
-// генерируем актуальные реквизиты
-const BANK_DETAILS = {
-  receiver: bank.masterName || "—",
-  iban: bank.adminIban || "—",
-  descriptionPrefix: "Rezervacija",
-};
-
 // Цвета для тегов услуг
 const tagColors = {
   'Šukuosena': '#c084fc',
@@ -37,6 +19,15 @@ const tagColors = {
   'Atvykimas': '#facc15',
   'Konsultacija': '#34d399'
 }
+// грузим правильный ключ, тот что использует Admin.jsx
+const settings = getSettings();
+
+// теперь данные точно подставятся
+const BANK_DETAILS = {
+  receiver: settings.masterName || "—",
+  iban: settings.adminIban || "—",
+  descriptionPrefix: "Rezervacija",
+};
 
 // helper: бронь считается оплаченной,
 // если флаг paid = true или старый статус 'approved_paid'
@@ -99,16 +90,7 @@ const list = useMemo(() => {
   // ВСЕ
   return all
 }, [filter, version, bookingsAll.length])
-// Sihronizacija s storage
-useEffect(() => {
-  const handler = () => {
-    setSettings(getSettings()); // обновляет UI
-  };
 
-  window.addEventListener("settingsUpdated", handler);
-  return () => window.removeEventListener("settingsUpdated", handler);
-}, []);
-  
   // пуш-уведомление когда бронь подтверждена админом
   useEffect(() => {
     const prev = JSON.parse(localStorage.getItem('prevBookings') || '[]')
