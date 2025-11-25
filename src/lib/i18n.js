@@ -1,21 +1,39 @@
 import React from 'react'
 
 import { getLang, setLang } from './storage'
+// src/lib/i18n.js
 import { useLang } from './LangContext'
 
-export const dict = { /* ← твой словарь остаётся без изменений */ }
+// ← ОДНО ЕДИНСТВЕННОЕ ОБЪЯВЛЕНИЕ dict
+export const dict = {
+  ru: {
+    brand: 'IZ Booking',
+    nav_calendar: 'Календарь',
+    // ... все переводы
+  },
+  lt: {
+    brand: 'IZ Registracija',
+    // ...
+  },
+  en: {
+    brand: 'IZ Booking',
+    // ...
+  }
+}
 
 export function useI18n() {
   const { lang } = useLang()
 
   const t = (key, vars = {}) => {
     let str = dict[lang]?.[key] || dict['ru'][key] || key
-    return Object.keys(vars).reduce((s, k) => s.replaceAll(`{${k}}`, vars[k]), str)
+   for (const k in vars) {
+  str = str.replaceAll(`{${k}}`, vars[k])
+}
+    return str
   }
 
   return { t, lang }
 }
-export const dict = {
   ru: {
     brand: 'IZ Booking',
     nav_calendar: 'Календарь',
