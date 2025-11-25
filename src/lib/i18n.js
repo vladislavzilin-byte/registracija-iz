@@ -11,48 +11,6 @@ export const dict = {
     nav_my: 'Мои записи',
     nav_admin: 'Админ',
     login: 'Вход',
-    // ... все твои переводы
-    only_future: 'Только будущие',
-    // ← последняя строка в ru
-  },
-  lt: {
-    brand: 'IZ Registracija',
-    nav_calendar: 'Kalendorius',
-    nav_my: 'Mano vizitai',
-    // ...
-    only_future: 'Tik būsimi',
-  },
-  en: {
-    brand: 'IZ Booking',
-    nav_calendar: 'Calendar',
-    nav_my: 'My bookings',
-    // ...
-    only_future: 'Only future',
-  }
-}   // ← закрываем объект dict — всё, больше скобок НЕТ!
-
-// ← теперь идёт функция — отдельно
-export function useI18n() {
-  const { lang } = useLang()
-
-  const t = (key, vars = {}) => {
-    let str = dict[lang]?.[key] || dict['ru'][key] || key
-
-    for (const k in vars) {
-      str = str.replaceAll(`{${k}}`, vars[k])
-    }
-
-    return str
-  }
-
-  return { t, lang }
-}
-  ru: {
-    brand: 'IZ Booking',
-    nav_calendar: 'Календарь',
-    nav_my: 'Мои записи',
-    nav_admin: 'Админ',
-    login: 'Вход',
     register: 'Регистрация',
     name: 'Имя',
     instagram: 'Instagram',
@@ -70,50 +28,10 @@ export function useI18n() {
     pending: 'Ожидает подтверждения',
     approved: 'Подтверждена',
     passed: 'Прошла',
-    canceled_by_client: 'Отменено клиентом',
-    canceled_by_admin: 'Отменено администратором',
     cancel: 'Отменить',
-    confirm_cancel: 'Отменить запись?',
-    irreversible: 'Это действие нельзя отменить.',
-    yes_cancel: 'Да, отменить',
-    back: 'Отмена',
-    slots_for: 'Слоты на',
-    already_booked: 'Этот слот уже занят',
-    login_or_register: 'Войдите или зарегистрируйтесь',
-    confirmed_title: 'Запись к {master} подтверждена!',
-    pending_title: 'Заявка отправлена!',
-    pending_caption: 'Ожидает подтверждения администратора',
-    ok: 'OK',
-    admin_only: 'Доступ только для администратора',
-    master_settings: 'Настройки мастера',
-    master_name: 'Имя мастера',
-    admin_phone: 'Телефон администратора',
-    day_start: 'Начало рабочего дня',
-    day_end: 'Конец рабочего дня',
-    slot_minutes: 'Длительность слота (мин)',
-    all_bookings: 'Все записи',
-    search_placeholder: 'Поиск по имени, телефону или Instagram',
-    status: 'Статус',
-    export: '📤 Экспорт',
-    refresh: '🔁 Обновить',
-    approve: 'Подтвердить',
-    rejected: 'Отклонить',
     no_records: 'Нет записей',
-    total: 'Всего',
-    total_active: 'Активных',
-    total_canceled: 'Отменённых',
-    reserved_label: 'Зарезервировано',
-    processing: '⏳ Обработка...',
-    booked_success: 'Запись создана!',
-    wait_confirmation: 'Ждите подтверждения администратора.',
-    details_in_my: 'Подробности в разделе «Мои записи».',
-    notif_approved: 'Ваша запись подтверждена!',
-    notif_canceled: 'Ваша запись отменена администратором.',
-    notif_ok: 'Понятно',
-    today: 'Сегодня',
-    this_week: 'Эта неделя',
-    this_month: 'Этот месяц',
-    only_future: 'Только будущие',
+    only_future: 'Только будущие'
+    // ← запятая не нужна на последнем элементе, но и с ней работает
   },
   lt: {
     brand: 'IZ Registracija',
@@ -138,50 +56,9 @@ export function useI18n() {
     pending: 'Laukia patvirtinimo',
     approved: 'Patvirtinta',
     passed: 'Įvyko',
-    canceled_by_client: 'Atšaukė klientas',
-    canceled_by_admin: 'Atšaukė administratorius',
     cancel: 'Atšaukti',
-    confirm_cancel: 'Atšaukti vizitą?',
-    irreversible: 'Veiksmo atšaukti neįmanoma.',
-    yes_cancel: 'Taip, atšaukti',
-    back: 'Atgal',
-    slots_for: 'Laikai',
-    already_booked: 'Šis laikas užimtas',
-    login_or_register: 'Prisijunkite arba užsiregistruokite',
-    confirmed_title: 'Vizitas pas {master} patvirtintas!',
-    pending_title: 'Užklausa išsiųsta!',
-    pending_caption: 'Laukia administratoriaus patvirtinimo',
-    ok: 'OK',
-    admin_only: 'Tik administratoriui',
-    master_settings: 'Meistro nustatymai',
-    master_name: 'Meistro vardas',
-    admin_phone: 'Administratoriaus telefonas',
-    day_start: 'Darbo pradžia',
-    day_end: 'Darbo pabaiga',
-    slot_minutes: 'Laiko tarpas (min)',
-    all_bookings: 'Visi vizitai',
-    search_placeholder: 'Paieška pagal vardą, tel. ar Instagram',
-    status: 'Būsena',
-    export: '📤 Eksportas',
-    refresh: '🔁 Atnaujinti',
-    approve: 'Patvirtinti',
-    rejected: 'Atmesti',
     no_records: 'Įrašų nėra',
-    total: 'Iš viso',
-    total_active: 'Aktyvių',
-    total_canceled: 'Atšauktų',
-    reserved_label: 'Rezervuota',
-    processing: '⏳ Apdorojama...',
-    booked_success: 'Vizitas sukurtas!',
-    wait_confirmation: 'Laukite administratoriaus patvirtinimo.',
-    details_in_my: 'Išsamiau skiltyje „Mano vizitai“.',
-    notif_approved: 'Jūsų vizitas patvirtintas!',
-    notif_canceled: 'Jūsų vizitas atšauktas administratoriaus.',
-    notif_ok: 'Gerai',
-    today: 'Šiandien',
-    this_week: 'Ši savaitė',
-    this_month: 'Šis mėnuo',
-    only_future: 'Tik būsimi',
+    only_future: 'Tik būsimi'
   },
   en: {
     brand: 'IZ Booking',
@@ -206,67 +83,25 @@ export function useI18n() {
     pending: 'Pending approval',
     approved: 'Approved',
     passed: 'Completed',
-    canceled_by_client: 'Canceled by client',
-    canceled_by_admin: 'Canceled by admin',
     cancel: 'Cancel',
-    confirm_cancel: 'Cancel booking?',
-    irreversible: 'This action cannot be undone.',
-    yes_cancel: 'Yes, cancel',
-    back: 'Back',
-    slots_for: 'Slots for',
-    already_booked: 'This slot is already taken',
-    login_or_register: 'Please log in or sign up',
-    confirmed_title: 'Booking with {master} confirmed!',
-    pending_title: 'Request sent!',
-    pending_caption: 'Waiting for admin approval',
-    ok: 'OK',
-    admin_only: 'Admin only',
-    master_settings: 'Master settings',
-    master_name: 'Master name',
-    admin_phone: 'Admin phone',
-    day_start: 'Day start',
-    day_end: 'Day end',
-    slot_minutes: 'Slot minutes',
-    all_bookings: 'All bookings',
-    search_placeholder: 'Search by name, phone or Instagram',
-    status: 'Status',
-    export: '📤 Export',
-    refresh: '🔁 Refresh',
-    approve: 'Approve',
-    rejected: 'Reject',
     no_records: 'No records',
-    total: 'Total',
-    total_active: 'Active',
-    total_canceled: 'Canceled',
-    reserved_label: 'Booked',
-    processing: '⏳ Processing...',
-    booked_success: 'Booking created!',
-    wait_confirmation: 'Please wait for admin approval.',
-    details_in_my: 'See details in “My bookings”.',
-    notif_approved: 'Your booking was approved!',
-    notif_canceled: 'Your booking was canceled by admin.',
-    notif_ok: 'OK',
-    today: 'Today',
-    this_week: 'This week',
-    this_month: 'This month',
-    only_future: 'Only future',
+    only_future: 'Only future'
   }
-}
+}   // ← ОДНА ЕДИНСТВЕННАЯ ЗАКРЫВАЮЩАЯ СКОБКА ДЛЯ dict
 
-export function useI18n(){
-  const [lang, setLangState] = React.useState(getLang())
+// ← После этого идёт функция — без лишних скобок!
+export function useI18n() {
+  const { lang } = useLang()
 
-  React.useEffect(()=>{
-    const stored = getLang()
-    if(stored!==lang) setLangState(stored)
-  }, [])
+  const t = (key, vars = {}) => {
+    let str = dict[lang]?.[key] || dict['ru'][key] || key
 
-  const t = React.useCallback((key, vars={})=>{
-    const str = (dict[lang] && dict[lang][key]) || (dict['ru'][key] || key)
-    return Object.keys(vars).reduce((s,k)=>s.replaceAll(`{${k}}`, vars[k]), str)
-  }, [lang])
+    for (const k in vars) {
+      str = str.replaceAll(`{${k}}`, vars[k])
+    }
 
-  const setLangUI = (l)=>{ setLang(l); setLangState(l) }
+    return str
+  }
 
-  return { lang, t, setLang: setLangUI }
+  return { t, lang }
 }
