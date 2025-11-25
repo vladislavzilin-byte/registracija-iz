@@ -1,7 +1,20 @@
 import React from 'react'
 
 import { getLang, setLang } from './storage'
+import { useLang } from './LangContext'
 
+export const dict = { /* ← твой словарь остаётся без изменений */ }
+
+export function useI18n() {
+  const { lang } = useLang()
+
+  const t = (key, vars = {}) => {
+    let str = dict[lang]?.[key] || dict['ru'][key] || key
+    return Object.keys(vars).reduce((s, k) => s.replaceAll(`{${k}}`, vars[k]), str)
+  }
+
+  return { t, lang }
+}
 export const dict = {
   ru: {
     brand: 'IZ Booking',
