@@ -1,5 +1,3 @@
-// FULL UPDATED App.jsx
-
 import Auth from './components/Auth.jsx'
 import Calendar from './components/Calendar.jsx'
 import Admin from './components/Admin.jsx'
@@ -7,62 +5,47 @@ import MyBookings from './components/MyBookings.jsx'
 import { useState, useEffect } from 'react'
 import { getCurrentUser } from './lib/storage'
 import { useI18n } from './lib/i18n'
+import { LangProvider, useLang } from './lib/LangContext'   // ← добавь
 
-/* ============================================================
-   МЕХАНИЗМ СКРЫТИЯ ЯЗЫКОВОГО МЕНЮ НА МОБИЛЬНОМ
-   ============================================================ */
-const useMobileLangHide = () => {
-  const [hidden, setHidden] = useState(false)
-
-  useEffect(() => {
-    let last = window.scrollY
-
-    const onScroll = () => {
-      if (window.innerWidth > 768) {
-        setHidden(false)
-        return
-      }
-
-      if (window.scrollY > last + 12) setHidden(true)
-      if (window.scrollY < last - 12) setHidden(false)
-
-      last = window.scrollY
-    }
-
-    window.addEventListener('scroll', onScroll)
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  return hidden
-}
-
-export default function App() {
-  const { lang, setLang, t } = useI18n()
+// ВСЁ ОСТАЛЬНОЕ ОСТАЁТСЯ ВНУТРИ ЭТОГО КОМПОНЕНТА
+function AppContent() {
+  const { lang, setLang } = useLang()        // ← теперь отсюда
+  const { t } = useI18n()                     // ← lang берётся автоматически
   const [tab, setTab] = useState('calendar')
   const [user, setUser] = useState(getCurrentUser())
   const hiddenLang = useMobileLangHide()
-
   const [kPress, setKPress] = useState(false)
 
-  /* ============================================================
-     ПРОБРОС setLang ДЛЯ МОБИЛЬНЫХ КНОПОК + АКТИВНЫЕ КНОПКИ
-     ============================================================ */
+  // Удаляем старую хрень с window.setLang
+  // и полностью убираем этот useEffect:
+  // useEffect(() => { window.setLang = setLang ... }, [])
+
+  // Вместо него — просто делаем setLang доступным глобально (для мобильных кнопок)
   useEffect(() => {
-    // React → window
     window.setLang = setLang
+  }, [setLang])
 
-    // подсветка мобильных кнопок
-    const btnLT = document.querySelector('.lang-bottom-lt')
-    const btnRU = document.querySelector('.lang-bottom-ru')
-    const btnEN = document.querySelector('.lang-bottom-en')
+  // ... весь остальной код App.jsx остаётся 100% тем же самым
+  // (всё что ниже return — не трогай)
 
-    const all = [btnLT, btnRU, btnEN]
-    all.forEach((btn) => btn?.classList.remove('active'))
+  const isAdmin = /* ... */
 
-    if (lang === 'lt') btnLT?.classList.add('active')
-    if (lang === 'ru') btnRU?.classList.add('active')
-    if (lang === 'en') btnEN?.classList.add('active')
-  }, [lang, setLang])
+  return (
+    <div className="container" style={containerStyle}>
+      {/* ВЕРХНЯЯ ПАНЕЛЬ, КНОПКИ, КОНТЕНТ — ВСЁ БЕЗ ИЗМЕНЕНИЙ */}
+      {/* ... */}
+    </div>
+  )
+}
+
+// Главный экспорт — теперь с провайдером
+export default function App() {
+  return (
+    <LangProvider>
+      <AppContent />
+    </LangProvider>
+  )
+}
 
   const isAdmin =
     user?.role === 'admin' ||
