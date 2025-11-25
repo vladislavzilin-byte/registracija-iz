@@ -90,7 +90,16 @@ const list = useMemo(() => {
   // ВСЕ
   return all
 }, [filter, version, bookingsAll.length])
+// Sihronizacija s storage
+useEffect(() => {
+  const handler = () => {
+    setSettings(getSettings()); // обновляет UI
+  };
 
+  window.addEventListener("settingsUpdated", handler);
+  return () => window.removeEventListener("settingsUpdated", handler);
+}, []);
+  
   // пуш-уведомление когда бронь подтверждена админом
   useEffect(() => {
     const prev = JSON.parse(localStorage.getItem('prevBookings') || '[]')
