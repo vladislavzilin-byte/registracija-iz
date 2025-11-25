@@ -144,12 +144,10 @@ export default function FinancePanel({
   const balance = totalIncome - totalExpenses;
 
   const combinedItems = useMemo(() => {
-    const all = [...systemItems, ...manualItems].map((i) => ({
-      ...i,
-      expense: i.amount * (percent / 100),
-    }));
-    return all.sort((a, b) => a.date.localeCompare(b.date) || a.timeDisplay.localeCompare(b.timeDisplay));
-  }, [systemItems, manualItems, percent]);
+    return [...systemItems, ...manualItems].sort(
+      (a, b) => a.date.localeCompare(b.date) || a.timeDisplay.localeCompare(b.timeDisplay)
+    );
+  }, [systemItems, manualItems]);
 
   const addManual = () => {
     const amount = Number(formAmount);
@@ -163,7 +161,10 @@ export default function FinancePanel({
       time,
     };
     setManualEntries((p) => [entry, ...p]);
-    setFormAmount(""); setFormDesc(""); setFormTimeFrom(""); setFormTimeTo("");
+    setFormAmount("");
+    setFormDesc("");
+    setFormTimeFrom("");
+    setFormTimeTo("");
   };
 
   const deleteItem = (item) => {
@@ -196,24 +197,20 @@ export default function FinancePanel({
     if (item.booking && onDownloadReceipt) onDownloadReceipt(item.booking);
   };
 
-  const exportPDF = () => {
-    // (PDF остаётся как был — не трогаем)
-  };
-
   return (
     <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
 
-      {/* Верхняя часть — сводка */}
+      {/* Сводка */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
         <div className="summary-card">
           <div className="title">{t("finance_system")}</div>
           <div className="value">€{systemTotal.toFixed(2)}</div>
-          <div className="subtitle">{t("finance_system_caption") || "Užbaigtos ir apmokėtos rezervacijos"}</div>
+          <div className="subtitle">Užbaigtos ir apmokėtos rezervacijos</div>
         </div>
         <div className="summary-card">
           <div className="title">{t("finance_manual")}</div>
           <div className="value">€{manualTotal.toFixed(2)}</div>
-          <div className="subtitle">{t("finance_manual_caption") || "Papildomi rankiniai įrašai"}</div>
+          <div className="subtitle">Papildomi rankiniai įrašai</div>
         </div>
         <div className="summary-card">
           <div className="title">{t("finance_expenses")} ({percent}%)</div>
@@ -271,13 +268,12 @@ export default function FinancePanel({
 
         {combinedItems.length === 0 ? (
           <div style={{ textAlign: "center", padding: 32, opacity: 0.6 }}>
-            {t("finance_no_records")}
+            {t("finance_no_records") || "Nėra įrašų"}
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {combinedItems.map((item) => (
               <div key={item.id} style={rowStyle}>
-                {/* Левая часть */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1 }}>
                   <span style={pillDate}>{item.dateDisplay}</span>
                   <span style={pillTime}>{item.timeDisplay}</span>
@@ -288,7 +284,6 @@ export default function FinancePanel({
                   )}
                 </div>
 
-                {/* Правая часть */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   {item.type === "system" && <span style={pillId}>#{item.shortId}</span>}
                   <span style={pillAmount}>€{item.amount.toFixed(2)}</span>
@@ -363,7 +358,7 @@ const rowStyle = {
 
 const pillDate = { padding: "6px 12px", borderRadius: 999, background: "rgba(59, 130, 246, 0.2)", border: "1px solid rgba(59, 130, 246, 0.6)", fontSize: 12, fontWeight: 600 };
 const pillTime = { padding: "6px 12px", borderRadius: 999, background: "rgba(99, 102, 241, 0.2)", border: "1px solid rgba(99, 102, 241, 0.6)", fontSize: 12 };
-const pillManual = { padding: "6px 14px", borderRadius: 999, background: "rgba(190, 24, 93, 0.25)", border: "1px solid rgba(244, 114, 182, 0.8)", fontSize A: 12 };
+const pillManual = { padding: "6px 14px", borderRadius: 999, background: "rgba(190, 24, 93, 0.25)", border: "1px solid rgba(244, 114, 182, 0.8)", fontSize: 12 };
 const pillId = { padding: "6px 10px", borderRadius: 999, background: "rgba(148, 163, 184, 0.2)", border: "1px solid rgba(148, 163, 184, 0.8)", fontSize: 11 };
 const pillAmount = { padding: "6px 12px", borderRadius: 999, background: "rgba(34, 197, 94, 0.2)", border: "1px solid rgba(34, 197, 94, 0.9)", fontWeight: 600, fontSize: 13 };
 
@@ -376,7 +371,16 @@ function renderTagPills(tags, serviceStyles) {
   return tags.map((name) => {
     const s = serviceStyles[name] || {};
     return (
-      <span key={name} style={{ padding: "6px 12px", borderRadius: 999, background: s.bg || "rgba(148, 163, 184, 0.18)", border: s.border || "1px solid rgba(148, 163, 184, 0.85)", fontSize: 11 }}>
+      <span
+        key={name}
+        style={{
+          padding: "6px 12px",
+          borderRadius: 999,
+          background: s.bg || "rgba(148, 163, 184, 0.18)",
+          border: s.border || "1px solid rgba(148, 163, 184, 0.85)",
+          fontSize: 11,
+        }}
+      >
         {name}
       </span>
     );
