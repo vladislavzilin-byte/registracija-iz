@@ -607,28 +607,27 @@ export const dict = {
 }
 
 export function useI18n() {
-  const [lang, setLangState] = React.useState(getLang())
+  const [lang, setLangState] = React.useState(getLang());
 
   React.useEffect(() => {
-    const stored = getLang()
-    if (stored !== lang) setLangState(stored)
-  }, [])
+    const stored = getLang();
+    if (stored !== lang) {
+      setLangState(stored);
+    }
+  }, [lang]);
 
-  const t = React.useCallback(
-    (key, vars = {}) => {
-      const str = (dict[lang] && dict[lang][key]) || dict['ru'][key] || key
-      return Object.keys(vars).reduce(
-        (s, k) => s.replaceAll(`{${k}}`, vars[k]),
-        str
-      )
-    },
-    [lang]
-  )
+  const t = React.useCallback((key, vars = {}) => {
+    const str = (dict[lang] && dict[lang][key]) || dict['ru'][key] || key;
+    return Object.keys(vars).reduce(
+      (s, k) => s.replaceAll(`{${k}}`, vars[k]),
+      str
+    );
+  }, [lang]);
 
   const setLangUI = (l) => {
-    setLang(l)
-    setLangState(l)
-  }
+    setLang(l);       // save to storage
+    setLangState(l);  // force React re-render
+  };
 
-  return { lang, t, setLang: setLangUI }
+  return { lang, t, setLang: setLangUI };
 }
