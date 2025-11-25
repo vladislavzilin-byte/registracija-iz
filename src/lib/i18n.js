@@ -4,31 +4,44 @@ import { getLang, setLang } from './storage'
 // src/lib/i18n.js
 import { useLang } from './LangContext'
 
-// ← ОДНО ЕДИНСТВЕННОЕ ОБЪЯВЛЕНИЕ dict
 export const dict = {
   ru: {
     brand: 'IZ Booking',
     nav_calendar: 'Календарь',
-    // ... все переводы
+    nav_my: 'Мои записи',
+    nav_admin: 'Админ',
+    login: 'Вход',
+    // ... все твои переводы
+    only_future: 'Только будущие',
+    // ← последняя строка в ru
   },
   lt: {
     brand: 'IZ Registracija',
+    nav_calendar: 'Kalendorius',
+    nav_my: 'Mano vizitai',
     // ...
+    only_future: 'Tik būsimi',
   },
   en: {
     brand: 'IZ Booking',
+    nav_calendar: 'Calendar',
+    nav_my: 'My bookings',
     // ...
+    only_future: 'Only future',
   }
-}
+}   // ← закрываем объект dict — всё, больше скобок НЕТ!
 
+// ← теперь идёт функция — отдельно
 export function useI18n() {
   const { lang } = useLang()
 
   const t = (key, vars = {}) => {
     let str = dict[lang]?.[key] || dict['ru'][key] || key
-   for (const k in vars) {
-  str = str.replaceAll(`{${k}}`, vars[k])
-}
+
+    for (const k in vars) {
+      str = str.replaceAll(`{${k}}`, vars[k])
+    }
+
     return str
   }
 
