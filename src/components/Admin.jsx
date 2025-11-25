@@ -111,6 +111,16 @@ export default function Admin() {
     window.dispatchEvent(new Event("settingsUpdated")); // 🔥 Событие авто-обновления
   };
 
+// авто-обновление каждые 5 секунд
+useEffect(() => {
+  const interval = setInterval(() => {
+    setSettings(getSettings());   // обновление настроек
+    setBookings(getBookings());   // обновление записей
+  }, 5000);
+
+  return () => clearInterval(interval);
+}, []);
+  
   // синк записей при обновлении профиля
   useEffect(() => {
     const handler = () => setBookings(getBookings());
@@ -273,6 +283,8 @@ export default function Admin() {
     setTimeout(() => setToast(null), 2200);
   };
 
+const [settings, setSettings] = useState(() => {
+  
   return (
     <div className="col" style={{ gap: 16 }}>
       {/* === НАСТРОЙКИ (ГАРМОШКА) === */}
