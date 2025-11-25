@@ -4,7 +4,6 @@ import { getLang, setLang } from './storage'
 
 export const dict = {
   ru: {
-    // ========= NAV / CORE =========
     brand: 'IZ Booking',
     nav_calendar: 'Календарь',
     nav_my: 'Мои записи',
@@ -21,8 +20,6 @@ export const dict = {
     my_profile: 'Мой профиль',
     my_bookings: 'Мои записи',
     you_have_x_active: 'У вас {n} активных запись(и)',
-
-    // ========= FILTERS / STATUS =========
     all: 'Все',
     active: 'Активные',
     canceled: 'Отменённые',
@@ -35,7 +32,7 @@ export const dict = {
     confirm_cancel: 'Отменить запись?',
     irreversible: 'Это действие нельзя отменить.',
     yes_cancel: 'Да, отменить',
-    back: 'Назад',
+    back: 'Отмена',
     slots_for: 'Слоты на',
     already_booked: 'Этот слот уже занят',
     login_or_register: 'Войдите или зарегистрируйтесь',
@@ -73,139 +70,8 @@ export const dict = {
     this_week: 'Эта неделя',
     this_month: 'Этот месяц',
     only_future: 'Только будущие',
-
-    // ========= MONTHS (для FinancePanel) =========
-    month_january: 'Январь',
-    month_february: 'Февраль',
-    month_march: 'Март',
-    month_april: 'Апрель',
-    month_may: 'Май',
-    month_june: 'Июнь',
-    month_july: 'Июль',
-    month_august: 'Август',
-    month_september: 'Сентябрь',
-    month_october: 'Октябрь',
-    month_november: 'Ноябрь',
-    month_december: 'Декабрь',
-
-    // ========= ADMIN (Admin.jsx) =========
-    admin_access_denied: 'Доступ запрещён',
-    admin_access_only_admin: 'Эта страница доступна только администраторам.',
-    admin_edit_settings: 'Редактировать настройки',
-    admin_services: 'Услуги',
-    admin_services_sub: 'Название, длительность, депозит',
-    admin_add_service: '+ Добавить услугу',
-    admin_new_service: 'Новая услуга',
-    admin_finance: 'Финансы',
-    admin_all_records: 'Все записи',
-
-    admin_filters_all: 'Все',
-    admin_filters_active: 'Активные',
-    admin_filters_finished: 'Завершённые',
-    admin_filters_canceled: 'Отменённые',
-
-    admin_pagination_prev: '← Назад',
-    admin_pagination_next: 'Вперёд →',
-    admin_page: 'Страница',
-    admin_of: 'из',
-    admin_records_short: 'зап.',
-
-    admin_confirmed: 'Подтверждено',
-    admin_unconfirmed: 'Неподтверждено',
-    admin_paid: 'Оплачено',
-    admin_unpaid: 'Не оплачено',
-
-    admin_date: 'Дата',
-    admin_time_from: 'Время от',
-    admin_time_to: 'Время до',
-    admin_download_receipt: '📄 Скачать квитанцию',
-    admin_receipt_number: '№ квитанции:',
-
-    admin_advance: 'Аванс (€):',
-    admin_mark_paid: 'Пометить оплаченной',
-    admin_remove_paid: 'Снять оплату',
-
-    admin_waiting_confirm: 'Ожидает подтверждения',
-    admin_canceled: 'Отменено',
-
-    admin_cancel_record_confirm: 'Отменить эту запись?',
-    admin_record_canceled: 'Запись отменена',
-    admin_record_confirmed: 'Запись подтверждена',
-    admin_payment_status_updated: 'Статус оплаты обновлён',
-
-    // ========= RECEIPT (квитанция) =========
-    receipt_invoice: 'Квитанция',
-    receipt_invoice_reservation: 'Квитанция за резервирование',
-    receipt_number_short: '№:',
-    receipt_created: 'Создано:',
-    receipt_scan_contact: 'Сканируйте, чтобы сохранить контакт',
-    receipt_client: 'Клиент:',
-    receipt_phone: 'Телефон:',
-    receipt_email: 'Email:',
-    receipt_services: 'Услуги:',
-    receipt_payment_status: 'Статус оплаты:',
-    receipt_generated_note:
-      'Эта квитанция сгенерирована автоматически и действительна без подписи.',
-    receipt_save_as_pdf:
-      'Чтобы сохранить как PDF, выберите «Печать» → «Сохранить как PDF».',
-
-    // ========= FINANCE PANEL (FinancePanel.jsx) =========
-    financeTitle: 'Финансы',
-    financeSubtitle: 'Доходы по записям и ручным операциям.',
-    financePeriodLabel: 'Период:',
-    financeModeMonth: 'Месяц',
-    financeModeYear: 'Год',
-    financeModeRange: 'Период',
-    financeExpensePercentLabel: 'Процент расходов:',
-    financeExportPdf: 'Экспортировать PDF',
-
-    financeSummarySystemTitle: 'Система',
-    financeSummarySystemCaption: 'Завершённые и оплаченные записи',
-    financeSummaryManualTitle: 'Ручные',
-    financeSummaryManualCaption: 'Дополнительные ручные записи',
-    financeSummaryExpensesTitle: 'Расходы ({percent}%)',
-    financeSummaryExpensesCaption: 'Автоматические расходы от дохода',
-    financeSummaryBalanceTitle: 'Баланс',
-    financeSummaryBalanceCaption: 'Доход минус расходы',
-
-    financeManualAddTitle: 'Добавить ручную запись',
-    financeManualAddSubtitle: 'Например, наличные или дополнительные услуги.',
-    financeManualAmountPlaceholder: 'Сумма €',
-    financeManualDescriptionPlaceholder: 'Описание',
-    financeManualAddButton: 'Добавить',
-
-    financeHistoryTitle: 'История',
-    financeHistorySubtitle: 'Все записи за выбранный период.',
-    financeHistoryEmpty: 'Нет записей за этот период.',
-
-    financeDeleteItemConfirm:
-      'Удалить эту запись из финансовой сводки? Бронирование не будет изменено.',
-    financeEditDescriptionPrompt: 'Описание:',
-    financeEditAmountPrompt: 'Сумма €:',
-    financeEditTimePrompt: 'Время (например 04:00 – 13:00):',
-
-    financeReportTitle: 'Финансовый отчёт',
-    financeReportHeaderSubtitle:
-      'Финансовый отчёт по выбранному периоду',
-    financeReportIntro:
-      'Сводка за выбранный период: доходы из системы и ручных записей, автоматические расходы ({percent}%) и баланс.',
-    financeReportSystemCaption: 'Завершённые и оплаченные записи',
-    financeReportManualCaption: 'Дополнительные ручные записи',
-    financeReportExpensesCaption: 'Автоматические расходы от дохода',
-    financeReportBalanceCaption: 'Доход минус расходы',
-    financeReportTableTitle: 'Список записей',
-    financeReportTableDate: 'Дата',
-    financeReportTableTime: 'Время',
-    financeReportTableDescription: 'Услуги / описание',
-    financeReportTableAmount: 'Сумма (€)',
-    financeReportTableExpense: 'Расходы',
-    financeReportTableReceiptNo: '№ квитанции',
-    financeReportTableEmpty: 'Нет записей за этот период.',
   },
-
-  // ======================================================
   lt: {
-    // ========= NAV / CORE =========
     brand: 'IZ Registracija',
     nav_calendar: 'Kalendorius',
     nav_my: 'Mano vizitai',
@@ -222,8 +88,6 @@ export const dict = {
     my_profile: 'Mano profilis',
     my_bookings: 'Mano vizitai',
     you_have_x_active: 'Turite {n} aktyvių vizitų',
-
-    // ========= FILTERS / STATUS =========
     all: 'Visi',
     active: 'Aktyvūs',
     canceled: 'Atšaukti',
@@ -274,139 +138,8 @@ export const dict = {
     this_week: 'Ši savaitė',
     this_month: 'Šis mėnuo',
     only_future: 'Tik būsimi',
-
-    // ========= MONTHS =========
-    month_january: 'Sausis',
-    month_february: 'Vasaris',
-    month_march: 'Kovas',
-    month_april: 'Balandis',
-    month_may: 'Gegužė',
-    month_june: 'Birželis',
-    month_july: 'Liepa',
-    month_august: 'Rugpjūtis',
-    month_september: 'Rugsėjis',
-    month_october: 'Spalis',
-    month_november: 'Lapkritis',
-    month_december: 'Gruodis',
-
-    // ========= ADMIN =========
-    admin_access_denied: 'Prieiga uždrausta',
-    admin_access_only_admin: 'Šis puslapis prieinamas tik administratoriui.',
-    admin_edit_settings: 'Redaguoti nustatymus',
-    admin_services: 'Paslaugos',
-    admin_services_sub: 'Pavadinimas, trukmė, avansas',
-    admin_add_service: '+ Pridėti paslaugą',
-    admin_new_service: 'Nauja paslauga',
-    admin_finance: 'Finansai',
-    admin_all_records: 'Visi vizitai',
-
-    admin_filters_all: 'Visi',
-    admin_filters_active: 'Aktyvūs',
-    admin_filters_finished: 'Įvykę',
-    admin_filters_canceled: 'Atšaukti',
-
-    admin_pagination_prev: '← Atgal',
-    admin_pagination_next: 'Pirmyn →',
-    admin_page: 'Puslapis',
-    admin_of: 'iš',
-    admin_records_short: 'įr.',
-
-    admin_confirmed: 'Patvirtinta',
-    admin_unconfirmed: 'Nepatvirtinta',
-    admin_paid: 'Apmokėta',
-    admin_unpaid: 'Neapmokėta',
-
-    admin_date: 'Data',
-    admin_time_from: 'Nuo',
-    admin_time_to: 'Iki',
-    admin_download_receipt: '📄 Atsisiųsti kvitą',
-    admin_receipt_number: 'Kvito nr.:',
-
-    admin_advance: 'Avansas (€):',
-    admin_mark_paid: 'Pažymėti apmokėta',
-    admin_remove_paid: 'Nuimti apmokėjimą',
-
-    admin_waiting_confirm: 'Laukia patvirtinimo',
-    admin_canceled: 'Atšaukta',
-
-    admin_cancel_record_confirm: 'Atšaukti šį vizitą?',
-    admin_record_canceled: 'Vizitas atšauktas',
-    admin_record_confirmed: 'Vizitas patvirtintas',
-    admin_payment_status_updated: 'Apmokėjimo būsena atnaujinta',
-
-    // ========= RECEIPT =========
-    receipt_invoice: 'Kvitancija',
-    receipt_invoice_reservation: 'Kvitancija už rezervaciją',
-    receipt_number_short: 'Nr.:',
-    receipt_created: 'Sukurta:',
-    receipt_scan_contact: 'Skenuokite ir išsaugokite kontaktą',
-    receipt_client: 'Klientas:',
-    receipt_phone: 'Telefonas:',
-    receipt_email: 'El. paštas:',
-    receipt_services: 'Paslaugos:',
-    receipt_payment_status: 'Mokėjimo būsena:',
-    receipt_generated_note:
-      'Ši kvitancija sugeneruota automatiškai ir galioja be parašo.',
-    receipt_save_as_pdf:
-      'Galite išsaugoti kaip PDF: pasirinkite „Spausdinti“ → „Save as PDF“.',
-
-    // ========= FINANCE PANEL =========
-    financeTitle: 'Finansai',
-    financeSubtitle: 'Pajamos iš rezervacijų ir rankinių įrašų.',
-    financePeriodLabel: 'Laikotarpis:',
-    financeModeMonth: 'Mėnuo',
-    financeModeYear: 'Metai',
-    financeModeRange: 'Laikotarpis',
-    financeExpensePercentLabel: 'Išlaidų procentas:',
-    financeExportPdf: 'Eksportuoti PDF',
-
-    financeSummarySystemTitle: 'Sistema',
-    financeSummarySystemCaption: 'Užbaigtos ir apmokėtos rezervacijos',
-    financeSummaryManualTitle: 'Rankiniai',
-    financeSummaryManualCaption: 'Papildomi rankiniai įrašai',
-    financeSummaryExpensesTitle: 'Išlaidos ({percent}%)',
-    financeSummaryExpensesCaption: 'Automatinės išlaidos nuo pajamų',
-    financeSummaryBalanceTitle: 'Balansas',
-    financeSummaryBalanceCaption: 'Pajamos minus išlaidos',
-
-    financeManualAddTitle: 'Pridėti rankinį įrašą',
-    financeManualAddSubtitle: 'Pvz. grynieji ar papildomos paslaugos.',
-    financeManualAmountPlaceholder: 'Suma €',
-    financeManualDescriptionPlaceholder: 'Aprašymas',
-    financeManualAddButton: 'Pridėti',
-
-    financeHistoryTitle: 'Istorija',
-    financeHistorySubtitle: 'Visi įrašai pagal pasirinktą laikotarpį.',
-    financeHistoryEmpty: 'Nėra įrašų šiam laikotarpiui',
-
-    financeDeleteItemConfirm:
-      'Ištrinti šį įrašą iš finansų suvestinės? Rezervacija neliečiama.',
-    financeEditDescriptionPrompt: 'Aprašymas:',
-    financeEditAmountPrompt: 'Suma €:',
-    financeEditTimePrompt: 'Laikas (pvz. 04:00 – 13:00):',
-
-    financeReportTitle: 'Finansų ataskaita',
-    financeReportHeaderSubtitle:
-      'Finansų ataskaita pagal laikotarpį',
-    financeReportIntro:
-      'Suvestinė pagal pasirinktą laikotarpį: pajamos iš sistemos ir rankinių įrašų, automatinės išlaidos ({percent}%) ir balansas.',
-    financeReportSystemCaption: 'Užbaigtos ir apmokėtos rezervacijos',
-    financeReportManualCaption: 'Papildomi rankiniai įrašai',
-    financeReportExpensesCaption: 'Automatinės išlaidos nuo pajamų',
-    financeReportBalanceCaption: 'Pajamos minus išlaidos',
-    financeReportTableTitle: 'Įrašų sąrašas',
-    financeReportTableDate: 'Data',
-    financeReportTableTime: 'Laikas',
-    financeReportTableDescription: 'Paslaugos / aprašymas',
-    financeReportTableAmount: 'Suma (€)',
-    financeReportTableExpense: 'Išlaidos',
-    financeReportTableReceiptNo: 'Kvito nr.',
-    financeReportTableEmpty: 'Nėra įrašų šiam laikotarpiui.',
   },
-
-  // ======================================================
   en: {
-    // ========= NAV / CORE =========
     brand: 'IZ Booking',
     nav_calendar: 'Calendar',
     nav_my: 'My bookings',
@@ -423,8 +156,6 @@ export const dict = {
     my_profile: 'My profile',
     my_bookings: 'My bookings',
     you_have_x_active: 'You have {n} active booking(s)',
-
-    // ========= FILTERS / STATUS =========
     all: 'All',
     active: 'Active',
     canceled: 'Canceled',
@@ -475,177 +206,23 @@ export const dict = {
     this_week: 'This week',
     this_month: 'This month',
     only_future: 'Only future',
-
-    // ========= MONTHS =========
-    month_january: 'January',
-    month_february: 'February',
-    month_march: 'March',
-    month_april: 'April',
-    month_may: 'May',
-    month_june: 'June',
-    month_july: 'July',
-    month_august: 'August',
-    month_september: 'September',
-    month_october: 'October',
-    month_november: 'November',
-    month_december: 'December',
-
-    // ========= ADMIN =========
-    admin_access_denied: 'Access denied',
-    admin_access_only_admin: 'This page is available only to administrators.',
-    admin_edit_settings: 'Edit settings',
-    admin_services: 'Services',
-    admin_services_sub: 'Name, duration, deposit',
-    admin_add_service: '+ Add service',
-    admin_new_service: 'New service',
-    admin_finance: 'Finance',
-    admin_all_records: 'All records',
-
-    admin_filters_all: 'All',
-    admin_filters_active: 'Active',
-    admin_filters_finished: 'Finished',
-    admin_filters_canceled: 'Canceled',
-
-    admin_pagination_prev: '← Back',
-    admin_pagination_next: 'Forward →',
-    admin_page: 'Page',
-    admin_of: 'of',
-    admin_records_short: 'rec.',
-
-    admin_confirmed: 'Confirmed',
-    admin_unconfirmed: 'Unconfirmed',
-    admin_paid: 'Paid',
-    admin_unpaid: 'Unpaid',
-
-    admin_date: 'Date',
-    admin_time_from: 'From',
-    admin_time_to: 'To',
-    admin_download_receipt: '📄 Download receipt',
-    admin_receipt_number: 'Receipt No.:',
-
-    admin_advance: 'Advance (€):',
-    admin_mark_paid: 'Mark as paid',
-    admin_remove_paid: 'Remove payment',
-
-    admin_waiting_confirm: 'Awaiting approval',
-    admin_canceled: 'Canceled',
-
-    admin_cancel_record_confirm: 'Cancel this booking?',
-    admin_record_canceled: 'Booking canceled',
-    admin_record_confirmed: 'Booking confirmed',
-    admin_payment_status_updated: 'Payment status updated',
-
-    // ========= RECEIPT =========
-    receipt_invoice: 'Receipt',
-    receipt_invoice_reservation: 'Reservation receipt',
-    receipt_number_short: 'No.:',
-    receipt_created: 'Created:',
-    receipt_scan_contact: 'Scan to save contact',
-    receipt_client: 'Client:',
-    receipt_phone: 'Phone:',
-    receipt_email: 'Email:',
-    receipt_services: 'Services:',
-    receipt_payment_status: 'Payment status:',
-    receipt_generated_note:
-      'This receipt was generated automatically and is valid without a signature.',
-    receipt_save_as_pdf:
-      'You can save it as PDF: choose “Print” → “Save as PDF”.',
-
-    // ========= FINANCE PANEL =========
-    financeTitle: 'Finance',
-    financeSubtitle: 'Income from bookings and manual entries.',
-    financePeriodLabel: 'Period:',
-    financeModeMonth: 'Month',
-    financeModeYear: 'Year',
-    financeModeRange: 'Custom',
-    financeExpensePercentLabel: 'Expense percent:',
-    financeExportPdf: 'Export PDF',
-
-    financeSummarySystemTitle: 'System',
-    financeSummarySystemCaption: 'Completed and paid bookings',
-    financeSummaryManualTitle: 'Manual',
-    financeSummaryManualCaption: 'Additional manual entries',
-    financeSummaryExpensesTitle: 'Expenses ({percent}%)',
-    financeSummaryExpensesCaption: 'Automatic expenses from income',
-    financeSummaryBalanceTitle: 'Balance',
-    financeSummaryBalanceCaption: 'Income minus expenses',
-
-    financeManualAddTitle: 'Add manual entry',
-    financeManualAddSubtitle: 'For example cash or extra services.',
-    financeManualAmountPlaceholder: 'Amount €',
-    financeManualDescriptionPlaceholder: 'Description',
-    financeManualAddButton: 'Add',
-
-    financeHistoryTitle: 'History',
-    financeHistorySubtitle: 'All entries for the selected period.',
-    financeHistoryEmpty: 'No entries for this period.',
-
-    financeDeleteItemConfirm:
-      'Delete this item from the finance summary? The booking itself will not be changed.',
-    financeEditDescriptionPrompt: 'Description:',
-    financeEditAmountPrompt: 'Amount €:',
-    financeEditTimePrompt: 'Time (e.g. 04:00 – 13:00):',
-
-    financeReportTitle: 'Finance report',
-    financeReportHeaderSubtitle:
-      'Finance report for the selected period',
-    financeReportIntro:
-      'Summary for the selected period: income from the system and manual entries, automatic expenses ({percent}%) and balance.',
-    financeReportSystemCaption: 'Completed and paid bookings',
-    financeReportManualCaption: 'Additional manual entries',
-    financeReportExpensesCaption: 'Automatic expenses from income',
-    financeReportBalanceCaption: 'Income minus expenses',
-    financeReportTableTitle: 'Entries list',
-    financeReportTableDate: 'Date',
-    financeReportTableTime: 'Time',
-    financeReportTableDescription: 'Services / description',
-    financeReportTableAmount: 'Amount (€)',
-    financeReportTableExpense: 'Expenses',
-    financeReportTableReceiptNo: 'Receipt No.',
-    financeReportTableEmpty: 'No entries for this period.',
-  },
+  }
 }
 
-export function useI18n() {
-  const [lang, setLangState] = React.useState(getLang());
+export function useI18n(){
+  const [lang, setLangState] = React.useState(getLang())
 
-  /** 
-   * Следим за языком. При смене — обновляем state,
-   * чтобы весь интерфейс перерисовался.
-   */
-  React.useEffect(() => {
-    const stored = getLang();
-    if (stored !== lang) {
-      setLangState(stored);
-    }
-  }, [lang]);
+  React.useEffect(()=>{
+    const stored = getLang()
+    if(stored!==lang) setLangState(stored)
+  }, [])
 
-  /**
-   * Функция перевода.
-   * Берёт строку из dict[lang], если нет — fallback → RU.
-   */
-  const t = React.useCallback(
-    (key, vars = {}) => {
-      const langDict = dict[lang] || dict['ru'];
-      let str = langDict[key] || dict['ru'][key] || key;
+  const t = React.useCallback((key, vars={})=>{
+    const str = (dict[lang] && dict[lang][key]) || (dict['ru'][key] || key)
+    return Object.keys(vars).reduce((s,k)=>s.replaceAll(`{${k}}`, vars[k]), str)
+  }, [lang])
 
-      return Object.keys(vars).reduce(
-        (s, k) => s.replaceAll(`{${k}}`, vars[k]),
-        str
-      );
-    },
-    [lang]
-  );
+  const setLangUI = (l)=>{ setLang(l); setLangState(l) }
 
-  /**
-   * Установка языка:
-   * - сохраняем в localStorage
-   * - заставляем React обновить UI мгновенно
-   */
-  const setLangUI = (l) => {
-    setLang(l);       // save to storage
-    setLangState(l);  // force UI re-render
-  };
-
-  return { lang, t, setLang: setLangUI };
+  return { lang, t, setLang: setLangUI }
 }
