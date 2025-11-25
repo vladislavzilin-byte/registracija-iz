@@ -4,6 +4,64 @@ import { getLang, setLang } from './storage'
 
 export const dict = {
   ru: {
+    // admin.jsx
+    admin_access_denied: "Доступ запрещён",
+admin_access_only_admin: "Эта страница доступна только администраторам.",
+admin_edit_settings: "Редактировать настройки",
+admin_services: "Услуги",
+admin_services_sub: "Название, длительность, депозит",
+admin_add_service: "+ Добавить услугу",
+admin_new_service: "Новая услуга",
+admin_finance: "Финансы",
+admin_all_records: "Все записи",
+
+admin_filters_all: "Все",
+admin_filters_active: "Активные",
+admin_filters_finished: "Завершённые",
+admin_filters_canceled: "Отменённые",
+
+admin_pagination_prev: "← Назад",
+admin_pagination_next: "Вперёд →",
+admin_page: "Страница",
+admin_of: "из",
+admin_records_short: "зап.",
+
+admin_confirmed: "Подтверждено",
+admin_unconfirmed: "Неподтверждено",
+admin_paid: "Оплачено",
+admin_unpaid: "Не оплачено",
+
+admin_date: "Дата",
+admin_time_from: "Время от",
+admin_time_to: "Время до",
+admin_download_receipt: "📄 Скачать квитанцию",
+admin_receipt_number: "Nr. kvitancii:",
+
+admin_advance: "Avansas (€):",
+admin_mark_paid: "Пометить оплаченной",
+admin_remove_paid: "Снять оплату",
+
+admin_waiting_confirm: "Ожидает подтверждения",
+admin_canceled: "Отменено",
+
+admin_cancel_record_confirm: "Отменить эту запись?",
+admin_record_canceled: "Запись отменена",
+admin_record_confirmed: "Запись подтверждена",
+admin_payment_status_updated: "Статус оплаты обновлён",
+
+receipt_invoice: "Квитанция",
+receipt_invoice_reservation: "Kvitancija už rezervaciją",
+receipt_number_short: "Nr.:",
+receipt_created: "Sukurta:",
+receipt_scan_contact: "Сканируйте и сохраните контакт",
+receipt_client: "Клиент:",
+receipt_phone: "Телефон:",
+receipt_email: "Email:",
+receipt_services: "Услуги:",
+receipt_payment_status: "Статус оплаты:",
+receipt_generated_note: "Эта квитанция сгенерирована автоматически и действует без подписи.",
+receipt_save_as_pdf: "Вы можете сохранить её как PDF: выберите «Печать» → «Сохранить как PDF».", 
+    
     brand: 'IZ Booking',
     nav_calendar: 'Календарь',
     nav_my: 'Мои записи',
