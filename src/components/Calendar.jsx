@@ -26,10 +26,8 @@ const DEFAULT_SERVICES = [
 ]
 
 export default function Calendar() {
-  const { t, lang } = useI18n()
-
-  // 🔥 1 — правильный принудительный rerender
-  const [, force] = useState(0)
+  const { t } = useI18n()
+  const settings = getSettings()
 
   // услуги из настроек или дефолтные
   const serviceList =
@@ -41,13 +39,13 @@ export default function Calendar() {
   const [openPrices, setOpenPrices] = useState(false)
 
   // Автооткрытие Kainas из App.jsx
-useEffect(() => {
-  const handler = () => {
-    setOpenPrices(prev => !prev)
-  }
-  window.addEventListener('togglePrices', handler)
-  return () => window.removeEventListener('togglePrices', handler)
-}, [])
+  useEffect(() => {
+    const handler = () => {
+      setOpenPrices(prev => !prev)
+    }
+    window.addEventListener('togglePrices', handler)
+    return () => window.removeEventListener('togglePrices', handler)
+  }, [])
 
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()))
   const [selectedDate, setSelectedDate] = useState(new Date())
