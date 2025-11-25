@@ -1,7 +1,7 @@
 // src/components/FinancePanel.jsx
 import { useState, useMemo, useEffect } from "react";
 import { fmtDate, fmtTime } from "../lib/storage";
-import { useI18n } from "../lib/i18n";
+import { useI18n } from "../lib/i18n";   // ← ОБЯЗАТЕЛЬНО ДОБАВЬ!
 
 const isPaid = (b) => !!(b?.paid || b?.status === "approved_paid");
 const isCanceled = (b) =>
