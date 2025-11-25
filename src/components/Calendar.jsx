@@ -26,8 +26,12 @@ const DEFAULT_SERVICES = [
 ]
 
 export default function Calendar() {
-  const { t, lang } = useI18n()
-  const settings = getSettings()
+const { t, lang } = useI18n();
+const [, force] = React.useState(0);
+
+React.useEffect(() => {
+  force(n => n + 1);
+}, [lang]);
 
   // услуги из настроек или дефолтные
   const serviceList =
