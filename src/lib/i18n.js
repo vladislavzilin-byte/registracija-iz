@@ -627,7 +627,7 @@ export function useI18n() {
   const setLangUI = (l) => {
     setLang(l);       // save to storage
     setLangState(l);  // force React re-render
-  };
+  }
 
   return { lang, t, setLang: setLangUI };
 }
