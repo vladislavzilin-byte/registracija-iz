@@ -73,8 +73,8 @@ export default function Admin() {
   if (!isAdmin) {
     return (
       <div className="card">
-        <h3>{t('')}</h3>
-        <p className="muted">{t('')}</p>
+        <h3>Доступ запрещён</h3>
+        <p className="muted">Эта страница доступна только администраторам.</p>
       </div>
     );
   }
@@ -283,7 +283,7 @@ export default function Admin() {
           >
             <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <Chevron open={showSettings} />
-              <span style={{ fontWeight: 700 }}>{t('')}</span>
+              <span style={{ fontWeight: 700 }}>Редактировать настройки</span>
             </span>
           </button>
 
@@ -324,7 +324,7 @@ export default function Admin() {
 
   {/* IBAN администратора */}
   <div className="col">
-    <label style={labelStyle}>{t('iban_eur')}</label>
+    <label style={labelStyle}>IBAN (EUR)</label>
     <input
       style={inputGlass}
       value={settings.adminIban || ""}
@@ -405,7 +405,7 @@ export default function Admin() {
                   }}
                 >
                   <div>
-                    <div style={{ fontWeight: 600 }}>{t('')}</div>
+                    <div style={{ fontWeight: 600 }}>Услуги</div>
                     <div style={{ opacity: 0.75, fontSize: 12 }}>
                       Название, длительность, депозит
                     </div>
@@ -524,7 +524,7 @@ export default function Admin() {
           >
             <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <Chevron open={showFinance} />
-              <span style={{ fontWeight: 700 }}>{t('finansai')}</span>
+              <span style={{ fontWeight: 700 }}>Finansai</span>
             </span>
           </button>
 
@@ -1540,7 +1540,7 @@ const downloadReceipt = (b) => {
     <div class="top-row">
       <div class="top-left">
         <img src="/logo2.svg" style="height:100px; margin-bottom:6px;" />
-        <div class="sub">{t('kvitancija_u_rezervacij')}</div>
+        <div class="sub">Kvitancija už rezervaciją</div>
       </div>
 
       <div class="top-right">
@@ -1564,34 +1564,34 @@ const downloadReceipt = (b) => {
       </div>
     </div>
 
-    <div class="title">{t('kvitancija')}</div>
+    <div class="title">Kvitancija</div>
 
     <div class="section">
       <div class="row">
-        <div class="label">{t('klientas')}</div>
+        <div class="label">Klientas:</div>
         <div class="value">${b.userName || "-"}</div>
       </div>
       <div class="row">
-        <div class="label">{t('telefonas')}</div>
+        <div class="label">Telefonas:</div>
         <div class="value">${b.userPhone || "-"}</div>
       </div>
       <div class="row">
-        <div class="label">{t('el_pa_tas')}</div>
+        <div class="label">El. paštas:</div>
         <div class="value">${b.userEmail || "-"}</div>
       </div>
     </div>
 
     <div class="section">
       <div class="row">
-        <div class="label">{t('data')}</div>
+        <div class="label">Data:</div>
         <div class="value">${dateStr}</div>
       </div>
       <div class="row">
-        <div class="label">{t('laikas')}</div>
+        <div class="label">Laikas:</div>
         <div class="value">${timeStr}</div>
       </div>
       <div class="row">
-        <div class="label">{t('paslaugos')}</div>
+        <div class="label">Paslaugos:</div>
         <div class="value">${servicesStr}</div>
       </div>
       <div class="services">
@@ -1603,13 +1603,13 @@ const downloadReceipt = (b) => {
 
     <div class="section">
       <div class="row">
-        <div class="label">{t('avansas')}</div>
+        <div class="label">Avansas:</div>
         <div class="value">${
           b.price ? `${b.price} €` : "—"
         }</div>
       </div>
       <div class="row">
-        <div class="label">{t('mok_jimo_b_sena')}</div>
+        <div class="label">Mokėjimo būsena:</div>
         <div class="value">${paidLabel}</div>
       </div>
     </div>

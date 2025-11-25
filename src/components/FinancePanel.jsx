@@ -325,7 +325,7 @@ export default function FinancePanel({
     win.document.write(`
       <html>
       <head>
-        <title>{t('finans_ataskaita')}</title>
+        <title>Finansų ataskaita</title>
         <meta charSet="utf-8" />
         <style>
           * { box-sizing: border-box; }
@@ -484,43 +484,43 @@ export default function FinancePanel({
 
             <div class="summary">
               <div class="card">
-                <div class="card-title">{t('sistema')}</div>
+                <div class="card-title">Sistema</div>
                 <div class="card-value">€${systemTotal.toFixed(2)}</div>
-                <div class="card-caption">{t('u_baigtos_ir_apmok_tos_rezervacijos')}</div>
+                <div class="card-caption">Užbaigtos ir apmokėtos rezervacijos</div>
               </div>
               <div class="card">
-                <div class="card-title">{t('rankiniai')}</div>
+                <div class="card-title">Rankiniai</div>
                 <div class="card-value">€${manualTotal.toFixed(2)}</div>
-                <div class="card-caption">{t('papildomi_rankiniai_ra_ai')}</div>
+                <div class="card-caption">Papildomi rankiniai įrašai</div>
               </div>
               <div class="card">
                 <div class="card-title">Išlaidos (${percent}%)</div>
                 <div class="card-value">€${totalExpenses.toFixed(2)}</div>
-                <div class="card-caption">{t('automatin_s_i_laidos_nuo_pajam')}</div>
+                <div class="card-caption">Automatinės išlaidos nuo pajamų</div>
               </div>
               <div class="card">
-                <div class="card-title">{t('balansas')}</div>
+                <div class="card-title">Balansas</div>
                 <div class="card-value">€${balance.toFixed(2)}</div>
-                <div class="card-caption">{t('pajamos_minus_i_laidos')}</div>
+                <div class="card-caption">Pajamos minus išlaidos</div>
               </div>
             </div>
 
-            <h2>{t('ra_s_ra_as')}</h2>
+            <h2>Įrašų sąrašas</h2>
             <table>
               <thead>
                 <tr>
-                  <th style="width:90px;">{t('data')}</th>
-                  <th style="width:120px;">{t('laikas')}</th>
-                  <th>{t('paslaugos_apra_ymas')}</th>
-                  <th style="width:80px;">{t('suma')}</th>
-                  <th style="width:80px;">{t('i_laidos')}</th>
-                  <th style="width:80px;">{t('kvito_nr')}</th>
+                  <th style="width:90px;">Data</th>
+                  <th style="width:120px;">Laikas</th>
+                  <th>Paslaugos / aprašymas</th>
+                  <th style="width:80px;">Suma (€)</th>
+                  <th style="width:80px;">Išlaidos</th>
+                  <th style="width:80px;">Kvito nr.</th>
                                   </tr>
               </thead>
               <tbody>
                 ${
                   groupedByDate.length === 0
-                    ? `<tr><td colspan="7" class="muted">{t('n_ra_ra_iam_laikotarpiui')}</td></tr>`
+                    ? `<tr><td colspan="7" class="muted">Nėra įrašų šiam laikotarpiui</td></tr>`
                     : groupedByDate
                         .map((g) =>
                           g.items
@@ -596,7 +596,7 @@ export default function FinancePanel({
           }}
         >
           <div>
-            <div style={{ fontSize: 20, fontWeight: 600 }}>{t('finansai')}</div>
+            <div style={{ fontSize: 20, fontWeight: 600 }}>Finansai</div>
             <div style={{ fontSize: 12, opacity: 0.7 }}>
               Pajamos iš rezervacijų ir rankinių įrašų.
             </div>
@@ -755,7 +755,7 @@ export default function FinancePanel({
 
         {/* большая кнопка PDF */}
         <button onClick={exportPDF} style={bigPdfBtn}>
-          <span style={{ marginRight: 6 }}>{t('')}</span> Eksportuoti PDF
+          <span style={{ marginRight: 6 }}>📄</span> Eksportuoti PDF
         </button>
 
         {/* текстовая сводка */}
@@ -768,16 +768,16 @@ export default function FinancePanel({
           }}
         >
           <div>
-            <div style={{ fontWeight: 600 }}>{t('sistema')}</div>
+            <div style={{ fontWeight: 600 }}>Sistema</div>
             <div>€{systemTotal.toFixed(2)}</div>
             <div style={{ opacity: 0.7 }}>
               Užbaigtos ir apmokėtos rezervacijos
             </div>
           </div>
           <div>
-            <div style={{ fontWeight: 600 }}>{t('rankiniai')}</div>
+            <div style={{ fontWeight: 600 }}>Rankiniai</div>
             <div>€{manualTotal.toFixed(2)}</div>
-            <div style={{ opacity: 0.7 }}>{t('papildomi_rankiniai_ra_ai')}</div>
+            <div style={{ opacity: 0.7 }}>Papildomi rankiniai įrašai</div>
           </div>
           <div>
             <div style={{ fontWeight: 600 }}>Išlaidos ({percent}%)</div>
@@ -787,7 +787,7 @@ export default function FinancePanel({
             </div>
           </div>
           <div>
-            <div style={{ fontWeight: 600 }}>{t('balansas')}</div>
+            <div style={{ fontWeight: 600 }}>Balansas</div>
             <div>€{balance.toFixed(2)}</div>
             <div style={{ opacity: 0.7 }}>
               Pajamos minus {percent}% išlaidų

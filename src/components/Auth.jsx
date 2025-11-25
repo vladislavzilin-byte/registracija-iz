@@ -57,7 +57,7 @@ function ForgotPasswordModal({ open, onClose }) {
   return (
     <div style={overlayStyle}>
       <div style={modalStyle}>
-        <h3 style={{ color: "#fff", marginBottom: 12 }}>{t('')}</h3>
+        <h3 style={{ color: "#fff", marginBottom: 12 }}>Восстановление пароля</h3>
         <input
           type="text"
           placeholder="Введите номер телефона"

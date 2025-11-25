@@ -17,30 +17,30 @@ export default function MasterSettings({ settings, onChange }) {
 
   return (
     <div className="settings-card">
-      <h3>{t('')}</h3>
-      <label>{t('')}</label>
+      <h3>Настройки мастера</h3>
+      <label>Имя мастера</label>
       <input
         value={local.name}
         onChange={e => handleChange('name', e.target.value)}
       />
-      <label>{t('')}</label>
+      <label>Телефон администратора</label>
       <input
         value={local.phone}
         onChange={e => handleChange('phone', e.target.value)}
       />
-      <label>{t('')}</label>
+      <label>Начало рабочего дня</label>
       <input
         type="time"
         value={local.start}
         onChange={e => handleChange('start', e.target.value)}
       />
-      <label>{t('')}</label>
+      <label>Конец рабочего дня</label>
       <input
         type="time"
         value={local.end}
         onChange={e => handleChange('end', e.target.value)}
       />
-      <label>{t('')}</label>
+      <label>Длительность слота (мин)</label>
       <input
         type="number"
         value={local.slot}

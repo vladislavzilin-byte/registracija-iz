@@ -566,7 +566,7 @@ export default function Calendar() {
               <path d="M7 10l5 5 5-5z" />
             </svg>
 
-            <span style={{ fontSize: 17, color: '#fff' }}>{t('i_r_ti_kainas')}</span>
+            <span style={{ fontSize: 17, color: '#fff' }}>Žiūrėti kainas</span>
           </div>
 
           <div
