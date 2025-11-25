@@ -98,15 +98,16 @@ export default function FinancePanel({
 
   const [manualEntries, setManualEntries] = useState([]);
   const [excludedIds, setExcludedIds] = useState([]);
-  const [percent, setPercent] = useState(() => {
-    try {
-      const raw = localStorage.getItem(PERCENT_KEY);
-      if (raw === "" || raw === null) return 30;
-      const n = Number(raw);
-  return !isNaN(n) && n >= 0 && n <= 100 ? n : 30;
-    }
-  } // ← Лишняя скобка
-);
+const [percent, setPercent] = useState(() => {
+  try {
+    const raw = localStorage.getItem(PERCENT_KEY);
+    if (raw === "" || raw === null) return 30;
+    const n = Number(raw);
+    return !isNaN(n) && n >= 0 && n <= 100 ? n : 30;
+  } catch {
+    return 30;
+  }
+});
 
   const [formDate, setFormDate] = useState(formatDateISO(now));
   const [formTimeFrom, setFormTimeFrom] = useState("");
