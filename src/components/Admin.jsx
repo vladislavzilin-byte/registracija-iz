@@ -82,14 +82,14 @@ export default function Admin() {
   const { t } = useI18n();
 
   // === НАСТРОЙКИ И СОСТОЯНИЯ ===
-  const [settings, setSettings] = useState(() => {
-    const s = getSettings();
-    if (!Array.isArray(s.serviceList) || !s.serviceList.length) {
-      s.serviceList = [...DEFAULT_SERVICES];
-      saveSettings(s);
-    }
-    return s;
-  });
+const [settings, setSettings] = useState(() => {
+  const s = getSettings();
+  if (!Array.isArray(s.serviceList) || !s.serviceList.length) {
+    s.serviceList = [...DEFAULT_SERVICES];
+    saveSettings(s);
+  }
+  return s;
+});
 
   const [bookings, setBookings] = useState(getBookings());
   const [showSettings, setShowSettings] = useState(false);
@@ -283,7 +283,7 @@ useEffect(() => {
     setTimeout(() => setToast(null), 2200);
   };
 
-const [settings, setSettings] = useState(() => {
+
   
   return (
     <div className="col" style={{ gap: 16 }}>
