@@ -121,9 +121,9 @@ export default function App() {
           className={`lang-switcher-top ${hiddenLang ? 'hidden-mobile' : ''}`}
           style={{ display: 'flex', gap: '8px' }}
         >
-          <button onClick={() => setLang('lt')} className={`lang-btn ${lang === 'lt' ? 'active' : ''}`}>LT</button>
-          <button onClick={() => setLang('ru')} className={`lang-btn ${lang === 'ru' ? 'active' : ''}`}>RU</button>
-          <button onClick={() => setLang('en')} className={`lang-btn ${lang === 'en' ? 'active' : ''}`}>GB</button>
+          <button onClick={() => setLang('lt')} className={`lang-btn ${lang === 'lt' ? 'active' : ''}`}>{t('lt')}</button>
+          <button onClick={() => setLang('ru')} className={`lang-btn ${lang === 'ru' ? 'active' : ''}`}>{t('ru')}</button>
+          <button onClick={() => setLang('en')} className={`lang-btn ${lang === 'en' ? 'active' : ''}`}>{t('gb')}</button>
         </div>
       </div>
 
@@ -133,7 +133,7 @@ export default function App() {
       {tab === 'my' && <MyBookings />}
       {tab === 'admin' && isAdmin && <Admin />}
 
-      <footer style={footerStyle}>© IZ HAIR TREND</footer>
+      <footer style={footerStyle}>{t('iz_hair_trend')}</footer>
     </div>
   )
 }
@@ -278,9 +278,9 @@ const bottomLang = document.createElement('div')
 bottomLang.className = 'lang-switcher-bottom'
 bottomLang.innerHTML = `
   <div class="lang-group">
-    <button class="lang-btn lang-bottom-lt">LT</button>
-    <button class="lang-btn lang-bottom-ru">RU</button>
-    <button class="lang-btn lang-bottom-en">GB</button>
+    <button class="lang-btn lang-bottom-lt">{t('lt')}</button>
+    <button class="lang-btn lang-bottom-ru">{t('ru')}</button>
+    <button class="lang-btn lang-bottom-en">{t('gb')}</button>
   </div>
 `
 document.body.appendChild(bottomLang)

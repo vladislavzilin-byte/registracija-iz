@@ -44,14 +44,11 @@ app.post('/api/reset-password', async (req,res)=>{
     if(process.env.SMTP_PASS){
       const t = makeTransporter()
       await t.sendMail({
-        from: `"${process.env.FROM_NAME || 'IZ Booking'}" <${process.env.FROM_EMAIL || process.env.SMTP_USER || 'izbooking1@gmail.com'}>`,
-        to: email,
-        subject: 'Восстановление пароля IZ Booking',
-        html: `<div style="background:#111;color:#fff;padding:18px;border-radius:10px">
-          <h2 style="margin:0 0 8px 0">Восстановление пароля — IZ Booking</h2>
+        from: `"${process.env.FROM_NAME || 'IZ Booking'}" <${process.env.FROM_EMAIL || process.env.SMTP_USER || 'izbooking1@gmail.com'}>{t('to_email_subject_iz_booking_html')}<div style="background:#111;color:#fff;padding:18px;border-radius:10px">
+          <h2 style="margin:0 0 8px 0">{t('iz_booking')}</h2>
           <p>Здравствуйте${email?', '+email:''}!</p>
           <p>Ваш временный пароль: <b>${temp}</b></p>
-          <p>Смените пароль после входа в «Мой профиль».</p>
+          <p>{t('')}</p>
         </div>`
       })
     }

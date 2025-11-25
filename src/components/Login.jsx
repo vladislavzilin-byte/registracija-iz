@@ -26,7 +26,7 @@ export default function Login({ onLogin }) {
 
   return (
     <div className="card">
-      <h2>Вход</h2>
+      <h2>{t('')}</h2>
 
       <input
         type="text"
@@ -44,7 +44,7 @@ export default function Login({ onLogin }) {
 
       {error && <p className="error">{error}</p>}
 
-      <button onClick={handleLogin}>Войти</button>
+      <button onClick={handleLogin}>{t('')}</button>
 
       <p className="forgot" style={{marginTop:8, cursor:'pointer', opacity:.85}} onClick={() => setShowForgot(true)}>
         Забыли пароль?

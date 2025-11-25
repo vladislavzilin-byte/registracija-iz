@@ -10,7 +10,6 @@ import {
 } from "../lib/storage";
 import { useI18n } from "../lib/i18n";
 import FinancePanel from "./FinancePanel";
-
 const ADMINS = ["irina.abramova7@gmail.com", "vladislavzilin@gmail.com"];
 
 const DEFAULT_SERVICES = [
@@ -74,8 +73,8 @@ export default function Admin() {
   if (!isAdmin) {
     return (
       <div className="card">
-        <h3>Доступ запрещён</h3>
-        <p className="muted">Эта страница доступна только администраторам.</p>
+        <h3>{t('')}</h3>
+        <p className="muted">{t('')}</p>
       </div>
     );
   }
@@ -109,19 +108,7 @@ export default function Admin() {
     const next = { ...settings, ...patch };
     setSettings(next);
     saveSettings(next);
-    // кастомное событие, если где-то ещё захочешь слушать настройки
-    window.dispatchEvent(new Event("settingsUpdated"));
   };
-
-  // 🔁 АВТО-ОБНОВЛЕНИЕ КАЖДЫЕ 5 СЕКУНД
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSettings(getSettings());
-      setBookings(getBookings());
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   // синк записей при обновлении профиля
   useEffect(() => {
@@ -296,7 +283,7 @@ export default function Admin() {
           >
             <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <Chevron open={showSettings} />
-              <span style={{ fontWeight: 700 }}>Редактировать настройки</span>
+              <span style={{ fontWeight: 700 }}>{t('')}</span>
             </span>
           </button>
 
@@ -308,46 +295,46 @@ export default function Admin() {
             }}
           >
             <div style={{ paddingTop: 10 }}>
-              {/* ОСНОВНЫЕ НАСТРОЙКИ */}
-              <div className="row" style={{ gap: 12 }}>
-                {/* Имя мастера */}
-                <div className="col">
-                  <label style={labelStyle}>{t("master_name")}</label>
-                  <input
-                    style={inputGlass}
-                    value={settings.masterName}
-                    onChange={(e) =>
-                      updateSettings({ masterName: e.target.value })
-                    }
-                  />
-                </div>
+   {/* ОСНОВНЫЕ НАСТРОЙКИ */}
+<div className="row" style={{ gap: 12 }}>
+  
+  {/* Имя мастера */}
+  <div className="col">
+    <label style={labelStyle}>{t("master_name")}</label>
+    <input
+      style={inputGlass}
+      value={settings.masterName}
+      onChange={(e) =>
+        updateSettings({ masterName: e.target.value })
+      }
+    />
+  </div>
 
-                {/* Телефон администратора */}
-                <div className="col">
-                  <label style={labelStyle}>{t("admin_phone")}</label>
-                  <input
-                    style={inputGlass}
-                    value={settings.adminPhone}
-                    onChange={(e) =>
-                      updateSettings({ adminPhone: e.target.value })
-                    }
-                  />
-                </div>
+  {/* Телефон администратора */}
+  <div className="col">
+    <label style={labelStyle}>{t("admin_phone")}</label>
+    <input
+      style={inputGlass}
+      value={settings.adminPhone}
+      onChange={(e) =>
+        updateSettings({ adminPhone: e.target.value })
+      }
+    />
+  </div>
 
-                {/* IBAN администратора */}
-                <div className="col">
-                  <label style={labelStyle}>IBAN (EUR)</label>
-                  <input
-                    style={inputGlass}
-                    value={settings.adminIban || ""}
-                    onChange={(e) =>
-                      updateSettings({ adminIban: e.target.value })
-                    }
-                    placeholder="LT00 0000 0000 0000 0000"
-                  />
-                </div>
-              </div>
-
+  {/* IBAN администратора */}
+  <div className="col">
+    <label style={labelStyle}>{t('iban_eur')}</label>
+    <input
+      style={inputGlass}
+      value={settings.adminIban || ""}
+      onChange={(e) =>
+        updateSettings({ adminIban: e.target.value })
+      }
+      placeholder="LT00 0000 0000 0000 0000"
+    />
+  </div>
+</div>
               {/* РАБОЧЕЕ ВРЕМЯ */}
               <div
                 className="row"
@@ -418,7 +405,7 @@ export default function Admin() {
                   }}
                 >
                   <div>
-                    <div style={{ fontWeight: 600 }}>Услуги</div>
+                    <div style={{ fontWeight: 600 }}>{t('')}</div>
                     <div style={{ opacity: 0.75, fontSize: 12 }}>
                       Название, длительность, депозит
                     </div>
@@ -438,89 +425,89 @@ export default function Admin() {
                     marginTop: 6,
                   }}
                 >
-                  {services.map((s, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1.4fr .7fr .7fr auto",
-                        gap: 8,
-                        alignItems: "center",
-                      }}
-                    >
-                      {/* Название */}
-                      <input
-                        style={inputGlass}
-                        value={s.name}
-                        onChange={(e) =>
-                          updateServiceField(idx, "name", e.target.value)
-                        }
-                      />
+{services.map((s, idx) => (
+  <div
+    key={idx}
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1.4fr .7fr .7fr auto",
+      gap: 8,
+      alignItems: "center",
+    }}
+  >
+    {/* Название */}
+    <input
+      style={inputGlass}
+      value={s.name}
+      onChange={(e) =>
+        updateServiceField(idx, "name", e.target.value)
+      }
+    />
 
-                      {/* Длительность + "min" */}
-                      <div style={{ position: "relative" }}>
-                        <input
-                          style={{ ...inputGlass, paddingRight: 34 }}
-                          type="number"
-                          value={s.duration}
-                          onChange={(e) =>
-                            updateServiceField(idx, "duration", e.target.value)
-                          }
-                        />
-                        <span
-                          style={{
-                            position: "absolute",
-                            right: 10,
-                            top: "50%",
-                            transform: "translateY(-50%)",
-                            fontSize: 12,
-                            opacity: 0.75,
-                            pointerEvents: "none",
-                          }}
-                        >
-                          min
-                        </span>
-                      </div>
+    {/* Длительность + "min" */}
+    <div style={{ position: "relative" }}>
+      <input
+        style={{ ...inputGlass, paddingRight: 34 }}
+        type="number"
+        value={s.duration}
+        onChange={(e) =>
+          updateServiceField(idx, "duration", e.target.value)
+        }
+      />
+      <span
+        style={{
+          position: "absolute",
+          right: 10,
+          top: "50%",
+          transform: "translateY(-50%)",
+          fontSize: 12,
+          opacity: 0.75,
+          pointerEvents: "none",
+        }}
+      >
+        min
+      </span>
+    </div>
 
-                      {/* Депозит + "€" */}
-                      <div style={{ position: "relative" }}>
-                        <input
-                          style={{ ...inputGlass, paddingRight: 34 }}
-                          type="number"
-                          value={s.deposit}
-                          onChange={(e) =>
-                            updateServiceField(idx, "deposit", e.target.value)
-                          }
-                        />
-                        <span
-                          style={{
-                            position: "absolute",
-                            right: 10,
-                            top: "50%",
-                            transform: "translateY(-50%)",
-                            fontSize: 12,
-                            opacity: 0.75,
-                            pointerEvents: "none",
-                          }}
-                        >
-                          €
-                        </span>
-                      </div>
+    {/* Депозит + "€" */}
+    <div style={{ position: "relative" }}>
+      <input
+        style={{ ...inputGlass, paddingRight: 34 }}
+        type="number"
+        value={s.deposit}
+        onChange={(e) =>
+          updateServiceField(idx, "deposit", e.target.value)
+        }
+      />
+      <span
+        style={{
+          position: "absolute",
+          right: 10,
+          top: "50%",
+          transform: "translateY(-50%)",
+          fontSize: 12,
+          opacity: 0.75,
+          pointerEvents: "none",
+        }}
+      >
+        €
+      </span>
+    </div>
 
-                      <button
-                        onClick={() => removeService(idx)}
-                        style={{
-                          padding: "8px 10px",
-                          borderRadius: 10,
-                          background: "rgba(110,20,30,.35)",
-                          border: "1px solid rgba(239,68,68,.7)",
-                          color: "#fff",
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
+    <button
+      onClick={() => removeService(idx)}
+      style={{
+        padding: "8px 10px",
+        borderRadius: 10,
+        background: "rgba(110,20,30,.35)",
+        border: "1px solid rgba(239,68,68,.7)",
+        color: "#fff",
+      }}
+    >
+      ✕
+    </button>
+  </div>
+))}                
                 </div>
               </div>
             </div>
@@ -537,7 +524,7 @@ export default function Admin() {
           >
             <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <Chevron open={showFinance} />
-              <span style={{ fontWeight: 700 }}>Finansai</span>
+              <span style={{ fontWeight: 700 }}>{t('finansai')}</span>
             </span>
           </button>
 
@@ -679,10 +666,7 @@ export default function Admin() {
             }}
           >
             {groupedByDate.map(({ key, label, items }) => (
-              <div
-                key={key}
-                style={{ display: "flex", flexDirection: "column", gap: 6 }}
-              >
+              <div key={key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {/* заголовок дня */}
                 <div
                   style={{
@@ -760,7 +744,7 @@ export default function Admin() {
                             {fmtTime(b.start)} – {fmtTime(b.end)}
                           </span>
 
-                          {/* услуги */}
+                         {/* услуги */}
                           {servicesArr.length > 0 && (
                             <span style={pillService}>
                               {servicesArr.join(", ")}
@@ -775,68 +759,64 @@ export default function Admin() {
                           {/* ID */}
                           <span style={pillId}>#{b.id.slice(0, 6)}</span>
 
-                          {/* справа: подтверждение + оплата + стрелка */}
-                          <span
-                            style={{
-                              marginLeft: "auto",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                            }}
-                          >
-                            {/* 🔵 СТАТУС ПОДТВЕРЖДЕНИЯ */}
-                            <span
-                              style={{
-                                fontSize: 11,
-                                padding: "3px 8px",
-                                borderRadius: 999,
-                                border:
-                                  b.status === "approved" ||
-                                  b.status === "approved_paid"
-                                    ? "1px solid rgba(34,197,94,0.85)"
-                                    : "1px solid rgba(248,113,113,0.9)",
-                                background:
-                                  b.status === "approved" ||
-                                  b.status === "approved_paid"
-                                    ? "rgba(22,163,74,0.25)"
-                                    : "rgba(127,29,29,0.6)",
-                              }}
-                            >
-                              {b.status === "approved" ||
-                              b.status === "approved_paid"
-                                ? "Подтверждено"
-                                : "Неподтверждено"}
-                            </span>
+                        {/* справа: подтверждение + оплата + стрелка */}
+<span
+  style={{
+    marginLeft: "auto",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  }}
+>
 
-                            {/* 🟢 ОПЛАТА */}
-                            <span
-                              style={{
-                                fontSize: 11,
-                                padding: "3px 8px",
-                                borderRadius: 999,
-                                border: paid
-                                  ? "1px solid rgba(34,197,94,0.85)"
-                                  : "1px solid rgba(248,113,113,0.9)",
-                                background: paid
-                                  ? "rgba(22,163,74,0.25)"
-                                  : "rgba(127,29,29,0.6)",
-                              }}
-                            >
-                              {paid ? "Оплачено" : "Не оплачено"}
-                            </span>
+  {/* 🔵 СТАТУС ПОДТВЕРЖДЕНИЯ */}
+  <span
+    style={{
+      fontSize: 11,
+      padding: "3px 8px",
+      borderRadius: 999,
+      border:
+        b.status === "approved" || b.status === "approved_paid"
+          ? "1px solid rgba(34,197,94,0.85)"
+          : "1px solid rgba(248,113,113,0.9)",
+      background:
+        b.status === "approved" || b.status === "approved_paid"
+          ? "rgba(22,163,74,0.25)"
+          : "rgba(127,29,29,0.6)",
+    }}
+  >
+    {b.status === "approved" || b.status === "approved_paid"
+      ? "Подтверждено"
+      : "Неподтверждено"}
+  </span>
 
-                            {/* стрелка */}
-                            <div
-                              style={{
-                                transform: isOpen
-                                  ? "rotate(180deg)"
-                                  : "rotate(0deg)",
-                                transition: "transform .25s ease",
-                              }}
-                            >
-                              <Chevron open={isOpen} />
-                            </div>
-                          </span>
+  {/* 🟢 ОПЛАТА */}
+  <span
+    style={{
+      fontSize: 11,
+      padding: "3px 8px",
+      borderRadius: 999,
+      border: paid
+        ? "1px solid rgba(34,197,94,0.85)"
+        : "1px solid rgba(248,113,113,0.9)",
+      background: paid
+        ? "rgba(22,163,74,0.25)"
+        : "rgba(127,29,29,0.6)",
+    }}
+  >
+    {paid ? "Оплачено" : "Не оплачено"}
+  </span>
+
+  {/* стрелка */}
+  <div
+    style={{
+      transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+      transition: "transform .25s ease",
+    }}
+  >
+    <Chevron open={isOpen} />
+  </div>
+</span>
                         </div>
                       </button>
 
@@ -998,7 +978,8 @@ export default function Admin() {
                                   marginTop: 4,
                                 }}
                               >
-                                Nr. kvitancii: <b>#{b.id.slice(0, 6)}</b>
+                                Nr. kvitancii:{" "}
+                                <b>#{b.id.slice(0, 6)}</b>
                               </div>
                             </div>
                           </div>
@@ -1013,7 +994,10 @@ export default function Admin() {
                             }}
                           >
                             {servicesArr.map((s, i) => (
-                              <span key={i} style={serviceTagStyle(s)}>
+                              <span
+                                key={i}
+                                style={serviceTagStyle(s)}
+                              >
                                 {s}
                               </span>
                             ))}
@@ -1022,7 +1006,9 @@ export default function Admin() {
                           {/* Клиент */}
                           <div style={{ marginTop: 6 }}>
                             <b>{b.userName}</b>
-                            <div style={{ opacity: 0.8 }}>{b.userPhone}</div>
+                            <div style={{ opacity: 0.8 }}>
+                              {b.userPhone}
+                            </div>
                             {b.userInstagram && (
                               <div style={{ opacity: 0.8 }}>
                                 @{b.userInstagram}
@@ -1036,7 +1022,8 @@ export default function Admin() {
                               marginTop: 6,
                               padding: "10px 12px",
                               borderRadius: 10,
-                              border: "1px solid rgba(148,163,184,0.25)",
+                              border:
+                                "1px solid rgba(148,163,184,0.25)",
                               background: "rgba(30,20,40,0.55)",
                               display: "flex",
                               flexDirection: "column",
@@ -1055,7 +1042,9 @@ export default function Admin() {
                                   width: 10,
                                   height: 10,
                                   borderRadius: "50%",
-                                  background: b.paid ? "#22c55e" : "#ef4444",
+                                  background: b.paid
+                                    ? "#22c55e"
+                                    : "#ef4444",
                                   boxShadow: b.paid
                                     ? "0 0 8px rgba(34,197,94,0.9)"
                                     : "0 0 8px rgba(248,113,113,0.9)",
@@ -1063,11 +1052,15 @@ export default function Admin() {
                               />
                               <span
                                 style={{
-                                  color: b.paid ? "#bbf7d0" : "#fecaca",
+                                  color: b.paid
+                                    ? "#bbf7d0"
+                                    : "#fecaca",
                                   fontWeight: 600,
                                 }}
                               >
-                                {b.paid ? "Apmokėta" : "Neapmokėta"}
+                                {b.paid
+                                  ? "Apmokėta"
+                                  : "Neapmokėta"}
                               </span>
                             </div>
 
@@ -1094,7 +1087,10 @@ export default function Admin() {
                                   const v = e.target.value;
                                   updateBooking(b.id, (orig) => ({
                                     ...orig,
-                                    price: v === "" ? null : Number(v),
+                                    price:
+                                      v === ""
+                                        ? null
+                                        : Number(v),
                                   }));
                                 }}
                               />
@@ -1107,12 +1103,15 @@ export default function Admin() {
                                 width: "100%",
                                 padding: 8,
                                 borderRadius: 8,
-                                border: "1px solid rgba(148,163,184,0.5)",
+                                border:
+                                  "1px solid rgba(148,163,184,0.5)",
                                 background: "rgba(0,0,0,0.25)",
                                 color: "#fff",
                               }}
                             >
-                              {b.paid ? "Снять оплату" : "Пометить оплаченной"}
+                              {b.paid
+                                ? "Снять оплату"
+                                : "Пометить оплаченной"}
                             </button>
                           </div>
 
@@ -1159,7 +1158,9 @@ export default function Admin() {
                                 marginLeft: 6,
                               }}
                             >
-                              {b.paid ? "Оплачено" : "Не оплачено"}
+                              {b.paid
+                                ? "Оплачено"
+                                : "Не оплачено"}
                             </span>
                           </div>
 
@@ -1174,26 +1175,33 @@ export default function Admin() {
                           >
                             {b.status === "pending" && (
                               <button
-                                onClick={() => approveByAdmin(b.id)}
+                                onClick={() =>
+                                  approveByAdmin(b.id)
+                                }
                                 style={btnPrimary}
                               >
                                 {t("approve")}
                               </button>
                             )}
 
-                            {!b.status.includes("canceled") && inFuture && (
-                              <button
-                                onClick={() => cancelByAdmin(b.id)}
-                                style={{
-                                  ...btnBase,
-                                  background: "rgba(110,20,30,.35)",
-                                  border: "1px solid rgba(239,68,68,.6)",
-                                  color: "#fff",
-                                }}
-                              >
-                                {t("rejected")}
-                              </button>
-                            )}
+                            {!b.status.includes("canceled") &&
+                              inFuture && (
+                                <button
+                                  onClick={() =>
+                                    cancelByAdmin(b.id)
+                                  }
+                                  style={{
+                                    ...btnBase,
+                                    background:
+                                      "rgba(110,20,30,.35)",
+                                    border:
+                                      "1px solid rgba(239,68,68,.6)",
+                                    color: "#fff",
+                                  }}
+                                >
+                                  {t("rejected")}
+                                </button>
+                              )}
                           </div>
                         </div>
                       )}
@@ -1326,7 +1334,7 @@ const segActive = {
   background:
     "linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))",
   border: "1px solid rgba(180,95,255,0.7)",
-  boxShadow: "0 0 12px rgba(150,90,255,0.3)",
+  boxShadow: "0 0 12px rgba(150,90,255,0.30)",
 };
 
 const receiptBtn = {
@@ -1365,6 +1373,11 @@ const pillDate = {
 const pillTime = {
   ...pillBase,
   border: "1px solid rgba(94,234,212,0.8)",
+};
+
+const pillPhone = {
+  ...pillBase,
+  border: "1px solid rgba(96,165,250,0.85)",
 };
 
 const pillService = {
@@ -1527,7 +1540,7 @@ const downloadReceipt = (b) => {
     <div class="top-row">
       <div class="top-left">
         <img src="/logo2.svg" style="height:100px; margin-bottom:6px;" />
-        <div class="sub">Kvitancija už rezervaciją</div>
+        <div class="sub">{t('kvitancija_u_rezervacij')}</div>
       </div>
 
       <div class="top-right">
@@ -1551,34 +1564,34 @@ const downloadReceipt = (b) => {
       </div>
     </div>
 
-    <div class="title">Kvitancija</div>
+    <div class="title">{t('kvitancija')}</div>
 
     <div class="section">
       <div class="row">
-        <div class="label">Klientas:</div>
+        <div class="label">{t('klientas')}</div>
         <div class="value">${b.userName || "-"}</div>
       </div>
       <div class="row">
-        <div class="label">Telefonas:</div>
+        <div class="label">{t('telefonas')}</div>
         <div class="value">${b.userPhone || "-"}</div>
       </div>
       <div class="row">
-        <div class="label">El. paštas:</div>
+        <div class="label">{t('el_pa_tas')}</div>
         <div class="value">${b.userEmail || "-"}</div>
       </div>
     </div>
 
     <div class="section">
       <div class="row">
-        <div class="label">Data:</div>
+        <div class="label">{t('data')}</div>
         <div class="value">${dateStr}</div>
       </div>
       <div class="row">
-        <div class="label">Laikas:</div>
+        <div class="label">{t('laikas')}</div>
         <div class="value">${timeStr}</div>
       </div>
       <div class="row">
-        <div class="label">Paslaugos:</div>
+        <div class="label">{t('paslaugos')}</div>
         <div class="value">${servicesStr}</div>
       </div>
       <div class="services">
@@ -1590,13 +1603,13 @@ const downloadReceipt = (b) => {
 
     <div class="section">
       <div class="row">
-        <div class="label">Avansas:</div>
+        <div class="label">{t('avansas')}</div>
         <div class="value">${
           b.price ? `${b.price} €` : "—"
         }</div>
       </div>
       <div class="row">
-        <div class="label">Mokėjimo būsena:</div>
+        <div class="label">{t('mok_jimo_b_sena')}</div>
         <div class="value">${paidLabel}</div>
       </div>
     </div>

@@ -355,7 +355,7 @@ const list = useMemo(() => {
     <div class="top-row">
       <div class="top-left">
         <img src="/logo2.svg" style="height:100px; margin-bottom:6px;" />
-        <div class="sub">Kvitancija už rezervaciją</div>
+        <div class="sub">{t('kvitancija_u_rezervacij')}</div>
       </div>
 
       <div class="top-right">
@@ -379,34 +379,34 @@ const list = useMemo(() => {
       </div>
     </div>
 
-    <div class="title">Kvitancija</div>
+    <div class="title">{t('kvitancija')}</div>
 
     <div class="section">
       <div class="row">
-        <div class="label">Klientas:</div>
+        <div class="label">{t('klientas')}</div>
         <div class="value">${b.userName || '-'}</div>
       </div>
       <div class="row">
-        <div class="label">Telefonas:</div>
+        <div class="label">{t('telefonas')}</div>
         <div class="value">${b.userPhone || '-'}</div>
       </div>
       <div class="row">
-        <div class="label">El. paštas:</div>
+        <div class="label">{t('el_pa_tas')}</div>
         <div class="value">${b.userEmail || '-'}</div>
       </div>
     </div>
 
     <div class="section">
       <div class="row">
-        <div class="label">Data:</div>
+        <div class="label">{t('data')}</div>
         <div class="value">${dateStr}</div>
       </div>
       <div class="row">
-        <div class="label">Laikas:</div>
+        <div class="label">{t('laikas')}</div>
         <div class="value">${timeStr}</div>
       </div>
       <div class="row">
-        <div class="label">Paslaugos:</div>
+        <div class="label">{t('paslaugos')}</div>
         <div class="value">${servicesStr}</div>
       </div>
       <div class="services">
@@ -416,11 +416,11 @@ const list = useMemo(() => {
 
     <div class="section">
       <div class="row">
-        <div class="label">Avansas:</div>
+        <div class="label">{t('avansas')}</div>
         <div class="value">${b.price ? `${b.price} €` : '—'}</div>
       </div>
       <div class="row">
-        <div class="label">Mokėjimo būsena:</div>
+        <div class="label">{t('mok_jimo_b_sena')}</div>
         <div class="value">${paidLabel}</div>
       </div>
     </div>
@@ -520,7 +520,7 @@ const list = useMemo(() => {
 
       {/* === ПРОФИЛЬ === */}
       <div style={outerCard}>
-        <h3 style={{ margin: 0, padding: '10px 20px' }}>Профиль</h3>
+        <h3 style={{ margin: 0, padding: '10px 20px' }}>{t('')}</h3>
         <div style={innerCard}>
           <div style={innerHeader} onClick={() => setShowProfile(!showProfile)}>
             <span
@@ -532,7 +532,7 @@ const list = useMemo(() => {
             >
               ▾
             </span>
-            <span style={{ fontWeight: 600 }}>Редактировать профиль</span>
+            <span style={{ fontWeight: 600 }}>{t('')}</span>
           </div>
 
           <div
@@ -545,14 +545,14 @@ const list = useMemo(() => {
           >
             <form className="col" style={{ gap: 12 }} onSubmit={saveProfile}>
               <div>
-                <label>Имя</label>
+                <label>{t('')}</label>
                 <input
                   value={form.name}
                   onChange={e => setForm({ ...form, name: e.target.value })}
                 />
               </div>
               <div>
-                <label>Instagram</label>
+                <label>{t('instagram')}</label>
                 <input
                   value={form.instagram}
                   onChange={e =>
@@ -561,7 +561,7 @@ const list = useMemo(() => {
                 />
               </div>
               <div>
-                <label>Телефон</label>
+                <label>{t('')}</label>
                 <input
                   value={form.phone}
                   onChange={e =>
@@ -570,7 +570,7 @@ const list = useMemo(() => {
                 />
               </div>
               <div>
-                <label>Email</label>
+                <label>{t('email')}</label>
                 <input
                   value={form.email}
                   onChange={e =>
@@ -579,7 +579,7 @@ const list = useMemo(() => {
                 />
               </div>
               <div>
-                <label>Пароль</label>
+                <label>{t('')}</label>
                 <input
                   type="password"
                   value={form.password}
@@ -604,7 +604,7 @@ const list = useMemo(() => {
       {/* === МОИ ЗАПИСИ === */}
       <div style={bookingsCard}>
         <div style={bookingsHeader}>
-          <h3 style={{ margin: 0 }}>Мои записи</h3>
+          <h3 style={{ margin: 0 }}>{t('')}</h3>
 
           <div style={filterButtons}>
             <button
@@ -812,7 +812,7 @@ const list = useMemo(() => {
       {modal && (
         <div style={modalBackdrop}>
           <div style={modalBox}>
-            <h3>Данные обновлены</h3>
+            <h3>{t('')}</h3>
           </div>
         </div>
       )}
@@ -820,7 +820,7 @@ const list = useMemo(() => {
       {approvedModal && (
         <div style={modalBackdrop}>
           <div style={modalBox}>
-            <h3 style={{ color: '#4ade80' }}>✅ Ваша запись подтверждена!</h3>
+            <h3 style={{ color: '#4ade80' }}>{t('')}</h3>
           </div>
         </div>
       )}
@@ -829,7 +829,7 @@ const list = useMemo(() => {
       {confirmId && (
         <div style={modalBackdrop}>
           <div style={modalBox}>
-            <h3>Отменить запись?</h3>
+            <h3>{t('')}</h3>
             <button onClick={doCancel} style={cancelBtn}>
               Да
             </button>
@@ -847,7 +847,7 @@ const list = useMemo(() => {
       {paymentBooking && (
         <div style={modalBackdrop}>
           <div style={modalBox}>
-            <h3>Выберите способ оплаты</h3>
+            <h3>{t('')}</h3>
 
             <p style={{ opacity: 0.9 }}>
               {fmtDate(paymentBooking.start)} • {fmtTime(paymentBooking.start)} –{' '}
@@ -900,7 +900,7 @@ const list = useMemo(() => {
 
             {/* Реквизиты (без QR) */}
             <div style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>
-              <b>Banko duomenys:</b>
+              <b>{t('banko_duomenys')}</b>
               <br />
            Gavėjas: {BANK_DETAILS.receiver || '—'}
 <br />

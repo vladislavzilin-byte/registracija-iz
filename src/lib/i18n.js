@@ -32,7 +32,7 @@ export const dict = {
     confirm_cancel: 'Отменить запись?',
     irreversible: 'Это действие нельзя отменить.',
     yes_cancel: 'Да, отменить',
-    back: 'Назад',
+    back: 'Отмена',
     slots_for: 'Слоты на',
     already_booked: 'Этот слот уже занят',
     login_or_register: 'Войдите или зарегистрируйтесь',
@@ -70,44 +70,7 @@ export const dict = {
     this_week: 'Эта неделя',
     this_month: 'Этот месяц',
     only_future: 'Только будущие',
-
-    // ⭐ Новые фразы, найденные при аудите:
-    forgot_password: 'Забыли пароль?',
-    reset_password: 'Сбросить пароль',
-    send: 'Отправить',
-    new_password: 'Новый пароль',
-    confirm_new_password: 'Подтвердите новый пароль',
-    password_changed: 'Пароль успешно изменён',
-    wrong_code: 'Неправильный код подтверждения',
-    code_sent: 'Код отправлен вам на телефон',
-    resend_code: 'Отправить код ещё раз',
-
-    confirm: 'Вы уверены?',
-    delete_booking: 'Удалить запись?',
-    create_booking: 'Создать новую запись',
-
-    error: 'Ошибка',
-    success: 'Успешно',
-    saved: 'Сохранено',
-    save_failed: 'Не удалось сохранить',
-    fill_required: 'Пожалуйста, заполните все поля',
-
-    free: 'Свободно',
-    no_slots: 'Нет доступных слотов',
-    loading: 'Загрузка...',
-    choose_date: 'Выберите дату',
-
-    add_expense: 'Добавить расход',
-    add_income: 'Добавить доход',
-    amount: 'Сумма',
-    comment: 'Комментарий',
-    save_changes: 'Сохранить изменения',
-    delete: 'Удалить',
-    finance: 'Финансы',
-    total_day: 'Итого за день',
-    total_month: 'Итого за месяц',
   },
-
   lt: {
     brand: 'IZ Registracija',
     nav_calendar: 'Kalendorius',
@@ -175,44 +138,7 @@ export const dict = {
     this_week: 'Ši savaitė',
     this_month: 'Šis mėnuo',
     only_future: 'Tik būsimi',
-
-    // ⭐ Добавленные новые фразы
-    forgot_password: 'Pamiršote slaptažodį?',
-    reset_password: 'Atstatyti slaptažodį',
-    send: 'Siųsti',
-    new_password: 'Naujas slaptažodis',
-    confirm_new_password: 'Patvirtinkite naują slaptažodį',
-    password_changed: 'Slaptažodis pakeistas',
-    wrong_code: 'Neteisingas patvirtinimo kodas',
-    code_sent: 'Kodą išsiuntėme į jūsų telefoną',
-    resend_code: 'Siųsti kodą dar kartą',
-
-    confirm: 'Ar tikrai?',
-    delete_booking: 'Ištrinti vizitą?',
-    create_booking: 'Sukurti naują vizitą',
-
-    error: 'Klaida',
-    success: 'Sėkmingai',
-    saved: 'Išsaugota',
-    save_failed: 'Nepavyko išsaugoti',
-    fill_required: 'Užpildykite visus privalomus laukus',
-
-    free: 'Laisva',
-    no_slots: 'Nėra laisvų laikų',
-    loading: 'Kraunama...',
-    choose_date: 'Pasirinkite datą',
-
-    add_expense: 'Pridėti išlaidas',
-    add_income: 'Pridėti pajamas',
-    amount: 'Suma',
-    comment: 'Komentaras',
-    save_changes: 'Išsaugoti pakeitimus',
-    delete: 'Ištrinti',
-    finance: 'Finansai',
-    total_day: 'Iš viso per dieną',
-    total_month: 'Iš viso per mėnesį',
   },
-
   en: {
     brand: 'IZ Booking',
     nav_calendar: 'Calendar',
@@ -280,42 +206,6 @@ export const dict = {
     this_week: 'This week',
     this_month: 'This month',
     only_future: 'Only future',
-
-    // ⭐ Новые фразы
-    forgot_password: 'Forgot password?',
-    reset_password: 'Reset password',
-    send: 'Send',
-    new_password: 'New password',
-    confirm_new_password: 'Confirm new password',
-    password_changed: 'Password changed',
-    wrong_code: 'Incorrect verification code',
-    code_sent: 'The code has been sent to your phone',
-    resend_code: 'Send code again',
-
-    confirm: 'Are you sure?',
-    delete_booking: 'Delete booking?',
-    create_booking: 'Create new booking',
-
-    error: 'Error',
-    success: 'Success',
-    saved: 'Saved',
-    save_failed: 'Failed to save',
-    fill_required: 'Please fill all required fields',
-
-    free: 'Free',
-    no_slots: 'No available slots',
-    loading: 'Loading...',
-    choose_date: 'Choose a date',
-
-    add_expense: 'Add expense',
-    add_income: 'Add income',
-    amount: 'Amount',
-    comment: 'Comment',
-    save_changes: 'Save changes',
-    delete: 'Delete',
-    finance: 'Finance',
-    total_day: 'Total per day',
-    total_month: 'Total per month',
   }
 }
 

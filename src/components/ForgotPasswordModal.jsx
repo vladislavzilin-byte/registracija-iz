@@ -30,7 +30,7 @@ export default function ForgotPasswordModal({ open, onClose }){
         color:'#fff', boxShadow:'0 0 25px #000',
         animation:'scaleIn .3s'
       }} onClick={e=>e.stopPropagation()}>
-        <h2 style={{margin:0, marginBottom:10}}>Восстановление пароля</h2>
+        <h2 style={{margin:0, marginBottom:10}}>{t('')}</h2>
 
         <form onSubmit={submit}>
           <input 
@@ -46,7 +46,7 @@ export default function ForgotPasswordModal({ open, onClose }){
 
         {found?.password && (
           <div style={{marginTop:15,fontSize:16}}>
-            <b>Ваш пароль:</b>
+            <b>{t('')}</b>
             <br/>
             <span style={{
               display:'inline-block',
