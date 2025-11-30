@@ -59,6 +59,8 @@ export const dict = {
     finance_pdf_title: 'Финансовый отчёт',
     finance_pdf_subtitle: 'Финансовая сводка',
     finance_pdf_intro: 'Расчёт за период. Расходы: {percent}%.',
+finance_export_pdf_button: 'Экспорт PDF',
+finance_year_suffix: ' год',
 
     finance_table_date: 'Дата',
     finance_table_time: 'Время',
@@ -155,6 +157,8 @@ export const dict = {
     finance_pdf_title: 'Finansų ataskaita',
     finance_pdf_subtitle: 'Finansų suvestinė',
     finance_pdf_intro: 'Ataskaita pagal laikotarpį. Išlaidos: {percent}%.',
+finance_export_pdf_button: 'Eksportuoti PDF',
+finance_year_suffix: ' metai',
 
     finance_table_date: 'Data',
     finance_table_time: 'Laikas',
@@ -251,6 +255,8 @@ export const dict = {
     finance_pdf_title: 'Finance Report',
     finance_pdf_subtitle: 'Finance summary',
     finance_pdf_intro: 'Period summary. Expenses: {percent}%.',
+finance_export_pdf_button: 'Export PDF',
+finance_year_suffix: 'year',
 
     finance_table_date: 'Date',
     finance_table_time: 'Time',
