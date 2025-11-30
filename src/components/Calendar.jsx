@@ -1,11 +1,22 @@
 import { useMemo, useState, useRef, useEffect } from 'react'
 import {
-  startOfMonth, endOfMonth, startOfWeek, endOfWeek,
-  addDays, addMonths, isSameMonth, isSameDay, format
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  addDays,
+  addMonths,
+  isSameMonth,
+  isSameDay,
+  format
 } from 'date-fns'
 import {
-  getBookings, saveBookings, getSettings,
-  getCurrentUser, id, isSameMinute
+  getBookings,
+  saveBookings,
+  getSettings,
+  getCurrentUser,
+  id,
+  isSameMinute
 } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
 
@@ -17,6 +28,8 @@ function toDateOnly(d) {
 }
 
 // дефолтные услуги, если в settings ещё нет serviceList
+// ВАЖНО: name — канонические ключи (по-литовски),
+// для отображения используем t(...) через map SERVICE_LABEL_KEYS
 const DEFAULT_SERVICES = [
   { name: 'Šukuosena', duration: 60, deposit: 50 },
   { name: 'Tresų nuoma', duration: 15, deposit: 25 },
@@ -24,6 +37,15 @@ const DEFAULT_SERVICES = [
   { name: 'Atvykimas', duration: 180, deposit: 50 },
   { name: 'Konsultacija', duration: 30, deposit: 10 }
 ]
+
+// ключи перевода для названий дефолтных услуг
+const SERVICE_LABEL_KEYS = {
+  'Šukuosena': 'service_hair',
+  'Tresų nuoma': 'service_extensions_rent',
+  'Papuošalų nuoma': 'service_jewelry_rent',
+  'Atvykimas': 'service_arrival',
+  'Konsultacija': 'service_consultation'
+}
 
 export default function Calendar() {
   const { t } = useI18n()
@@ -34,6 +56,11 @@ export default function Calendar() {
     Array.isArray(settings.serviceList) && settings.serviceList.length
       ? settings.serviceList
       : DEFAULT_SERVICES
+
+  const renderServiceName = (name) => {
+    const key = SERVICE_LABEL_KEYS[name]
+    return key ? t(key) : name
+  }
 
   // KAINAS — accordion state
   const [openPrices, setOpenPrices] = useState(false)
@@ -89,8 +116,10 @@ export default function Calendar() {
 
     const [sh, sm] = settings.workStart.split(':').map(Number)
     const [eh, em] = settings.workEnd.split(':').map(Number)
-    const start = new Date(d); start.setHours(sh, sm, 0, 0)
-    const end = new Date(d); end.setHours(eh, em, 0, 0)
+    const start = new Date(d)
+    start.setHours(sh, sm, 0, 0)
+    const end = new Date(d)
+    end.setHours(eh, em, 0, 0)
     const slots = []
     let cur = new Date(start)
 
@@ -107,7 +136,7 @@ export default function Calendar() {
   }
 
   // проверка: занято ли время (учитываем всю длительность)
-  const isTaken = (t) => {
+  const isTaken = (tSel) => {
     const active = bookings.filter(
       b => b.status === 'approved' || b.status === 'pending'
     )
@@ -115,11 +144,11 @@ export default function Calendar() {
     const byBookings = active.some(b => {
       const bs = new Date(b.start)
       const be = new Date(b.end)
-      return t >= bs && t < be
+      return tSel >= bs && tSel < be
     })
 
-    const isProc = processingISO && isSameMinute(processingISO, t)
-    const isLocal = bookedISO.some(x => isSameMinute(x, t))
+    const isProc = processingISO && isSameMinute(processingISO, tSel)
+    const isLocal = bookedISO.some(x => isSameMinute(x, tSel))
 
     return byBookings || isProc || isLocal
   }
@@ -157,13 +186,19 @@ export default function Calendar() {
       toDateOnly(tSel) < today ||
       (isSameDay(tSel, now) && tSel < now)
     ) {
-      alert(t('cannot_book_past') || 'Нельзя записываться на прошедшее время')
+      alert(t('cannot_book_past'))
       return
     }
 
     const user = getCurrentUser()
-    if (!user) { alert(t('login_or_register')); return }
-    if (isTaken(tSel)) { alert(t('already_booked')); return }
+    if (!user) {
+      alert(t('login_or_register'))
+      return
+    }
+    if (isTaken(tSel)) {
+      alert(t('already_booked'))
+      return
+    }
 
     const endPreview = new Date(tSel)
     endPreview.setMinutes(endPreview.getMinutes() + settings.slotMinutes)
@@ -172,17 +207,17 @@ export default function Calendar() {
     setSelectedServices([])
 
     setModal({
-      title: 'Kokias paslaugas norėtumėte pasirinkti?',
+      title: t('calendar_modal_title'),
       dateStr: format(tSel, 'dd.MM.yyyy'),
       timeStr: `${format(tSel, 'HH:mm')} – ${format(endPreview, 'HH:mm')}`,
-      caption: 'Trukmė ir suma priklauso nuo pasirinktų paslaugų.'
+      caption: t('calendar_modal_caption')
     })
   }
 
   const confirmBooking = () => {
     if (!pendingTime) return
     if (!selectedServices || selectedServices.length === 0) {
-      alert('Pasirinkite bent vieną paslaugą.')
+      alert(t('calendar_select_service_error'))
       return
     }
     const user = getCurrentUser()
@@ -198,7 +233,7 @@ export default function Calendar() {
       toDateOnly(start) < today ||
       (isSameDay(start, now) && start < now)
     ) {
-      alert(t('cannot_book_past') || 'Нельзя записываться на прошедшее время')
+      alert(t('cannot_book_past'))
       return
     }
 
@@ -212,7 +247,7 @@ export default function Calendar() {
 
     // проверяем весь интервал
     if (!isRangeFree(start, durationMinutes)) {
-      alert(t('already_booked') || 'Šiuo metu jau yra rezervacija.')
+      alert(t('already_booked'))
       return
     }
 
@@ -284,7 +319,8 @@ export default function Calendar() {
   }
 
   const monthLabelRaw = format(currentMonth, 'LLLL yyyy')
-  const monthLabel = monthLabelRaw.charAt(0).toUpperCase() + monthLabelRaw.slice(1)
+  const monthLabel =
+    monthLabelRaw.charAt(0).toUpperCase() + monthLabelRaw.slice(1)
 
   const navBtnStyle = {
     width: 130,
@@ -309,7 +345,8 @@ export default function Calendar() {
     justifyContent: 'center',
     alignItems: 'center',
     border: '1px solid rgba(168,85,247,0.40)',
-    background: 'linear-gradient(145deg, rgba(66,0,145,0.55), rgba(20,0,40,0.60))',
+    background:
+      'linear-gradient(145deg, rgba(66,0,145,0.55), rgba(20,0,40,0.60))',
     backdropFilter: 'blur(8px)',
     color: '#fff',
     fontWeight: 600
@@ -343,11 +380,49 @@ export default function Calendar() {
     return base
   }
 
+  const weekdayKeys = [
+    'weekday_mon_short',
+    'weekday_tue_short',
+    'weekday_wed_short',
+    'weekday_thu_short',
+    'weekday_fri_short',
+    'weekday_sat_short',
+    'weekday_sun_short'
+  ]
+
+  // статический прайс-лист (теперь тоже через i18n)
+  const priceItems = [
+    {
+      priceKey: 'calendar_price1_price',
+      titleKey: 'calendar_price1_title',
+      textKey: 'calendar_price1_text'
+    },
+    {
+      priceKey: 'calendar_price2_price',
+      titleKey: 'calendar_price2_title',
+      textKey: 'calendar_price2_text'
+    },
+    {
+      priceKey: 'calendar_price3_price',
+      titleKey: 'calendar_price3_title',
+      textKey: 'calendar_price3_text'
+    },
+    {
+      priceKey: 'calendar_price4_price',
+      titleKey: 'calendar_price4_title',
+      textKey: 'calendar_price4_text'
+    },
+    {
+      priceKey: 'calendar_price5_price',
+      titleKey: 'calendar_price5_title',
+      textKey: 'calendar_price5_text'
+    }
+  ]
+
   return (
     <>
       {/* Глобальные стили для календаря и модалки */}
       <style>{`
-        /* точка под прошлыми днями */
         .past-day-dot::after {
           content: '';
           width: 6px;
@@ -433,13 +508,11 @@ export default function Calendar() {
           to { transform: rotate(360deg); }
         }
 
-        /* Kainas fadeIn */
         @keyframes fadeIn {
           0% { opacity: 0; transform: translateY(6px); }
           100% { opacity: 1; transform: translateY(0); }
         }
 
-        /* МОДАЛКА КАК Forgot Password — поверх всего экрана */
         .calendar-modal-backdrop {
           position: fixed;
           inset: 0;
@@ -471,7 +544,6 @@ export default function Calendar() {
           100% { opacity: 1; transform: scale(1); }
         }
 
-        /* iOS zoom fix */
         @media (max-width: 768px) {
           input, select, textarea, button {
             font-size: 16px !important;
@@ -495,7 +567,7 @@ export default function Calendar() {
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        {/* --------- KAINAS ---------- */}
+        {/* --------- KAINOS (Prices) ---------- */}
         <div
           style={{
             width: '100%',
@@ -519,7 +591,7 @@ export default function Calendar() {
               letterSpacing: '0.3px'
             }}
           >
-            Kainas
+            {t('calendar_prices_title')}
           </h2>
 
           <div
@@ -541,11 +613,12 @@ export default function Calendar() {
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = 'rgba(210, 120, 255, 0.55)'
               e.currentTarget.style.boxShadow =
-                '0 0 22px rgba(200, 110, 255, 0.48)'
+                '0 0 22px rgba(200, 120, 255, 0.48)'
               e.currentTarget.style.background = 'rgba(30, 24, 50, 0.92)'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(180, 90, 255, 0.32)'
+              e.currentTarget.style.borderColor =
+                'rgba(180, 90, 255, 0.32)'
               e.currentTarget.style.boxShadow = openPrices
                 ? '0 0 20px rgba(180, 90, 255, 0.35)'
                 : '0 0 12px rgba(180, 90, 255, 0.15)'
@@ -566,7 +639,9 @@ export default function Calendar() {
               <path d="M7 10l5 5 5-5z" />
             </svg>
 
-            <span style={{ fontSize: 17, color: '#fff' }}>Žiūrėti kainas</span>
+            <span style={{ fontSize: 17, color: '#fff' }}>
+              {t('calendar_prices_toggle')}
+            </span>
           </div>
 
           <div
@@ -589,35 +664,7 @@ export default function Calendar() {
                 animation: openPrices ? 'fadeIn .45s ease' : 'none'
               }}
             >
-              {[
-                {
-                  price: '80–130 €',
-                  title: 'Šukuosenos kaina',
-                  text: 'Priklauso nuo darbo apimties'
-                },
-                {
-                  price: '25 €',
-                  title: 'Konsultacija',
-                  text: 'Užtrunkame nuo 30 min. iki valandos'
-                },
-                {
-                  price: '50 € užstatas / 100 €',
-                  title: 'Plaukų Tresų nuoma',
-                  text:
-                    'Grąžinti reikia per 3/4 d. Grąžinate plaukus, grąžinu užstatą'
-                },
-                {
-                  price: 'Iki 20 €',
-                  title: 'Papuošalų nuoma',
-                  text: ''
-                },
-                {
-                  price: '130 €',
-                  title: 'Atvykimas Klaipėdoje',
-                  text:
-                    'Daiktų kraustymai, važiavimai — per tą laiką galiu priimti kitą klientę.'
-                }
-              ].map((item, i) => (
+              {priceItems.map((item, i) => (
                 <div
                   key={i}
                   style={{
@@ -630,14 +677,14 @@ export default function Calendar() {
                   }}
                 >
                   <p style={{ margin: 0, fontSize: 18, color: '#fff' }}>
-                    <b>{item.price}</b>
+                    <b>{t(item.priceKey)}</b>
                   </p>
                   <p style={{ margin: '4px 0 0 0', color: '#d6caff' }}>
-                    {item.title}
+                    {t(item.titleKey)}
                   </p>
-                  {item.text && (
+                  {t(item.textKey) && (
                     <p style={{ margin: '3px 0 0 0', color: '#a898ce' }}>
-                      {item.text}
+                      {t(item.textKey)}
                     </p>
                   )}
                 </div>
@@ -681,13 +728,13 @@ export default function Calendar() {
 
         {/* CALENDAR GRID */}
         <div className="grid">
-          {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((w, i) => (
+          {weekdayKeys.map((key, i) => (
             <div
               key={i}
               className="muted"
               style={{ textAlign: 'center', fontWeight: 600 }}
             >
-              {w}
+              {t(key)}
             </div>
           ))}
 
@@ -731,15 +778,22 @@ export default function Calendar() {
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 8,
+              marginTop: 8
+            }}
+          >
             {slotsForDay(selectedDate).map(ti => {
               const taken = isTaken(ti)
-              const isProcessing = processingISO && isSameMinute(processingISO, ti)
+              const isProcessing =
+                processingISO && isSameMinute(processingISO, ti)
               const isLocal = bookedISO.some(x => isSameMinute(x, ti))
               const disabledLike = taken || busy || isProcessing
 
-              const isPastTime =
-                isSameDay(ti, now) && ti < now
+              const isPastTime = isSameDay(ti, now) && ti < now
 
               let label = format(ti, 'HH:mm')
               if (isProcessing) label = t('processing')
@@ -751,36 +805,38 @@ export default function Calendar() {
                   disabled={disabledLike || isPastTime}
                   onClick={() => openTimeModal(ti)}
                   className={
-                    'time-slot-btn ' +
-                    (isPastTime ? 'time-past' : '')
+                    'time-slot-btn ' + (isPastTime ? 'time-past' : '')
                   }
                   style={{
                     borderRadius: 10,
                     padding: '8px 12px',
-                    border: '1px solid ' + (
-                      disabledLike || isPastTime
+                    border: '1px solid ' +
+                      (disabledLike || isPastTime
                         ? 'rgba(180,180,200,0.25)'
-                        : 'rgba(168,85,247,0.45)'
-                    ),
-                    background: (disabledLike || isPastTime)
-                      ? 'rgba(255,255,255,0.04)'
-                      : 'rgba(98,0,180,0.18)',
+                        : 'rgba(168,85,247,0.45)'),
+                    background:
+                      disabledLike || isPastTime
+                        ? 'rgba(255,255,255,0.04)'
+                        : 'rgba(98,0,180,0.18)',
                     color: '#fff',
-                    cursor: (disabledLike || isPastTime) ? 'default' : 'pointer',
+                    cursor:
+                      disabledLike || isPastTime ? 'default' : 'pointer',
                     backdropFilter: 'blur(6px)',
                     transition: '0.2s'
                   }}
                 >
-                  {busy && isProcessing
-                    ? <span className="calendar-loader" />
-                    : label}
+                  {busy && isProcessing ? (
+                    <span className="calendar-loader" />
+                  ) : (
+                    label
+                  )}
                 </button>
               )
             })}
 
             {slotsForDay(selectedDate).length === 0 && (
               <small className="muted">
-                {t('no_slots') || 'Нет доступных слотов'}
+                {t('no_slots')}
               </small>
             )}
           </div>
@@ -800,10 +856,22 @@ export default function Calendar() {
 
             {pendingTime && (
               <div style={{ marginTop: 8, marginBottom: 16 }}>
-                <div style={{ fontSize: 14, opacity: 0.8, marginBottom: 8 }}>
-                  Pasirinkite vieną ar kelias paslaugas:
+                <div
+                  style={{
+                    fontSize: 14,
+                    opacity: 0.8,
+                    marginBottom: 8
+                  }}
+                >
+                  {t('calendar_modal_instruction')}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8
+                  }}
+                >
                   {serviceList.map(s => (
                     <button
                       key={s.name}
@@ -833,9 +901,15 @@ export default function Calendar() {
                         transition: '.25s'
                       }}
                     >
-                      <span>{s.name}</span>
-                      <span style={{ fontSize: 13, opacity: 0.9 }}>
-                        {(s.duration || 0)} min • Avansas {(s.deposit || 0)} €
+                      <span>{renderServiceName(s.name)}</span>
+                      <span
+                        style={{
+                          fontSize: 13,
+                          opacity: 0.9
+                        }}
+                      >
+                        {(s.duration || 0)} min • {t('calendar_deposit')}{' '}
+                        {(s.deposit || 0)} €
                       </span>
                     </button>
                   ))}
@@ -844,7 +918,7 @@ export default function Calendar() {
             )}
 
             {modal.dateStr && (
-              <p style={{ margin: '6px 0', opacity: .9 }}>
+              <p style={{ margin: '6px 0', opacity: 0.9 }}>
                 {modal.dateStr}
               </p>
             )}
@@ -856,18 +930,20 @@ export default function Calendar() {
             )}
 
             {modal.caption && (
-              <p style={{ margin: '6px 0', opacity: .95 }}>
+              <p style={{ margin: '6px 0', opacity: 0.95 }}>
                 {modal.caption}
               </p>
             )}
 
-            <div style={{
-              marginTop: 14,
-              textAlign: 'right',
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: 8
-            }}>
+            <div
+              style={{
+                marginTop: 14,
+                textAlign: 'right',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: 8
+              }}
+            >
               <button
                 onClick={closeModal}
                 style={{
@@ -879,7 +955,7 @@ export default function Calendar() {
                   cursor: 'pointer'
                 }}
               >
-                Atšaukti
+                {t('cancel')}
               </button>
               <button
                 onClick={confirmBooking}
@@ -893,7 +969,7 @@ export default function Calendar() {
                   cursor: 'pointer'
                 }}
               >
-                Patvirtinti
+                {t('approve')}
               </button>
             </div>
           </div>
