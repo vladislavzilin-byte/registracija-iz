@@ -30,7 +30,38 @@ export const dict = {
     cancel: 'Отменить',
     no_records: 'Нет записей',
     only_future: 'Только будущие',
-
+// добавить в lt, ru и en:
+finance_system: 'Sistema',                  // ru: 'Система',          en: 'System'
+finance_manual: 'Rankiniai',                // ru: 'Ручные',           en: 'Manual'
+finance_expenses: 'Išlaidos (30%)',         // ru: 'Расходы (30%)',    en: 'Expenses (30%)'
+finance_balance: 'Balansas',                // ru: 'Баланс',           en: 'Balance'
+finance_system_desc: 'Užbaigtos ir apmokėtos rezervacijos',
+finance_manual_desc: 'Papildomi rankiniai įrašai',
+finance_expenses_desc: 'Automatinės išlaidos nuo pajamų',
+finance_balance_desc: 'Pajamos minus 30% išlaidų',
+finance_period_label: 'Laikotarpis',        // ru: 'Период',           en: 'Period'
+finance_year_suffix: ' metai',              // ru: ' год',             en: ''
+finance_mode_month: 'Mėnuo',                // ru: 'Месяц',            en: 'Month'
+finance_mode_year: 'Metai',                 // ru: 'Год',              en: 'Year'
+finance_mode_range: 'Laikotarpis',          // ru: 'Произвольный',     en: 'Custom range'
+finance_add_manual: 'Pridėti rankinį įrašą',
+finance_add_example: 'Pvz. grynieji ar papildomos paslaugos.',
+finance_amount_placeholder: 'Suma €',
+finance_description_placeholder: 'Aprašymas (neprivaloma)',
+finance_add_button: 'Pridėti',
+finance_history: 'Istorija',
+finance_history_desc: 'Visi įrašai pagal pasirinktą laikotarpį.',
+finance_no_records: 'Nėra įrašų šiam laikotarpiui',
+finance_export_pdf: 'Eksportuoti PDF',
+finance_system_default_desc: 'Sisteminė pajamų įmoka',
+finance_manual_default_desc: 'Rankinė pajamų įmoka',
+finance_delete_confirm: 'Ištrinti šį įrašą iš finansų suvestinės? Rezervacija neliečiama.',
+finance_edit_desc_prompt: 'Aprašymas:',
+finance_edit_amount_prompt: 'Suma €:',
+finance_edit_time_prompt: 'Laikas (pvz. 10:00 – 18:00):',
+finance_pdf_title: 'Finansų ataskaita',
+finance_pdf_subtitle: 'Finansų suvestinė',
+finance_pdf_description: 'Suvestinė pagal pasirinktą laikotarpį: pajamos iš sistemos ir rankinių įrašų, automatinės išlaidos (30%) ir balansas.',
     // === Финансы ===
     finance_title: 'Финансы',
     finance_subtitle: 'Доходы от бронирований и ручных записей',
