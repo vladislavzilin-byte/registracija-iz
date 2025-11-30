@@ -36,7 +36,8 @@ export const dict = {
     cancel: 'Отменить',
     no_records: 'Нет записей',
     only_future: 'Только будущие',
-
+login_error_invalid: 'Неверный логин или пароль',
+forgot_password: 'Забыли пароль?',
     login_or_register: 'Войдите или зарегистрируйтесь',
 
     /* ============================================================
@@ -326,7 +327,8 @@ finance_no_records: 'Нет записей за выбранный период'
     cancel: 'Atšaukti',
     no_records: 'Įrašų nėra',
     only_future: 'Tik būsimi',
-
+login_error_invalid: 'Neteisingas el. paštas / telefonas arba slaptažodis',
+forgot_password: 'Pamiršote slaptažodį?',
     login_or_register: 'Prisijunkite arba užsiregistruokite.',
 
     /* ========== MyBookings ========== */
@@ -601,7 +603,8 @@ finance_no_records: 'Nėra įrašų pasirinktame laikotarpyje',
     cancel: 'Cancel',
     no_records: 'No records',
     only_future: 'Only future',
-
+login_error_invalid: 'Invalid login or password',
+forgot_password: 'Forgot password?',
     login_or_register: 'Please log in or register.',
 
     /* ========== MyBookings ========== */
