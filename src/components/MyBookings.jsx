@@ -1,3 +1,4 @@
+// src/pages/MyBookings.jsx
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   getCurrentUser,
@@ -7,10 +8,11 @@ import {
   fmtTime,
   getUsers,
   saveUsers,
-  setCurrentUser
+  setCurrentUser,
+  getSettings
 } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
-import { getSettings } from "../lib/storage";
+
 // Цвета для тегов услуг
 const tagColors = {
   'Šukuosena': '#c084fc',
@@ -19,19 +21,20 @@ const tagColors = {
   'Atvykimas': '#facc15',
   'Konsultacija': '#34d399'
 }
+
 // грузим правильный ключ, тот что использует Admin.jsx
-const settings = getSettings();
+const settings = getSettings()
 
 // теперь данные точно подставятся
 const BANK_DETAILS = {
-  receiver: settings.masterName || "—",
-  iban: settings.adminIban || "—",
-  descriptionPrefix: "Rezervacija",
-};
+  receiver: settings.masterName || '—',
+  iban: settings.adminIban || '—',
+  descriptionPrefix: 'Rezervacija'
+}
 
 // helper: бронь считается оплаченной,
 // если флаг paid = true или старый статус 'approved_paid'
-const isPaid = (b) => !!(b?.paid || b?.status === 'approved_paid')
+const isPaid = b => !!(b?.paid || b?.status === 'approved_paid')
 
 export default function MyBookings() {
   const { t } = useI18n()
@@ -57,39 +60,39 @@ export default function MyBookings() {
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [paymentError, setPaymentError] = useState('')
 
-// читаем брони при каждом рендере (обновление через version)
-const bookingsAll = getBookings()
-const all = bookingsAll
-  .filter(b => user && b.userPhone === user.phone)
-  .sort((a, b) => new Date(a.start) - new Date(b.start))
+  // читаем брони при каждом рендере (обновление через version)
+  const bookingsAll = getBookings()
+  const all = bookingsAll
+    .filter(b => user && b.userPhone === user.phone)
+    .sort((a, b) => new Date(a.start) - new Date(b.start))
 
-// === ФИЛЬТРЫ: Все / Активные / История ===
-const list = useMemo(() => {
-  const now = new Date()
+  // === ФИЛЬТРЫ: Все / Активные / История ===
+  const list = useMemo(() => {
+    const now = new Date()
 
-  // АКТИВНЫЕ — только будущие и не отменённые
-  if (filter === 'active') {
-    return all.filter(b => {
-      const end = new Date(b.end)
-      const canceled =
-        b.status === 'canceled_client' || b.status === 'canceled_admin'
-      return end > now && !canceled
-    })
-  }
+    // АКТИВНЫЕ — только будущие и не отменённые
+    if (filter === 'active') {
+      return all.filter(b => {
+        const end = new Date(b.end)
+        const canceled =
+          b.status === 'canceled_client' || b.status === 'canceled_admin'
+        return end > now && !canceled
+      })
+    }
 
-  // ИСТОРИЯ — только прошедшие записи (без отменённых)
-  if (filter === 'history') {
-    return all.filter(b => {
-      const end = new Date(b.end)
-      const canceled =
-        b.status === 'canceled_client' || b.status === 'canceled_admin'
-      return end < now && !canceled
-    })
-  }
+    // ИСТОРИЯ — только прошедшие записи (без отменённых)
+    if (filter === 'history') {
+      return all.filter(b => {
+        const end = new Date(b.end)
+        const canceled =
+          b.status === 'canceled_client' || b.status === 'canceled_admin'
+        return end < now && !canceled
+      })
+    }
 
-  // ВСЕ
-  return all
-}, [filter, version, bookingsAll.length])
+    // ВСЕ
+    return all
+  }, [filter, version, bookingsAll.length])
 
   // пуш-уведомление когда бронь подтверждена админом
   useEffect(() => {
@@ -97,9 +100,10 @@ const list = useMemo(() => {
     const approvedNow = all.find(
       b =>
         (b.status === 'approved' || b.status === 'approved_paid') &&
-        !prev.find(p =>
-          p.id === b.id &&
-          (p.status === 'approved' || p.status === 'approved_paid')
+        !prev.find(
+          p =>
+            p.id === b.id &&
+            (p.status === 'approved' || p.status === 'approved_paid')
         )
     )
     if (approvedNow) {
@@ -111,7 +115,7 @@ const list = useMemo(() => {
 
   // авто-синхронизация с админкой
   useEffect(() => {
-    const onStorage = (e) => {
+    const onStorage = e => {
       if (!e.key || e.key === 'iz.bookings.v7') {
         setVersion(v => v + 1)
       }
@@ -122,21 +126,24 @@ const list = useMemo(() => {
 
   const validate = () => {
     const e = {}
-    if (!form.phone && !form.email) e.contact = 'Нужен телефон или email'
-    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) e.email = 'Некорректный email'
-    if (form.phone && !/^[+\d][\d\s\-()]{5,}$/.test(form.phone)) e.phone = 'Некорректный телефон'
+    if (!form.phone && !form.email) e.contact = t('mb_error_contact')
+    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email))
+      e.email = t('mb_error_email')
+    if (form.phone && !/^[+\d][\d\s\-()]{5,}$/.test(form.phone))
+      e.phone = t('mb_error_phone')
     setErrors(e)
     return Object.keys(e).length === 0
   }
 
-  const saveProfile = (ev) => {
+  const saveProfile = ev => {
     ev.preventDefault()
     if (!validate()) return
 
     const users = getUsers()
-    const idx = users.findIndex(u =>
-      (u.phone && u.phone === user.phone) ||
-      (u.email && u.email === user.email)
+    const idx = users.findIndex(
+      u =>
+        (u.phone && u.phone === user.phone) ||
+        (u.email && u.email === user.email)
     )
 
     const updated = { ...user, ...form }
@@ -147,7 +154,7 @@ const list = useMemo(() => {
 
     // обновляем записи пользователя
     const bookings = getBookings().map(b =>
-      (b.userEmail === user.email || b.userPhone === user.phone)
+      b.userEmail === user.email || b.userPhone === user.phone
         ? {
             ...b,
             userName: updated.name,
@@ -164,12 +171,16 @@ const list = useMemo(() => {
     setTimeout(() => setModal(false), 2000)
   }
 
-  const cancel = (id) => setConfirmId(id)
+  const cancel = id => setConfirmId(id)
   const doCancel = () => {
     const id = confirmId
     const arr = getBookings().map(b =>
       b.id === id
-        ? { ...b, status: 'canceled_client', canceledAt: new Date().toISOString() }
+        ? {
+            ...b,
+            status: 'canceled_client',
+            canceledAt: new Date().toISOString()
+          }
         : b
     )
     saveBookings(arr)
@@ -178,7 +189,7 @@ const list = useMemo(() => {
   }
 
   // === МОДАЛКА ОПЛАТЫ ===
-  const openPaymentModal = (booking) => {
+  const openPaymentModal = booking => {
     setPaymentBooking(booking)
     setPaymentError('')
     setPaymentLoading(false)
@@ -189,7 +200,7 @@ const list = useMemo(() => {
     setPaymentLoading(false)
   }
 
-  const startPayment = async (method) => {
+  const startPayment = async method => {
     if (!paymentBooking) return
 
     // банковский перевод — только инструкции, без реальной оплаты
@@ -209,23 +220,23 @@ const list = useMemo(() => {
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Payment error')
+      if (!res.ok) throw new Error(data.error || t('mb_payment_error'))
 
       if (data.redirectUrl) {
         window.location.href = data.redirectUrl
       } else {
-        setPaymentError('Не удалось получить ссылку на оплату')
+        setPaymentError(t('mb_payment_link_error'))
       }
     } catch (err) {
       console.error(err)
-      setPaymentError(err.message || 'Payment error')
+      setPaymentError(err.message || t('mb_payment_error'))
     } finally {
       setPaymentLoading(false)
     }
   }
 
   // === КВИТАНЦИЯ (HTML → печать → PDF пользователем) ===
-  const downloadReceipt = (b) => {
+  const downloadReceipt = b => {
     try {
       const win = window.open('', '_blank', 'width=700,height=900')
       if (!win) return
@@ -236,7 +247,7 @@ const list = useMemo(() => {
         ? new Date(b.createdAt).toLocaleString('lt-LT')
         : new Date(b.start).toLocaleString('lt-LT')
       const servicesStr = (b.services || []).join(', ') || '—'
-      const paidLabel = isPaid(b) ? 'Оплачено' : 'Не оплачено'
+      const paidLabel = isPaid(b) ? t('receipt_paid') : t('receipt_unpaid')
 
       // vCard для QR-визитки
       const vcard = [
@@ -261,7 +272,7 @@ const list = useMemo(() => {
 <html>
 <head>
   <meta charSet="utf-8" />
-  <title>Квитанция #${b.id.slice(0, 6)}</title>
+  <title>${t('receipt_title')} #${b.id.slice(0, 6)}</title>
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -311,7 +322,6 @@ const list = useMemo(() => {
     }
     .row {
       display: flex;
-      justify-content: space между;
       justify-content: space-between;
       gap: 12px;
       margin: 4px 0;
@@ -355,12 +365,12 @@ const list = useMemo(() => {
     <div class="top-row">
       <div class="top-left">
         <img src="/logo2.svg" style="height:100px; margin-bottom:6px;" />
-        <div class="sub">Kvitancija už rezervaciją</div>
+        <div class="sub">${t('receipt_subtitle')}</div>
       </div>
 
       <div class="top-right">
-        Nr.: <b>#${b.id.slice(0, 6)}</b><br/>
-        Sukurta: ${createdStr}<br/>
+        ${t('receipt_booking_id')}: <b>#${b.id.slice(0, 6)}</b><br/>
+        ${t('receipt_created') ?? 'Created'}: ${createdStr}<br/>
 
         <img src="${qrUrl}" alt="IZ HAIR TREND vCard"
              style="
@@ -374,60 +384,62 @@ const list = useMemo(() => {
              "/>
 
         <div class="qr-label">
-          Skenuokite ir išsaugokite kontaktą
+          ${t('receipt_contact_hint')}
         </div>
       </div>
     </div>
 
-    <div class="title">Kvitancija</div>
+    <div class="title">${t('receipt_title')}</div>
 
     <div class="section">
       <div class="row">
-        <div class="label">Klientas:</div>
+        <div class="label">${t('receipt_client')}:</div>
         <div class="value">${b.userName || '-'}</div>
       </div>
       <div class="row">
-        <div class="label">Telefonas:</div>
+        <div class="label">${t('receipt_phone')}:</div>
         <div class="value">${b.userPhone || '-'}</div>
       </div>
       <div class="row">
-        <div class="label">El. paštas:</div>
+        <div class="label">Email:</div>
         <div class="value">${b.userEmail || '-'}</div>
       </div>
     </div>
 
     <div class="section">
       <div class="row">
-        <div class="label">Data:</div>
+        <div class="label">${t('receipt_date')}:</div>
         <div class="value">${dateStr}</div>
       </div>
       <div class="row">
-        <div class="label">Laikas:</div>
+        <div class="label">${t('receipt_time')}:</div>
         <div class="value">${timeStr}</div>
       </div>
       <div class="row">
-        <div class="label">Paslaugos:</div>
+        <div class="label">${t('receipt_service_list')}:</div>
         <div class="value">${servicesStr}</div>
       </div>
       <div class="services">
-        ${(b.services || []).map(s => `<span class="tag">${s}</span>`).join('')}
+        ${(b.services || [])
+          .map(s => `<span class="tag">${s}</span>`)
+          .join('')}
       </div>
     </div>
 
     <div class="section">
       <div class="row">
-        <div class="label">Avansas:</div>
+        <div class="label">${t('receipt_total')}:</div>
         <div class="value">${b.price ? `${b.price} €` : '—'}</div>
       </div>
       <div class="row">
-        <div class="label">Mokėjimo būsena:</div>
+        <div class="label">${t('receipt_payment_status')}:</div>
         <div class="value">${paidLabel}</div>
       </div>
     </div>
 
     <div class="footer">
-      Ši kvitancija sugeneruota internetu ir galioja be parašo.<br/>
-      Jei reikia, galite ją išsisaugoti kaip PDF: naršyklėje pasirinkite "Spausdinti" → "Save as PDF".
+      ${t('receipt_generated')}<br/>
+      ${t('receipt_pdf_hint') ?? ''}
     </div>
   </div>
 
@@ -451,13 +463,13 @@ const list = useMemo(() => {
   if (!user) {
     return (
       <div className="card">
-        <b>{t('login_or_register')}</b>
+        <b>{t('login')}</b>
       </div>
     )
   }
 
   // === ЛАМПОЧКИ СТАТУСОВ ===
-  const lamp = (color) => ({
+  const lamp = color => ({
     width: 12,
     height: 12,
     borderRadius: '50%',
@@ -466,7 +478,7 @@ const list = useMemo(() => {
     display: 'inline-block'
   })
 
-  const statusDot = (b) => {
+  const statusDot = b => {
     const paid = isPaid(b)
 
     if (b.status === 'approved' || b.status === 'approved_paid') {
@@ -482,47 +494,51 @@ const list = useMemo(() => {
     return <span style={lamp('#6b7280')} />
   }
 
-  const statusText = (b) => {
+  const statusText = b => {
     const paid = isPaid(b)
 
     if (b.status === 'approved' || b.status === 'approved_paid') {
-      if (paid) return 'Бронирование подтверждено • Оплачено'
-      return 'Бронирование подтверждено • Ожидает оплаты'
+      if (paid) return t('mb_status_confirmed_paid')
+      return t('mb_status_confirmed_unpaid')
     }
 
     if (b.status === 'pending') {
       return paid
-        ? 'Ожидает подтверждения • Оплачено'
-        : 'Ожидает подтверждения • Не оплачено'
+        ? t('mb_status_pending_paid')
+        : t('mb_status_pending_unpaid')
     }
 
-    if (b.status === 'canceled_client') return 'Отменено клиентом'
-    if (b.status === 'canceled_admin') return 'Отменено администратором'
+    if (b.status === 'canceled_client') return t('mb_status_canceled_client')
+    if (b.status === 'canceled_admin') return t('mb_status_canceled_admin')
 
     return b.status
   }
 
   return (
     <div style={container}>
-
       {/* ==== MOBILE NO-ZOOM PATCH ==== */}
       <style
-  dangerouslySetInnerHTML={{
-    __html: `
+        dangerouslySetInnerHTML={{
+          __html: `
       @media (max-width: 768px) {
         input, select, textarea, button {
           font-size: 16px !important;
         }
       }
     `
-  }}
-/>
+        }}
+      />
 
       {/* === ПРОФИЛЬ === */}
       <div style={outerCard}>
-        <h3 style={{ margin: 0, padding: '10px 20px' }}>Профиль</h3>
+        <h3 style={{ margin: 0, padding: '10px 20px' }}>
+          {t('mb_profile_title')}
+        </h3>
         <div style={innerCard}>
-          <div style={innerHeader} onClick={() => setShowProfile(!showProfile)}>
+          <div
+            style={innerHeader}
+            onClick={() => setShowProfile(!showProfile)}
+          >
             <span
               style={{
                 color: '#a855f7',
@@ -532,7 +548,9 @@ const list = useMemo(() => {
             >
               ▾
             </span>
-            <span style={{ fontWeight: 600 }}>Редактировать профиль</span>
+            <span style={{ fontWeight: 600 }}>
+              {t('mb_edit_profile')}
+            </span>
           </div>
 
           <div
@@ -545,14 +563,16 @@ const list = useMemo(() => {
           >
             <form className="col" style={{ gap: 12 }} onSubmit={saveProfile}>
               <div>
-                <label>Имя</label>
+                <label>{t('name')}</label>
                 <input
                   value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  onChange={e =>
+                    setForm({ ...form, name: e.target.value })
+                  }
                 />
               </div>
               <div>
-                <label>Instagram</label>
+                <label>{t('instagram')}</label>
                 <input
                   value={form.instagram}
                   onChange={e =>
@@ -561,25 +581,31 @@ const list = useMemo(() => {
                 />
               </div>
               <div>
-                <label>Телефон</label>
+                <label>{t('phone')}</label>
                 <input
                   value={form.phone}
                   onChange={e =>
                     setForm({ ...form, phone: e.target.value })
                   }
                 />
+                {errors.phone && (
+                  <div style={{ color: '#f87171' }}>{errors.phone}</div>
+                )}
               </div>
               <div>
-                <label>Email</label>
+                <label>{t('email_opt')}</label>
                 <input
                   value={form.email}
                   onChange={e =>
                     setForm({ ...form, email: e.target.value })
                   }
                 />
+                {errors.email && (
+                  <div style={{ color: '#f87171' }}>{errors.email}</div>
+                )}
               </div>
               <div>
-                <label>Пароль</label>
+                <label>{t('password')}</label>
                 <input
                   type="password"
                   value={form.password}
@@ -594,7 +620,7 @@ const list = useMemo(() => {
               )}
 
               <button type="submit" style={saveBtn}>
-                💾 Сохранить
+                💾 {t('mb_save')}
               </button>
             </form>
           </div>
@@ -604,26 +630,26 @@ const list = useMemo(() => {
       {/* === МОИ ЗАПИСИ === */}
       <div style={bookingsCard}>
         <div style={bookingsHeader}>
-          <h3 style={{ margin: 0 }}>Мои записи</h3>
+          <h3 style={{ margin: 0 }}>{t('mb_title')}</h3>
 
           <div style={filterButtons}>
             <button
               style={filterBtn(filter === 'all')}
               onClick={() => setFilter('all')}
             >
-              Все
+              {t('mb_filters_all')}
             </button>
             <button
               style={filterBtn(filter === 'active')}
               onClick={() => setFilter('active')}
             >
-              Активные
+              {t('mb_filters_active')}
             </button>
             <button
               style={filterBtn(filter === 'history')}
               onClick={() => setFilter('history')}
             >
-              История
+              {t('mb_filters_history')}
             </button>
           </div>
         </div>
@@ -674,7 +700,7 @@ const list = useMemo(() => {
                         style={receiptBtn}
                         onClick={() => downloadReceipt(b)}
                       >
-                        🧾 Скачать квитанцию
+                        🧾 {t('mb_download_receipt')}
                       </button>
                       <div
                         style={{
@@ -682,7 +708,8 @@ const list = useMemo(() => {
                           opacity: 0.75
                         }}
                       >
-                        Nr. kvitancii: <b>#{shortId}</b>
+                        {t('mb_receipt_number')}{' '}
+                        <b>#{shortId}</b>
                       </div>
                     </div>
                   )}
@@ -721,68 +748,74 @@ const list = useMemo(() => {
                 {/* Аванс */}
                 {b.price && (
                   <div style={{ marginTop: 8, fontSize: 13 }}>
-                    <span style={{ opacity: 0.8 }}>Avansas: </span>
+                    <span style={{ opacity: 0.8 }}>
+                      {t('mb_deposit')}:{' '}
+                    </span>
                     <b>{b.price} €</b>
                   </div>
                 )}
 
-          {/* СТАТУСЫ В ВИДЕ БЕЙДЖЕЙ */}
-<div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-  {/* Статус подтверждения */}
-  <span
-    style={{
-      padding: '4px 10px',
-      borderRadius: 8,
-      fontSize: 13,
-      border: '1px solid rgba(255,255,255,0.15)',
-      background:
-        b.status === 'approved' || b.status === 'approved_paid'
-          ? 'rgba(168,85,247,0.25)'          // фиолетовый
-          : b.status === 'pending'
-          ? 'rgba(250,204,21,0.25)'          // жёлтый
-          : 'rgba(107,114,128,0.25)',         // серый
-      color:
-        b.status === 'approved' || b.status === 'approved_paid'
-          ? '#d8b4fe'
-          : b.status === 'pending'
-          ? '#fde047'
-          : '#d1d5db'
-    }}
-  >
-    {b.status === 'approved' || b.status === 'approved_paid'
-      ? 'Бронирование подтверждено'
-      : b.status === 'pending'
-      ? 'Ожидает подтверждения'
-      : 'Отменено'}
-  </span>
+                {/* СТАТУСЫ В ВИДЕ БЕЙДЖЕЙ */}
+                <div
+                  style={{
+                    marginTop: 8,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 6
+                  }}
+                >
+                  {/* Статус подтверждения + текст */}
+                  <span
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: 8,
+                      fontSize: 13,
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      background:
+                        b.status === 'approved' ||
+                        b.status === 'approved_paid'
+                          ? 'rgba(168,85,247,0.25)' // фиолетовый
+                          : b.status === 'pending'
+                          ? 'rgba(250,204,21,0.25)' // жёлтый
+                          : 'rgba(107,114,128,0.25)', // серый
+                      color:
+                        b.status === 'approved' ||
+                        b.status === 'approved_paid'
+                          ? '#d8b4fe'
+                          : b.status === 'pending'
+                          ? '#fde047'
+                          : '#d1d5db'
+                    }}
+                  >
+                    {statusText(b)}
+                  </span>
 
-  {/* Статус оплаты */}
-  <span
-    style={{
-      padding: '4px 10px',
-      borderRadius: 8,
-      fontSize: 13,
-      border: '1px solid rgba(255,255,255,0.15)',
-      background: isPaid(b)
-        ? 'rgba(34,197,94,0.25)' // зелёный
-        : 'rgba(239,68,68,0.25)', // красный
-      color: isPaid(b) ? '#4ade80' : '#fca5a5'
-    }}
-  >
-    {isPaid(b) ? 'Оплачено' : 'Не оплачено'}
-  </span>
-</div>
+                  {/* Статус оплаты */}
+                  <span
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: 8,
+                      fontSize: 13,
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      background: isPaid(b)
+                        ? 'rgba(34,197,94,0.25)' // зелёный
+                        : 'rgba(239,68,68,0.25)', // красный
+                      color: isPaid(b) ? '#4ade80' : '#fca5a5'
+                    }}
+                  >
+                    {isPaid(b)
+                      ? t('mb_status_paid')
+                      : t('mb_status_unpaid')}
+                  </span>
+                </div>
 
                 {/* Оплата — только если ещё не оплачено */}
                 {(b.status === 'pending' ||
                   b.status === 'approved' ||
                   b.status === 'approved_paid') &&
                   !paid && (
-                    <button
-                      style={payBtn}
-                      onClick={() => openPaymentModal(b)}
-                    >
-                      💳 Apmokėti
+                    <button style={payBtn} onClick={() => openPaymentModal(b)}>
+                      💳 {t('mb_pay_button')}
                     </button>
                   )}
 
@@ -792,7 +825,7 @@ const list = useMemo(() => {
                     style={cancelBtn}
                     onClick={() => cancel(b.id)}
                   >
-                    Отменить
+                    ✕ {t('cancel')}
                   </button>
                 )}
               </div>
@@ -812,7 +845,7 @@ const list = useMemo(() => {
       {modal && (
         <div style={modalBackdrop}>
           <div style={modalBox}>
-            <h3>Данные обновлены</h3>
+            <h3>{t('mb_profile_updated')}</h3>
           </div>
         </div>
       )}
@@ -820,7 +853,9 @@ const list = useMemo(() => {
       {approvedModal && (
         <div style={modalBackdrop}>
           <div style={modalBox}>
-            <h3 style={{ color: '#4ade80' }}>✅ Ваша запись подтверждена!</h3>
+            <h3 style={{ color: '#4ade80' }}>
+              ✅ {t('mb_booking_approved_toast')}
+            </h3>
           </div>
         </div>
       )}
@@ -829,15 +864,18 @@ const list = useMemo(() => {
       {confirmId && (
         <div style={modalBackdrop}>
           <div style={modalBox}>
-            <h3>Отменить запись?</h3>
+            <h3>{t('mb_dialog_cancel_title')}</h3>
             <button onClick={doCancel} style={cancelBtn}>
-              Да
+              {t('mb_dialog_yes')}
             </button>
             <button
               onClick={() => setConfirmId(null)}
-              style={{ ...cancelBtn, background: 'rgba(80,80,120,0.4)' }}
+              style={{
+                ...cancelBtn,
+                background: 'rgba(80,80,120,0.4)'
+              }}
             >
-              Нет
+              {t('mb_dialog_no')}
             </button>
           </div>
         </div>
@@ -847,16 +885,17 @@ const list = useMemo(() => {
       {paymentBooking && (
         <div style={modalBackdrop}>
           <div style={modalBox}>
-            <h3>Выберите способ оплаты</h3>
+            <h3>{t('mb_payment_choose_method')}</h3>
 
             <p style={{ opacity: 0.9 }}>
-              {fmtDate(paymentBooking.start)} • {fmtTime(paymentBooking.start)} –{' '}
-              {fmtTime(paymentBooking.end)}
+              {fmtDate(paymentBooking.start)} • {fmtTime(paymentBooking.start)}{' '}
+              – {fmtTime(paymentBooking.end)}
             </p>
 
             {paymentBooking.price && (
               <p>
-                Avansas: <b>{paymentBooking.price} €</b>
+                {t('mb_deposit')}:{' '}
+                <b>{paymentBooking.price} €</b>
               </p>
             )}
 
@@ -874,7 +913,13 @@ const list = useMemo(() => {
               </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8
+              }}
+            >
               <button
                 disabled={paymentLoading}
                 style={payOptionBtn}
@@ -900,25 +945,25 @@ const list = useMemo(() => {
 
             {/* Реквизиты (без QR) */}
             <div style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>
-              <b>Banko duomenys:</b>
+              <b>{t('mb_bank_details')}:</b>
               <br />
-           Gavėjas: {BANK_DETAILS.receiver || '—'}
-<br />
-IBAN: {BANK_DETAILS.iban || '—'}
+              {t('mb_bank_receiver')}: {BANK_DETAILS.receiver || '—'}
               <br />
-              Paskirtis: {BANK_DETAILS.descriptionPrefix} #{paymentBooking.id.slice(0, 6)}
+              IBAN: {BANK_DETAILS.iban || '—'}
+              <br />
+              {t('mb_bank_purpose')}:{' '}
+              {BANK_DETAILS.descriptionPrefix} #{paymentBooking.id.slice(0, 6)}
             </div>
 
             <button
               onClick={closePaymentModal}
               style={{ ...cancelBtn, marginTop: 14 }}
             >
-              Закрыть
+              {t('mb_close')}
             </button>
           </div>
         </div>
       )}
-
     </div>
   )
 }
@@ -965,10 +1010,14 @@ const saveBtn = {
 }
 
 const bookingsCard = { ...outerCard, padding: '18px' }
-const bookingsHeader = { display: 'flex', justifyContent: 'space-between', marginBottom: 10 }
+const bookingsHeader = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  marginBottom: 10
+}
 const filterButtons = { display: 'flex', gap: 8 }
 
-const filterBtn = (active) => ({
+const filterBtn = active => ({
   padding: '8px 18px',
   borderRadius: 10,
   background: active ? 'rgba(130,60,255,0.25)' : 'rgba(30,20,40,0.6)',
