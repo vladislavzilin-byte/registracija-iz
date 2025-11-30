@@ -6,11 +6,9 @@ import { useI18n } from "../lib/i18n";
 const isPaid = (b) => !!(b?.paid || b?.status === "approved_paid");
 const isCanceled = (b) =>
   b.status === "canceled_client" || b.status === "canceled_admin";
-
 const MANUAL_KEY = "iz.finance.manual.v1";
 const EXCLUDE_KEY = "iz.finance.exclude.v1";
 const PERCENT_KEY = "iz.finance.expensePercent.v1";
-
 const pad2 = (n) => String(n).padStart(2, "0");
 const formatDateISO = (d0) => {
   const d = new Date(d0);
@@ -18,23 +16,12 @@ const formatDateISO = (d0) => {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 };
 
-// Months use LT keys, same as old version
 const MONTH_KEYS = [
-  "month_0",
-  "month_1",
-  "month_2",
-  "month_3",
-  "month_4",
-  "month_5",
-  "month_6",
-  "month_7",
-  "month_8",
-  "month_9",
-  "month_10",
-  "month_11",
+  "month_0", "month_1", "month_2", "month_3", "month_4", "month_5",
+  "month_6", "month_7", "month_8", "month_9", "month_10", "month_11",
 ];
 
-// === STYLES (same design as user version) ===
+// === STYLES ===
 const wrapStyle = { padding: "20px 16px", background: "#0f0225", minHeight: "100vh", color: "#e5e7eb" };
 const bigPdfBtn = { width: "100%", padding: "14px", borderRadius: 16, background: "linear-gradient(90deg, #7c3aed, #a855f7)", color: "white", fontWeight: 600, border: "none", cursor: "pointer" };
 const summaryGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginTop: 16 };
@@ -85,9 +72,8 @@ export default function FinancePanel({
   onDownloadReceipt,
   settings = {},
 }) {
-  const { t } = useI18n();
+  const { t, i18n } = useI18n();   // ← теперь получаем i18n для смены языка
   const now = new Date();
-
   const [mode, setMode] = useState("month");
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -95,19 +81,18 @@ export default function FinancePanel({
     new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
   );
   const [rangeTo, setRangeTo] = useState(now.toISOString().slice(0, 10));
-
   const [manualEntries, setManualEntries] = useState([]);
   const [excludedIds, setExcludedIds] = useState([]);
-const [percent, setPercent] = useState(() => {
-  try {
-    const raw = localStorage.getItem(PERCENT_KEY);
-    if (raw === "" || raw === null) return 30;
-    const n = Number(raw);
-    return !isNaN(n) && n >= 0 && n <= 100 ? n : 30;
-  } catch {
-    return 30;
-  }
-});
+  const [percent, setPercent] = useState(() => {
+    try {
+      const raw = localStorage.getItem(PERCENT_KEY);
+      if (raw === "" || raw === null) return 30;
+      const n = Number(raw);
+      return !isNaN(n) && n >= 0 && n <= 100 ? n : 30;
+    } catch {
+      return 30;
+    }
+  });
 
   const [formDate, setFormDate] = useState(formatDateISO(now));
   const [formTimeFrom, setFormTimeFrom] = useState("");
@@ -132,7 +117,6 @@ const [percent, setPercent] = useState(() => {
   // === Range ===
   const [rangeStart, rangeEnd, rangeLabel] = useMemo(() => {
     let start, end, label;
-
     if (mode === "month") {
       start = new Date(year, month, 1);
       end = new Date(year, month + 1, 1);
@@ -148,7 +132,6 @@ const [percent, setPercent] = useState(() => {
       end = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
       label = `${t("finance_mode_range")}: ${rangeFrom || "…"} – ${rangeTo || "…"}`;
     }
-
     return [start, end, label];
   }, [mode, year, month, rangeFrom, rangeTo, t]);
 
@@ -208,7 +191,6 @@ const [percent, setPercent] = useState(() => {
   );
 
   const manualTotal = manualItems.reduce((s, i) => s + i.amount, 0);
-
   const totalIncome = systemTotal + manualTotal;
   const totalExpenses = totalIncome * (percent / 100);
   const balance = totalIncome - totalExpenses;
@@ -229,12 +211,10 @@ const [percent, setPercent] = useState(() => {
   const addManual = () => {
     const amount = Number(formAmount);
     if (!formDate || !amount || amount <= 0) return;
-
     const time =
       formTimeFrom && formTimeTo
         ? `${formTimeFrom} – ${formTimeTo}`
         : formTimeFrom || formTimeTo || "";
-
     const entry = {
       id: Date.now(),
       date: formDate,
@@ -242,7 +222,6 @@ const [percent, setPercent] = useState(() => {
       description: formDesc || t("finance_manual_entry"),
       time,
     };
-
     setManualEntries((p) => [entry, ...p]);
     setFormAmount("");
     setFormDesc("");
@@ -252,7 +231,6 @@ const [percent, setPercent] = useState(() => {
 
   const deleteItem = (item) => {
     if (!window.confirm(t("finance_delete_confirm"))) return;
-
     if (item.type === "system") {
       setExcludedIds((p) =>
         p.includes(item.bookingId) ? p : [...p, item.bookingId]
@@ -266,18 +244,14 @@ const [percent, setPercent] = useState(() => {
     if (item.type !== "manual") return;
     const e = manualEntries.find((x) => x.id === item.manualId);
     if (!e) return;
-
     const desc = window.prompt(t("finance_edit_desc"), e.description || "");
     if (desc === null) return;
-
     const amt = window.prompt(t("finance_edit_amount"), String(e.amount));
     if (amt === null) return;
     const amount = Number(amt);
     if (!amount || amount <= 0) return;
-
     const time = window.prompt(t("finance_edit_time"), e.time || "");
     if (time === null) return;
-
     setManualEntries((p) =>
       p.map((x) =>
         x.id === e.id ? { ...x, description: desc, amount, time } : x
@@ -293,12 +267,11 @@ const [percent, setPercent] = useState(() => {
   const exportPDF = () => {
     const win = window.open("", "FINANCE_REPORT", "width=900,height=700");
     if (!win) return;
-
     win.document.write(`<!DOCTYPE html><html><head><meta charset='utf-8'>
 <title>${t("finance_report_title")}</title>
 <style>
   body{font-family:system-ui;background:#0b1120;margin:0;padding:24px;color:#e5e7eb;}
-  .wrap{max-width:900px;margin:0 auto;background:#1e293b;border-radius:16px;padding:22px;box-shadow:0 22px 60px rgba(0,0,0,0.55);} 
+  .wrap{max-width:900px;margin:0 auto;background:#1e293b;border-radius:16px;padding:22px;box-shadow:0 22px 60px rgba(0,0,0,0.55);}
   h1{text-align:center;margin:0 0 14px 0;font-size:22px;color:#fff;}
   table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px;}
   th,td{border:1px solid #475569;padding:6px 8px;}
@@ -329,6 +302,41 @@ ${combinedItems.map(i=>`<tr>
   // === RENDER ===
   return (
     <div style={wrapStyle}>
+      {/* === ЯЗЫКОВЫЕ КНОПКИ — точно как на скриншоте === */}
+      <div style={{ display: "flex", justifyContent: "center", gap: "12px", marginBottom: "24px", paddingTop: "8px" }}>
+        {[
+          { code: "lt", label: "LT" },
+          { code: "ru", label: "RU" },
+          { code: "en", label: "GB" },
+        ].map(({ code, label }) => {
+          const isActive = i18n.language === code || (code === "en" && i18n.language?.startsWith("en"));
+          return (
+            <button
+              key={code}
+              onClick={() => i18n.changeLanguage(code)}
+              style={{
+                minWidth: "56px",
+                padding: "10px 18px",
+                borderRadius: "999px",
+                fontWeight: 700,
+                fontSize: "15px",
+                textTransform: "uppercase",
+                background: isActive
+                  ? "linear-gradient(90deg, #7c3aed, #a855f7)"
+                  : "rgba(255, 255, 255, 0.06)",
+                color: isActive ? "#ffffff" : "#94a3b8",
+                border: "none",
+                boxShadow: isActive ? "0 0 24px rgba(168, 85, 247, 0.9)" : "none",
+                cursor: "pointer",
+                transition: "all 0.25s ease",
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* PDF BUTTON */}
       <button onClick={exportPDF} style={bigPdfBtn}>
         📄 {t("finance_export_pdf")}
@@ -361,7 +369,6 @@ ${combinedItems.map(i=>`<tr>
       {/* MANUAL INPUT */}
       <div style={{ marginTop: 26 }}>
         <div style={sectionTitle}>{t("finance_add_manual")}</div>
-
         <div style={formGrid}>
           <input
             type="date"
@@ -369,7 +376,6 @@ ${combinedItems.map(i=>`<tr>
             onChange={(e) => setFormDate(e.target.value)}
             style={fieldStyle}
           />
-
           <div style={{ display: "flex", gap: 4 }}>
             <input
               type="time"
@@ -385,7 +391,6 @@ ${combinedItems.map(i=>`<tr>
               style={timeStyle}
             />
           </div>
-
           <input
             type="number"
             placeholder={t("finance_amount_placeholder")}
@@ -393,7 +398,6 @@ ${combinedItems.map(i=>`<tr>
             onChange={(e) => setFormAmount(e.target.value)}
             style={fieldStyle}
           />
-
           <input
             type="text"
             placeholder={t("finance_desc_placeholder")}
@@ -401,7 +405,6 @@ ${combinedItems.map(i=>`<tr>
             onChange={(e) => setFormDesc(e.target.value)}
             style={fieldStyle}
           />
-
           <button onClick={addManual} style={addButtonStyle}>
             {t("add")}
           </button>
@@ -411,7 +414,6 @@ ${combinedItems.map(i=>`<tr>
       {/* HISTORY */}
       <div style={{ marginTop: 26 }}>
         <div style={sectionTitle}>{t("finance_history")}</div>
-
         {combinedItems.length === 0 ? (
           <div style={emptyStyle}>{t("finance_no_records")}</div>
         ) : (
@@ -429,21 +431,17 @@ ${combinedItems.map(i=>`<tr>
                 >
                   <span style={pillDate}>{item.dateDisplay}</span>
                   <span style={pillTime}>{item.timeDisplay}</span>
-
                   {item.type === "system" ? (
                     renderTagPills(item.tags, serviceStyles)
                   ) : (
                     <span style={pillManual}>{item.description}</span>
                   )}
                 </div>
-
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   {item.type === "system" && (
                     <span style={pillId}>#{item.shortId}</span>
                   )}
-
                   <span style={pillAmount}>€{item.amount.toFixed(2)}</span>
-
                   {item.type === "system" && (
                     <button
                       style={iconBtn}
@@ -453,7 +451,6 @@ ${combinedItems.map(i=>`<tr>
                       🧾
                     </button>
                   )}
-
                   {item.type === "manual" && (
                     <button
                       style={iconBtnPurple}
@@ -462,7 +459,6 @@ ${combinedItems.map(i=>`<tr>
                       ✎
                     </button>
                   )}
-
                   <button
                     style={iconBtnRed}
                     onClick={() => deleteItem(item)}
@@ -478,7 +474,4 @@ ${combinedItems.map(i=>`<tr>
       </div>
     </div>
   );
-}(`<!DOCTYPE html><html><head><meta charset='utf-8'>
-<title>${t("finance_report_title")}</title>`);(n) && n >= 0 && n <= 100 ? n : 30;
-    } catch { (variant A keys)
-// NOTE: Insert full corrected code here...
+}
