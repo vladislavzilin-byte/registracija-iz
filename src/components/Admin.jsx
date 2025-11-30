@@ -10,6 +10,7 @@ import {
 } from "../lib/storage";
 import { useI18n } from "../lib/i18n";
 import FinancePanel from "./FinancePanel";
+
 const ADMINS = ["irina.abramova7@gmail.com", "vladislavzilin@gmail.com"];
 
 const DEFAULT_SERVICES = [
@@ -69,17 +70,16 @@ const formatPrice = (value) => {
 export default function Admin() {
   const me = getCurrentUser();
   const isAdmin = me && (me.role === "admin" || ADMINS.includes(me.email));
+  const { t } = useI18n();
 
   if (!isAdmin) {
     return (
       <div className="card">
-        <h3>Доступ запрещён</h3>
-        <p className="muted">Эта страница доступна только администраторам.</p>
+        <h3>{t("admin_access_denied_title")}</h3>
+        <p className="muted">{t("admin_access_denied_text")}</p>
       </div>
     );
   }
-
-  const { t } = useI18n();
 
   // === НАСТРОЙКИ И СОСТОЯНИЯ ===
   const [settings, setSettings] = useState(() => {
@@ -211,15 +211,20 @@ export default function Admin() {
     setBookings(next);
   };
 
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2200);
+  };
+
   // === ДЕЙСТВИЯ С ЗАПИСЯМИ ===
   const cancelByAdmin = (id) => {
-    if (!confirm("Отменить эту запись?")) return;
+    if (!confirm(t("admin_confirm_cancel"))) return;
     updateBooking(id, (b) => ({
       ...b,
       status: "canceled_admin",
       canceledAt: new Date().toISOString(),
     }));
-    showToast("Запись отменена");
+    showToast(t("admin_toast_canceled"));
   };
 
   const approveByAdmin = (id) => {
@@ -228,12 +233,12 @@ export default function Admin() {
       status: "approved",
       approvedAt: new Date().toISOString(),
     }));
-    showToast("Запись подтверждена");
+    showToast(t("admin_toast_approved"));
   };
 
   const togglePaid = (id) => {
     updateBooking(id, (b) => ({ ...b, paid: !b.paid }));
-    showToast("Статус оплаты обновлён");
+    showToast(t("admin_toast_payment_updated"));
   };
 
   // === НАСТРОЙКИ УСЛУГ ===
@@ -255,7 +260,7 @@ export default function Admin() {
     updateSettings({
       serviceList: [
         ...services,
-        { name: "Новая услуга", duration: 60, deposit: 0 },
+        { name: t("admin_services_new_service"), duration: 60, deposit: 0 },
       ],
     });
   };
@@ -267,9 +272,8 @@ export default function Admin() {
     });
   };
 
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2200);
+  const handleDownloadReceipt = (booking) => {
+    downloadReceipt(booking, t);
   };
 
   return (
@@ -283,7 +287,9 @@ export default function Admin() {
           >
             <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <Chevron open={showSettings} />
-              <span style={{ fontWeight: 700 }}>Редактировать настройки</span>
+              <span style={{ fontWeight: 700 }}>
+                {t("admin_settings_title")}
+              </span>
             </span>
           </button>
 
@@ -295,46 +301,46 @@ export default function Admin() {
             }}
           >
             <div style={{ paddingTop: 10 }}>
-   {/* ОСНОВНЫЕ НАСТРОЙКИ */}
-<div className="row" style={{ gap: 12 }}>
-  
-  {/* Имя мастера */}
-  <div className="col">
-    <label style={labelStyle}>{t("master_name")}</label>
-    <input
-      style={inputGlass}
-      value={settings.masterName}
-      onChange={(e) =>
-        updateSettings({ masterName: e.target.value })
-      }
-    />
-  </div>
+              {/* ОСНОВНЫЕ НАСТРОЙКИ */}
+              <div className="row" style={{ gap: 12 }}>
+                {/* Имя мастера */}
+                <div className="col">
+                  <label style={labelStyle}>{t("master_name")}</label>
+                  <input
+                    style={inputGlass}
+                    value={settings.masterName}
+                    onChange={(e) =>
+                      updateSettings({ masterName: e.target.value })
+                    }
+                  />
+                </div>
 
-  {/* Телефон администратора */}
-  <div className="col">
-    <label style={labelStyle}>{t("admin_phone")}</label>
-    <input
-      style={inputGlass}
-      value={settings.adminPhone}
-      onChange={(e) =>
-        updateSettings({ adminPhone: e.target.value })
-      }
-    />
-  </div>
+                {/* Телефон администратора */}
+                <div className="col">
+                  <label style={labelStyle}>{t("admin_phone")}</label>
+                  <input
+                    style={inputGlass}
+                    value={settings.adminPhone}
+                    onChange={(e) =>
+                      updateSettings({ adminPhone: e.target.value })
+                    }
+                  />
+                </div>
 
-  {/* IBAN администратора */}
-  <div className="col">
-    <label style={labelStyle}>IBAN (EUR)</label>
-    <input
-      style={inputGlass}
-      value={settings.adminIban || ""}
-      onChange={(e) =>
-        updateSettings({ adminIban: e.target.value })
-      }
-      placeholder="LT00 0000 0000 0000 0000"
-    />
-  </div>
-</div>
+                {/* IBAN администратора */}
+                <div className="col">
+                  <label style={labelStyle}>IBAN (EUR)</label>
+                  <input
+                    style={inputGlass}
+                    value={settings.adminIban || ""}
+                    onChange={(e) =>
+                      updateSettings({ adminIban: e.target.value })
+                    }
+                    placeholder="LT00 0000 0000 0000 0000"
+                  />
+                </div>
+              </div>
+
               {/* РАБОЧЕЕ ВРЕМЯ */}
               <div
                 className="row"
@@ -405,14 +411,16 @@ export default function Admin() {
                   }}
                 >
                   <div>
-                    <div style={{ fontWeight: 600 }}>Услуги</div>
+                    <div style={{ fontWeight: 600 }}>
+                      {t("admin_services_title")}
+                    </div>
                     <div style={{ opacity: 0.75, fontSize: 12 }}>
-                      Название, длительность, депозит
+                      {t("admin_services_subtitle")}
                     </div>
                   </div>
 
                   <button style={btnPrimary} onClick={addService}>
-                    + Добавить услугу
+                    + {t("admin_services_add_button")}
                   </button>
                 </div>
 
@@ -425,89 +433,89 @@ export default function Admin() {
                     marginTop: 6,
                   }}
                 >
-{services.map((s, idx) => (
-  <div
-    key={idx}
-    style={{
-      display: "grid",
-      gridTemplateColumns: "1.4fr .7fr .7fr auto",
-      gap: 8,
-      alignItems: "center",
-    }}
-  >
-    {/* Название */}
-    <input
-      style={inputGlass}
-      value={s.name}
-      onChange={(e) =>
-        updateServiceField(idx, "name", e.target.value)
-      }
-    />
+                  {services.map((s, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1.4fr .7fr .7fr auto",
+                        gap: 8,
+                        alignItems: "center",
+                      }}
+                    >
+                      {/* Название */}
+                      <input
+                        style={inputGlass}
+                        value={s.name}
+                        onChange={(e) =>
+                          updateServiceField(idx, "name", e.target.value)
+                        }
+                      />
 
-    {/* Длительность + "min" */}
-    <div style={{ position: "relative" }}>
-      <input
-        style={{ ...inputGlass, paddingRight: 34 }}
-        type="number"
-        value={s.duration}
-        onChange={(e) =>
-          updateServiceField(idx, "duration", e.target.value)
-        }
-      />
-      <span
-        style={{
-          position: "absolute",
-          right: 10,
-          top: "50%",
-          transform: "translateY(-50%)",
-          fontSize: 12,
-          opacity: 0.75,
-          pointerEvents: "none",
-        }}
-      >
-        min
-      </span>
-    </div>
+                      {/* Длительность + "min" */}
+                      <div style={{ position: "relative" }}>
+                        <input
+                          style={{ ...inputGlass, paddingRight: 34 }}
+                          type="number"
+                          value={s.duration}
+                          onChange={(e) =>
+                            updateServiceField(idx, "duration", e.target.value)
+                          }
+                        />
+                        <span
+                          style={{
+                            position: "absolute",
+                            right: 10,
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            fontSize: 12,
+                            opacity: 0.75,
+                            pointerEvents: "none",
+                          }}
+                        >
+                          min
+                        </span>
+                      </div>
 
-    {/* Депозит + "€" */}
-    <div style={{ position: "relative" }}>
-      <input
-        style={{ ...inputGlass, paddingRight: 34 }}
-        type="number"
-        value={s.deposit}
-        onChange={(e) =>
-          updateServiceField(idx, "deposit", e.target.value)
-        }
-      />
-      <span
-        style={{
-          position: "absolute",
-          right: 10,
-          top: "50%",
-          transform: "translateY(-50%)",
-          fontSize: 12,
-          opacity: 0.75,
-          pointerEvents: "none",
-        }}
-      >
-        €
-      </span>
-    </div>
+                      {/* Депозит + "€" */}
+                      <div style={{ position: "relative" }}>
+                        <input
+                          style={{ ...inputGlass, paddingRight: 34 }}
+                          type="number"
+                          value={s.deposit}
+                          onChange={(e) =>
+                            updateServiceField(idx, "deposit", e.target.value)
+                          }
+                        />
+                        <span
+                          style={{
+                            position: "absolute",
+                            right: 10,
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            fontSize: 12,
+                            opacity: 0.75,
+                            pointerEvents: "none",
+                          }}
+                        >
+                          €
+                        </span>
+                      </div>
 
-    <button
-      onClick={() => removeService(idx)}
-      style={{
-        padding: "8px 10px",
-        borderRadius: 10,
-        background: "rgba(110,20,30,.35)",
-        border: "1px solid rgba(239,68,68,.7)",
-        color: "#fff",
-      }}
-    >
-      ✕
-    </button>
-  </div>
-))}                
+                      <button
+                        onClick={() => removeService(idx)}
+                        style={{
+                          padding: "8px 10px",
+                          borderRadius: 10,
+                          background: "rgba(110,20,30,.35)",
+                          border: "1px solid rgba(239,68,68,.7)",
+                          color: "#fff",
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -524,7 +532,7 @@ export default function Admin() {
           >
             <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <Chevron open={showFinance} />
-              <span style={{ fontWeight: 700 }}>Finansai</span>
+              <span style={{ fontWeight: 700 }}>{t("finance_title")}</span>
             </span>
           </button>
 
@@ -539,7 +547,7 @@ export default function Admin() {
               <FinancePanel
                 bookings={bookings}
                 serviceStyles={serviceStyles}
-                onDownloadReceipt={downloadReceipt}
+                onDownloadReceipt={handleDownloadReceipt}
               />
             </div>
           </div>
@@ -551,7 +559,7 @@ export default function Admin() {
         <div style={cardAurora}>
           <div style={topBar}>
             <div style={{ fontWeight: 700, fontSize: "1.05rem" }}>
-              Все записи
+              {t("admin_bookings_title")}
             </div>
           </div>
 
@@ -574,10 +582,10 @@ export default function Admin() {
             {/* ПАНЕЛЬ ФИЛЬТРОВ */}
             <div style={segmented}>
               {[
-                { v: "all", label: "Все" },
-                { v: "active", label: "Активные" },
-                { v: "finished", label: "Завершённые" },
-                { v: "canceled", label: "Отменённые" },
+                { v: "all", label: t("all") },
+                { v: "active", label: t("active") },
+                { v: "finished", label: t("finished") },
+                { v: "canceled", label: t("canceled") },
               ].map((it) => (
                 <button
                   key={it.v}
@@ -636,7 +644,7 @@ export default function Admin() {
                 disabled={page <= 1}
                 onClick={() => page > 1 && setPage(page - 1)}
               >
-                ← Назад
+                {t("admin_prev_page")}
               </button>
               <button
                 style={{
@@ -648,10 +656,14 @@ export default function Admin() {
                 disabled={page >= totalPages}
                 onClick={() => page < totalPages && setPage(page + 1)}
               >
-                Вперёд →
+                {t("admin_next_page")}
               </button>
               <span className="muted">
-                Страница {page} из {totalPages} ({filtered.length} зап.)
+                {t("admin_page_info", {
+                  page,
+                  totalPages,
+                  count: filtered.length,
+                })}
               </span>
             </div>
           </div>
@@ -666,7 +678,10 @@ export default function Admin() {
             }}
           >
             {groupedByDate.map(({ key, label, items }) => (
-              <div key={key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div
+                key={key}
+                style={{ display: "flex", flexDirection: "column", gap: 6 }}
+              >
                 {/* заголовок дня */}
                 <div
                   style={{
@@ -682,7 +697,9 @@ export default function Admin() {
                   }}
                 >
                   <span style={{ fontWeight: 600 }}>{label}</span>
-                  <span className="muted">{items.length} зап.</span>
+                  <span className="muted">
+                    {t("admin_day_count", { n: items.length })}
+                  </span>
                 </div>
 
                 {/* записи конкретного дня */}
@@ -744,7 +761,7 @@ export default function Admin() {
                             {fmtTime(b.start)} – {fmtTime(b.end)}
                           </span>
 
-                         {/* услуги */}
+                          {/* услуги */}
                           {servicesArr.length > 0 && (
                             <span style={pillService}>
                               {servicesArr.join(", ")}
@@ -759,64 +776,70 @@ export default function Admin() {
                           {/* ID */}
                           <span style={pillId}>#{b.id.slice(0, 6)}</span>
 
-                        {/* справа: подтверждение + оплата + стрелка */}
-<span
-  style={{
-    marginLeft: "auto",
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-  }}
->
+                          {/* справа: подтверждение + оплата + стрелка */}
+                          <span
+                            style={{
+                              marginLeft: "auto",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                            }}
+                          >
+                            {/* статус подтверждения */}
+                            <span
+                              style={{
+                                fontSize: 11,
+                                padding: "3px 8px",
+                                borderRadius: 999,
+                                border:
+                                  b.status === "approved" ||
+                                  b.status === "approved_paid"
+                                    ? "1px solid rgba(34,197,94,0.85)"
+                                    : "1px solid rgba(248,113,113,0.9)",
+                                background:
+                                  b.status === "approved" ||
+                                  b.status === "approved_paid"
+                                    ? "rgba(22,163,74,0.25)"
+                                    : "rgba(127,29,29,0.6)",
+                              }}
+                            >
+                              {b.status === "approved" ||
+                              b.status === "approved_paid"
+                                ? t("admin_status_confirmed")
+                                : t("admin_status_unconfirmed")}
+                            </span>
 
-  {/* 🔵 СТАТУС ПОДТВЕРЖДЕНИЯ */}
-  <span
-    style={{
-      fontSize: 11,
-      padding: "3px 8px",
-      borderRadius: 999,
-      border:
-        b.status === "approved" || b.status === "approved_paid"
-          ? "1px solid rgba(34,197,94,0.85)"
-          : "1px solid rgba(248,113,113,0.9)",
-      background:
-        b.status === "approved" || b.status === "approved_paid"
-          ? "rgba(22,163,74,0.25)"
-          : "rgba(127,29,29,0.6)",
-    }}
-  >
-    {b.status === "approved" || b.status === "approved_paid"
-      ? "Подтверждено"
-      : "Неподтверждено"}
-  </span>
+                            {/* статус оплаты */}
+                            <span
+                              style={{
+                                fontSize: 11,
+                                padding: "3px 8px",
+                                borderRadius: 999,
+                                border: paid
+                                  ? "1px solid rgba(34,197,94,0.85)"
+                                  : "1px solid rgba(248,113,113,0.9)",
+                                background: paid
+                                  ? "rgba(22,163,74,0.25)"
+                                  : "rgba(127,29,29,0.6)",
+                              }}
+                            >
+                              {paid
+                                ? t("receipt_status_paid")
+                                : t("receipt_status_unpaid")}
+                            </span>
 
-  {/* 🟢 ОПЛАТА */}
-  <span
-    style={{
-      fontSize: 11,
-      padding: "3px 8px",
-      borderRadius: 999,
-      border: paid
-        ? "1px solid rgba(34,197,94,0.85)"
-        : "1px solid rgba(248,113,113,0.9)",
-      background: paid
-        ? "rgba(22,163,74,0.25)"
-        : "rgba(127,29,29,0.6)",
-    }}
-  >
-    {paid ? "Оплачено" : "Не оплачено"}
-  </span>
-
-  {/* стрелка */}
-  <div
-    style={{
-      transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-      transition: "transform .25s ease",
-    }}
-  >
-    <Chevron open={isOpen} />
-  </div>
-</span>
+                            {/* стрелка */}
+                            <div
+                              style={{
+                                transform: isOpen
+                                  ? "rotate(180deg)"
+                                  : "rotate(0deg)",
+                                transition: "transform .25s ease",
+                              }}
+                            >
+                              <Chevron open={isOpen} />
+                            </div>
+                          </span>
                         </div>
                       </button>
 
@@ -848,7 +871,7 @@ export default function Admin() {
                             {/* Дата */}
                             <div style={{ minWidth: 140 }}>
                               <div style={{ fontSize: 12, opacity: 0.8 }}>
-                                Дата
+                                {t("date")}
                               </div>
                               <input
                                 type="date"
@@ -885,7 +908,7 @@ export default function Admin() {
                             {/* Время от */}
                             <div style={{ minWidth: 110 }}>
                               <div style={{ fontSize: 12, opacity: 0.8 }}>
-                                Время от
+                                {t("admin_time_from")}
                               </div>
                               <input
                                 type="time"
@@ -919,7 +942,7 @@ export default function Admin() {
                             {/* Время до */}
                             <div style={{ minWidth: 110 }}>
                               <div style={{ fontSize: 12, opacity: 0.8 }}>
-                                Время до
+                                {t("admin_time_to")}
                               </div>
                               <input
                                 type="time"
@@ -964,9 +987,9 @@ export default function Admin() {
                                 <button
                                   type="button"
                                   style={receiptBtn}
-                                  onClick={() => downloadReceipt(b)}
+                                  onClick={() => handleDownloadReceipt(b)}
                                 >
-                                  📄 Скачать квитанцию
+                                  📄 {t("admin_download_receipt")}
                                 </button>
                               )}
 
@@ -978,7 +1001,7 @@ export default function Admin() {
                                   marginTop: 4,
                                 }}
                               >
-                                Nr. kvitancii:{" "}
+                                {t("admin_receipt_number_short")}{" "}
                                 <b>#{b.id.slice(0, 6)}</b>
                               </div>
                             </div>
@@ -994,10 +1017,7 @@ export default function Admin() {
                             }}
                           >
                             {servicesArr.map((s, i) => (
-                              <span
-                                key={i}
-                                style={serviceTagStyle(s)}
-                              >
+                              <span key={i} style={serviceTagStyle(s)}>
                                 {s}
                               </span>
                             ))}
@@ -1006,9 +1026,7 @@ export default function Admin() {
                           {/* Клиент */}
                           <div style={{ marginTop: 6 }}>
                             <b>{b.userName}</b>
-                            <div style={{ opacity: 0.8 }}>
-                              {b.userPhone}
-                            </div>
+                            <div style={{ opacity: 0.8 }}>{b.userPhone}</div>
                             {b.userInstagram && (
                               <div style={{ opacity: 0.8 }}>
                                 @{b.userInstagram}
@@ -1059,8 +1077,8 @@ export default function Admin() {
                                 }}
                               >
                                 {b.paid
-                                  ? "Apmokėta"
-                                  : "Neapmokėta"}
+                                  ? t("receipt_status_paid")
+                                  : t("receipt_status_unpaid")}
                               </span>
                             </div>
 
@@ -1073,7 +1091,7 @@ export default function Admin() {
                               }}
                             >
                               <span style={{ minWidth: 90 }}>
-                                Avansas (€):
+                                {t("receipt_advance_label")} (€):
                               </span>
                               <input
                                 type="number"
@@ -1088,9 +1106,7 @@ export default function Admin() {
                                   updateBooking(b.id, (orig) => ({
                                     ...orig,
                                     price:
-                                      v === ""
-                                        ? null
-                                        : Number(v),
+                                      v === "" ? null : Number(v),
                                   }));
                                 }}
                               />
@@ -1110,8 +1126,8 @@ export default function Admin() {
                               }}
                             >
                               {b.paid
-                                ? "Снять оплату"
-                                : "Пометить оплаченной"}
+                                ? t("admin_mark_unpaid_button")
+                                : t("admin_mark_paid_button")}
                             </button>
                           </div>
 
@@ -1138,10 +1154,10 @@ export default function Admin() {
                               }}
                             >
                               {b.status === "pending"
-                                ? "Ожидает подтверждения"
+                                ? t("pending")
                                 : b.status.includes("canceled")
-                                ? "Отменено"
-                                : "Подтверждено"}
+                                ? t("canceled")
+                                : t("approved")}
                             </span>
 
                             <span
@@ -1159,8 +1175,8 @@ export default function Admin() {
                               }}
                             >
                               {b.paid
-                                ? "Оплачено"
-                                : "Не оплачено"}
+                                ? t("receipt_status_paid")
+                                : t("receipt_status_unpaid")}
                             </span>
                           </div>
 
@@ -1175,33 +1191,27 @@ export default function Admin() {
                           >
                             {b.status === "pending" && (
                               <button
-                                onClick={() =>
-                                  approveByAdmin(b.id)
-                                }
+                                onClick={() => approveByAdmin(b.id)}
                                 style={btnPrimary}
                               >
                                 {t("approve")}
                               </button>
                             )}
 
-                            {!b.status.includes("canceled") &&
-                              inFuture && (
-                                <button
-                                  onClick={() =>
-                                    cancelByAdmin(b.id)
-                                  }
-                                  style={{
-                                    ...btnBase,
-                                    background:
-                                      "rgba(110,20,30,.35)",
-                                    border:
-                                      "1px solid rgba(239,68,68,.6)",
-                                    color: "#fff",
-                                  }}
-                                >
-                                  {t("rejected")}
-                                </button>
-                              )}
+                            {!b.status.includes("canceled") && inFuture && (
+                              <button
+                                onClick={() => cancelByAdmin(b.id)}
+                                style={{
+                                  ...btnBase,
+                                  background: "rgba(110,20,30,.35)",
+                                  border:
+                                    "1px solid rgba(239,68,68,.6)",
+                                  color: "#fff",
+                                }}
+                              >
+                                {t("cancel")}
+                              </button>
+                            )}
                           </div>
                         </div>
                       )}
@@ -1334,7 +1344,7 @@ const segActive = {
   background:
     "linear-gradient(180deg, rgba(110,60,190,0.9), rgba(60,20,110,0.9))",
   border: "1px solid rgba(180,95,255,0.7)",
-  boxShadow: "0 0 12px rgba(150,90,255,0.30)",
+  boxShadow: "0 0 12px rgba(150,90,255,0.3)",
 };
 
 const receiptBtn = {
@@ -1375,11 +1385,6 @@ const pillTime = {
   border: "1px solid rgba(94,234,212,0.8)",
 };
 
-const pillPhone = {
-  ...pillBase,
-  border: "1px solid rgba(96,165,250,0.85)",
-};
-
 const pillService = {
   ...pillBase,
   border: "1px solid rgba(244,114,182,0.85)",
@@ -1412,18 +1417,21 @@ const statusDot = (b) => {
 };
 
 /* === ГЕНЕРАЦИЯ КВИТАНЦИИ === */
-const downloadReceipt = (b) => {
+const downloadReceipt = (b, t) => {
   try {
     const win = window.open("", "_blank", "width=700,height=900");
     if (!win) return;
 
+    const shortId = b.id.slice(0, 6);
     const dateStr = fmtDate(b.start);
     const timeStr = `${fmtTime(b.start)} – ${fmtTime(b.end)}`;
     const createdStr = b.createdAt
       ? new Date(b.createdAt).toLocaleString("lt-LT")
       : new Date(b.start).toLocaleString("lt-LT");
     const servicesStr = (b.services || []).join(", ") || "—";
-    const paidLabel = isPaid(b) ? "Оплачено" : "Не оплачено";
+    const paidLabel = isPaid(b)
+      ? t("receipt_status_paid")
+      : t("receipt_status_unpaid");
 
     const vcard = [
       "BEGIN:VCARD",
@@ -1447,7 +1455,7 @@ const downloadReceipt = (b) => {
 <html>
 <head>
   <meta charSet="utf-8" />
-  <title>Квитанция #${b.id.slice(0, 6)}</title>
+  <title>${t("receipt_title")} #${shortId}</title>
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -1540,12 +1548,12 @@ const downloadReceipt = (b) => {
     <div class="top-row">
       <div class="top-left">
         <img src="/logo2.svg" style="height:100px; margin-bottom:6px;" />
-        <div class="sub">Kvitancija už rezervaciją</div>
+        <div class="sub">${t("receipt_subtitle")}</div>
       </div>
 
       <div class="top-right">
-        Nr.: <b>#${b.id.slice(0, 6)}</b><br/>
-        Sukurta: ${createdStr}<br/>
+        ${t("receipt_number_label")} <b>#${shortId}</b><br/>
+        ${t("receipt_created_label")} ${createdStr}<br/>
 
         <img src="${qrUrl}" alt="IZ HAIR TREND vCard"
              style="
@@ -1559,39 +1567,39 @@ const downloadReceipt = (b) => {
              "/>
 
         <div class="qr-label">
-          Skenuokite ir išsaugokite kontaktą
+          ${t("receipt_qr_hint")}
         </div>
       </div>
     </div>
 
-    <div class="title">Kvitancija</div>
+    <div class="title">${t("receipt_title")}</div>
 
     <div class="section">
       <div class="row">
-        <div class="label">Klientas:</div>
+        <div class="label">${t("receipt_client_label")}</div>
         <div class="value">${b.userName || "-"}</div>
       </div>
       <div class="row">
-        <div class="label">Telefonas:</div>
+        <div class="label">${t("receipt_phone_label")}</div>
         <div class="value">${b.userPhone || "-"}</div>
       </div>
       <div class="row">
-        <div class="label">El. paštas:</div>
+        <div class="label">${t("receipt_email_label")}</div>
         <div class="value">${b.userEmail || "-"}</div>
       </div>
     </div>
 
     <div class="section">
       <div class="row">
-        <div class="label">Data:</div>
+        <div class="label">${t("receipt_date_label")}</div>
         <div class="value">${dateStr}</div>
       </div>
       <div class="row">
-        <div class="label">Laikas:</div>
+        <div class="label">${t("receipt_time_label")}</div>
         <div class="value">${timeStr}</div>
       </div>
       <div class="row">
-        <div class="label">Paslaugos:</div>
+        <div class="label">${t("receipt_services_label")}</div>
         <div class="value">${servicesStr}</div>
       </div>
       <div class="services">
@@ -1603,20 +1611,19 @@ const downloadReceipt = (b) => {
 
     <div class="section">
       <div class="row">
-        <div class="label">Avansas:</div>
+        <div class="label">${t("receipt_advance_label")}</div>
         <div class="value">${
           b.price ? `${b.price} €` : "—"
         }</div>
       </div>
       <div class="row">
-        <div class="label">Mokėjimo būsena:</div>
+        <div class="label">${t("receipt_payment_status_label")}</div>
         <div class="value">${paidLabel}</div>
       </div>
     </div>
 
     <div class="footer">
-      Ši kvitancija sugeneruota internetu ir galioja be parašo.<br/>
-      Jei reikia, galite ją išsisaugoti kaip PDF: naršyklėje pasirinkite \"Spausdinti\" → \"Save as PDF\".
+      ${t("receipt_footer_text")}
     </div>
   </div>
 
