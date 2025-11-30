@@ -7,6 +7,192 @@ import { useLang } from './LangContext';
 ============================================================ */
 export const dict = {
 
+{
+  /* ===== CALENDAR / GENERAL ===== */
+  "slots_for": { lt: "Laikai", ru: "Слоты на", en: "Slots for" },
+  "no_slots": { lt: "Nėra laisvų laikų", ru: "Нет доступных слотов", en: "No available slots" },
+  "processing": { lt: "Vykdoma...", ru: "Обработка...", en: "Processing..." },
+  "reserved_label": { lt: "Užimta", ru: "Занято", en: "Reserved" },
+
+  /* ===== ERRORS & MESSAGES ===== */
+  "cannot_book_past": {
+    lt: "Negalima rezervuoti praeityje.",
+    ru: "Нельзя записываться на прошедшее время.",
+    en: "You cannot book a past time."
+  },
+  "already_booked": {
+    lt: "Šis laikas jau užimtas.",
+    ru: "Это время уже занято.",
+    en: "This time is already booked."
+  },
+  "login_or_register": {
+    lt: "Prisijunkite arba užsiregistruokite.",
+    ru: "Войдите или зарегистрируйтесь.",
+    en: "Please log in or register."
+  },
+  "calendar_select_service_error": {
+    lt: "Pasirinkite bent vieną paslaugą.",
+    ru: "Выберите хотя бы одну услугу.",
+    en: "Select at least one service."
+  },
+
+  /* ===== WEEKDAYS SHORT ===== */
+  "weekday_mon_short": { lt: "Pr", ru: "Пн", en: "Mon" },
+  "weekday_tue_short": { lt: "An", ru: "Вт", en: "Tue" },
+  "weekday_wed_short": { lt: "Tr", ru: "Ср", en: "Wed" },
+  "weekday_thu_short": { lt: "Kt", ru: "Чт", en: "Thu" },
+  "weekday_fri_short": { lt: "Pn", ru: "Пт", en: "Fri" },
+  "weekday_sat_short": { lt: "Št", ru: "Сб", en: "Sat" },
+  "weekday_sun_short": { lt: "Sk", ru: "Вс", en: "Sun" },
+
+  /* ===== MODAL ===== */
+  "calendar_modal_title": {
+    lt: "Pasirinkite paslaugas",
+    ru: "Выберите услуги",
+    en: "Select services"
+  },
+  "calendar_modal_caption": {
+    lt: "Trukmė ir suma priklauso nuo pasirinktų paslaugų.",
+    ru: "Длительность и сумма зависят от выбранных услуг.",
+    en: "Duration and price depend on selected services."
+  },
+  "calendar_modal_instruction": {
+    lt: "Pasirinkite vieną ar kelias paslaugas:",
+    ru: "Выберите одну или несколько услуг:",
+    en: "Select one or more services:"
+  },
+  "calendar_deposit": {
+    lt: "Avansas",
+    ru: "Аванс",
+    en: "Deposit"
+  },
+
+  /* ===== MODAL BUTTONS ===== */
+  "cancel": { lt: "Atšaukti", ru: "Отменить", en: "Cancel" },
+  "approve": { lt: "Patvirtinti", ru: "Подтвердить", en: "Confirm" },
+
+  /* ===== PRICE BLOCK ===== */
+  "calendar_prices_title": {
+    lt: "Kainos",
+    ru: "Цены",
+    en: "Prices"
+  },
+  "calendar_prices_toggle": {
+    lt: "Žiūrėti kainas",
+    ru: "Посмотреть цены",
+    en: "View prices"
+  },
+
+  /* PRICE ITEM 1 */
+  "calendar_price1_price": { lt: "80–130 €", ru: "80–130 €", en: "80–130 €" },
+  "calendar_price1_title": {
+    lt: "Šukuosenos kaina",
+    ru: "Цена причёски",
+    en: "Hairstyle price"
+  },
+  "calendar_price1_text": {
+    lt: "Priklauso nuo darbo apimties",
+    ru: "Зависит от объёма работы",
+    en: "Depends on work complexity"
+  },
+
+  /* PRICE ITEM 2 */
+  "calendar_price2_price": { lt: "25 €", ru: "25 €", en: "25 €" },
+  "calendar_price2_title": {
+    lt: "Konsultacija",
+    ru: "Консультация",
+    en: "Consultation"
+  },
+  "calendar_price2_text": {
+    lt: "Užtrunkame nuo 30 min. iki valandos",
+    ru: "Длится от 30 минут до часа",
+    en: "Takes from 30 minutes to 1 hour"
+  },
+
+  /* PRICE ITEM 3 */
+  "calendar_price3_price": {
+    lt: "50 € užstatas / 100 €",
+    ru: "Депозит 50 € / 100 €",
+    en: "Deposit 50 € / 100 €"
+  },
+  "calendar_price3_title": {
+    lt: "Plaukų tęsų nuoma",
+    ru: "Аренда трессов",
+    en: "Hair extensions rental"
+  },
+  "calendar_price3_text": {
+    lt: "Grąžinti per 3–4 d. Grąžinus plaukus – grąžinu užstatą.",
+    ru: "Вернуть в течение 3–4 дней. Вы возвращаете волосы — я возвращаю депозит.",
+    en: "Must be returned within 3–4 days. Return the hair — deposit is refunded."
+  },
+
+  /* PRICE ITEM 4 */
+  "calendar_price4_price": {
+    lt: "Iki 20 €",
+    ru: "До 20 €",
+    en: "Up to 20 €"
+  },
+  "calendar_price4_title": {
+    lt: "Papuošalų nuoma",
+    ru: "Аренда украшений",
+    en: "Jewelry rental"
+  },
+  "calendar_price4_text": {
+    lt: "",
+    ru: "",
+    en: ""
+  },
+
+  /* PRICE ITEM 5 */
+  "calendar_price5_price": { lt: "130 €", ru: "130 €", en: "130 €" },
+  "calendar_price5_title": {
+    lt: "Atvykimas Klaipėdoje",
+    ru: "Выезд в Клайпеде",
+    en: "Arrival in Klaipėda"
+  },
+  "calendar_price5_text": {
+    lt: "Daiktų kraustymai, važiavimai — per tą laiką galiu priimti kitą klientę.",
+    ru: "Сборы, переезды — за это время я могла бы принять другую клиентку.",
+    en: "Travel and preparation — during this time I could serve another client."
+  },
+
+  /* ===== DEFAULT SERVICE NAMES (for modal list) ===== */
+  "service_hair": { lt: "Šukuosena", ru: "Причёска", en: "Hairstyle" },
+  "service_extensions_rent": {
+    lt: "Tresų nuoma",
+    ru: "Аренда трессов",
+    en: "Hair extensions rental"
+  },
+  "service_jewelry_rent": {
+    lt: "Papuošalų nuoma",
+    ru: "Аренда украшений",
+    en: "Jewelry rental"
+  },
+  "service_arrival": {
+    lt: "Atvykimas",
+    ru: "Выезд",
+    en: "Arrival"
+  },
+  "service_consultation": {
+    lt: "Konsultacija",
+    ru: "Консультация",
+    en: "Consultation"
+  },
+
+  /* ===== MY BOOKINGS EXTRA KEYS ===== */
+  "mb_status_paid": {
+    lt: "Apmokėta",
+    ru: "Оплачено",
+    en: "Paid"
+  },
+
+  "mb_download_receipt": {
+    lt: "Atsisiųsti kvitą",
+    ru: "Скачать квитанцию",
+    en: "Download receipt"
+  }
+}
+  
 /* ============================================================
      🇷🇺 RUSSIAN
 ============================================================ */
