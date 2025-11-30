@@ -33,6 +33,69 @@ export const dict = {
     cancel: 'Отменить',
     no_records: 'Нет записей',
     only_future: 'Только будущие',
+/* ============================================================
+   MY BOOKINGS (MB)
+============================================================ */
+mb_title: 'Мои записи',
+mb_profile_title: 'Профиль',
+mb_edit_profile: 'Редактировать профиль',
+mb_save: 'Сохранить',
+mb_cancel: 'Отмена',
+
+mb_filters_all: 'Все',
+mb_filters_active: 'Активные',
+mb_filters_history: 'История',
+
+mb_status_pending: 'Ожидает подтверждения',
+mb_status_approved: 'Подтверждено',
+mb_status_canceled: 'Отменено',
+mb_status_passed: 'Прошло',
+mb_status_paid: 'Оплачено',
+mb_status_unpaid: 'Не оплачено',
+
+mb_price: 'Цена',
+mb_duration: 'Длительность',
+mb_service: 'Услуга',
+
+mb_pay_button: 'Оплатить',
+mb_download_receipt: 'Скачать квитанцию',
+mb_view_receipt: 'Открыть квитанцию',
+
+mb_dialog_cancel_title: 'Отменить запись?',
+mb_dialog_cancel_text: 'Вы уверены, что хотите отменить эту запись?',
+mb_dialog_yes: 'Да',
+mb_dialog_no: 'Нет',
+
+mb_updated: 'Данные обновлены',
+       
+       /* ------------------ mybookings ------------------ */
+receipt_title: 'Квитанция',
+receipt_subtitle: 'Платёжный документ',
+receipt_booking_id: 'Номер записи',
+
+receipt_client: 'Клиент',
+receipt_phone: 'Телефон',
+
+receipt_service: 'Услуга',
+receipt_service_list: 'Перечень услуг',
+receipt_price: 'Цена',
+receipt_duration: 'Длительность',
+receipt_total: 'Итоговая сумма',
+
+receipt_paid: 'Оплачено',
+receipt_unpaid: 'Не оплачено',
+receipt_payment_status: 'Статус оплаты',
+
+receipt_date: 'Дата',
+receipt_time: 'Время',
+
+receipt_staff: 'Специалист',
+receipt_signature: 'Подпись',
+
+receipt_generated: 'Квитанция сгенерирована автоматически.',
+receipt_contact_hint: 'Сканируйте QR-код, чтобы сохранить контакт.',
+receipt_qr_hint: 'QR-код визитки',
+       
 /* ------------------ admin ------------------ */
            master_name: 'Имя мастера',
     admin_phone: 'Телефон администратора',
@@ -191,7 +254,35 @@ finance_year_suffix: ' год',
     cancel: 'Atšaukti',
     no_records: 'Įrašų nėra',
     only_future: 'Tik būsimi',
-/* ------------------ admin ------------------ */
+/* ------------------ mybookings ------------------ */
+       receipt_title: 'Kvitas',
+receipt_subtitle: 'Mokėjimo dokumentas',
+receipt_booking_id: 'Rezervacijos numeris',
+
+receipt_client: 'Klientas',
+receipt_phone: 'Telefonas',
+
+receipt_service: 'Paslauga',
+receipt_service_list: 'Paslaugų sąrašas',
+receipt_price: 'Kaina',
+receipt_duration: 'Trukmė',
+receipt_total: 'Suma',
+
+receipt_paid: 'Apmokėta',
+receipt_unpaid: 'Neapmokėta',
+receipt_payment_status: 'Mokėjimo būsena',
+
+receipt_date: 'Data',
+receipt_time: 'Laikas',
+
+receipt_staff: 'Specialistas',
+receipt_signature: 'Parašas',
+
+receipt_generated: 'Kvitas sugeneruotas automatiškai.',
+receipt_contact_hint: 'Nuskenuokite QR kodą ir išsaugokite kontaktą.',
+receipt_qr_hint: 'Vizitinės QR kodas',
+
+       /* ------------------ admin ------------------ */
            master_name: 'Meistrės vardas',
     admin_phone: 'Administratoriaus telefonas',
     day_start: 'Dienos pradžia',
@@ -349,7 +440,34 @@ finance_year_suffix: ' metai',
     cancel: 'Cancel',
     no_records: 'No records',
     only_future: 'Only future',
-/* ------------------ admin ------------------ */
+/* ------------------ mybookings ------------------ */
+       receipt_title: 'Receipt',
+receipt_subtitle: 'Payment document',
+receipt_booking_id: 'Booking ID',
+
+receipt_client: 'Client',
+receipt_phone: 'Phone',
+
+receipt_service: 'Service',
+receipt_service_list: 'Service list',
+receipt_price: 'Price',
+receipt_duration: 'Duration',
+receipt_total: 'Total',
+
+receipt_paid: 'Paid',
+receipt_unpaid: 'Unpaid',
+receipt_payment_status: 'Payment status',
+
+receipt_date: 'Date',
+receipt_time: 'Time',
+
+receipt_staff: 'Specialist',
+receipt_signature: 'Signature',
+
+receipt_generated: 'This receipt was generated automatically.',
+receipt_contact_hint: 'Scan the QR code to save the contact.',
+receipt_qr_hint: 'Business card QR code',
+       /* ------------------ admin ------------------ */
            master_name: 'Master name',
     admin_phone: 'Admin phone',
     day_start: 'Day start',
