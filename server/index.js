@@ -24,8 +24,8 @@ function makeTransporter(){
   const host = process.env.SMTP_HOST || 'smtp.gmail.com'
   const port = Number(process.env.SMTP_PORT || 465)
   const secure = String(process.env.SMTP_SECURE || 'true') === 'true'
-  const user = process.env.SMTP_USER || 'izbooking1@gmail.com'
-  const pass = process.env.SMTP_PASS || ''
+  const user = process.env.SMTP_USER
+  const pass = process.env.SMTP_PASS
   return nodemailer.createTransport({ host, port, secure, auth: { user, pass } })
 }
 
@@ -41,36 +41,18 @@ app.post('/api/reset-password', async (req,res)=>{
   const temp = genTempPassword()
   let status='ok', error=null
   try{
-    if(process.env.SMTP_PASS){
-      const t = makeTransporter()
-      await t.sendMail({
-        from: `"${process.env.FROM_NAME || 'IZ Booking'}" <${process.env.FROM_EMAIL || process.env.SMTP_USER || 'izbooking1@gmail.com'}>`,
-        to: email,
-        subject: 'Восстановление пароля IZ Booking',
-        html: `<div style="background:#111;color:#fff;padding:18px;border-radius:10px">
-          <h2 style="margin:0 0 8px 0">Восстановление пароля — IZ Booking</h2>
-          <p>Здравствуйте${email?', '+email:''}!</p>
-          <p>Ваш временный пароль: <b>${temp}</b></p>
-          <p>Смените пароль после входа в «Мой профиль».</p>
-        </div>`
-      })
-    }
+    const t = makeTransporter()
+    await t.sendMail({
+      from: `"${process.env.FROM_NAME}" <${process.env.FROM_EMAIL}>`,
+      to: email,
+      subject: 'Password reset',
+      html: `<p>Your temporary password: <b>${temp}</b></p>`
+    })
   }catch(e){
     status='error'; error=String(e)
   }
   appendResetLog({ at:new Date().toISOString(), email, status, error })
-  res.json({ ok:true, tempPassword: temp, emailed: status==='ok' && !!process.env.SMTP_PASS })
+  res.json({ ok:true, tempPassword: temp, emailed: status==='ok' })
 })
 
-app.get('/api/reset-log', (req,res)=>{
-  try{
-    const data = existsSync(LOG_PATH) ? JSON.parse(readFileSync(LOG_PATH,'utf-8')||'[]') : []
-    res.json(data)
-  }catch(e){
-    res.status(500).json({ok:false, error:String(e)})
-  }
-})
-
-app.get('/api/health', (req,res)=> res.json({ok:true, time:new Date().toISOString()}))
-
-app.listen(PORT, ()=> console.log('[server] http://localhost:'+PORT))
+app.listen(PORT, ()=> console.log('[server] running on '+PORT))
