@@ -1,123 +1,186 @@
-// FinancePanel.jsx — FULL i18n VERSION
-// (code too long for single insertion in this message)
-
-// --- PART 1 START ---
 import { useState, useMemo, useEffect } from "react";
 import { fmtDate, fmtTime } from "../lib/storage";
 import { useI18n } from "../lib/i18n";
-
+// такие же правила, как в Admin.jsx
 const isPaid = (b) => !!(b?.paid || b?.status === "approved_paid");
-const isCanceled = (b) => b.status === "canceled_client" || b.status === "canceled_admin";
+const isCanceled = (b) =>
+  b.status === "canceled_client" || b.status === "canceled_admin";
 
 const MANUAL_KEY = "iz.finance.manual.v1";
 const EXCLUDE_KEY = "iz.finance.exclude.v1";
 const PERCENT_KEY = "iz.finance.expensePercent.v1";
 
 const pad2 = (n) => String(n).padStart(2, "0");
-const formatDateISO = (d) => {
-  const x = new Date(d);
-  if (isNaN(x)) return "";
-  return `${x.getFullYear()}-${pad2(x.getMonth() + 1)}-${pad2(x.getDate())}`;
+
+const formatDateISO = (dateLike) => {
+  const d = new Date(dateLike);
+  if (isNaN(d)) return "";
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(
+    d.getDate()
+  )}`;
 };
 
-export default function FinancePanel({ bookings = [], serviceStyles = {}, onDownloadReceipt, settings = {} }) {
-  const { t, lang } = useI18n();
+export default function FinancePanel({
+  bookings = [],
+  serviceStyles = {},
+  onDownloadReceipt,
+  settings = {}, // имя мастера придёт отсюда
+}) {
   const now = new Date();
 
-  const [mode, setMode] = useState("month");
+  // режим периода
+  const [mode, setMode] = useState("month"); // month | year | range
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
-  const [rangeFrom, setRangeFrom] = useState(formatDateISO(new Date(now.getFullYear(), now.getMonth(), 1)));
-  const [rangeTo, setRangeTo] = useState(formatDateISO(now));
+  const [rangeFrom, setRangeFrom] = useState(
+    new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+  );
+  const [rangeTo, setRangeTo] = useState(now.toISOString().slice(0, 10));
 
+  // ручные записи и исключённые системные id
   const [manualEntries, setManualEntries] = useState([]);
   const [excludedIds, setExcludedIds] = useState([]);
+
+  const { t, lang } = useI18n();
+
+  // локализованные месяцы
+  const months = useMemo(
+    () => Array.from({ length: 12 }, (_, i) => t(`month_${i}`)),
+    [t, lang]
+  );
+
+  // процент расходов
   const [percent, setPercent] = useState(() => {
-    const raw = localStorage.getItem(PERCENT_KEY);
-    const n = Number(raw);
-    return !isNaN(n) ? n : 30;
+    try {
+      const raw = localStorage.getItem(PERCENT_KEY);
+      if (raw === "" || raw === null) return 30;
+      const n = Number(raw);
+      return !isNaN(n) && n >= 0 && n <= 100 ? n : 30;
+    } catch {
+      return 30;
+    }
   });
 
+  // форма ручной записи
   const [formDate, setFormDate] = useState(formatDateISO(now));
   const [formTimeFrom, setFormTimeFrom] = useState("");
   const [formTimeTo, setFormTimeTo] = useState("");
   const [formAmount, setFormAmount] = useState("");
   const [formDesc, setFormDesc] = useState("");
 
-  const MONTHS =
-    lang === "lt"
-      ? t("finance_months_lt").split(",")
-      : lang === "ru"
-      ? t("finance_months_ru").split(",")
-      : t("finance_months_en").split(",");
+  // === загрузка / сохранение localStorage ===
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(MANUAL_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setManualEntries(parsed);
+      }
+    } catch (e) {
+      console.error("Finance manual load error", e);
+    }
+    try {
+      const raw2 = localStorage.getItem(EXCLUDE_KEY);
+      if (raw2) {
+        const parsed = JSON.parse(raw2);
+        if (Array.isArray(parsed)) setExcludedIds(parsed);
+      }
+    } catch (e) {
+      console.error("Finance exclude load error", e);
+    }
+  }, []);
 
   useEffect(() => {
     try {
-      const raw = JSON.parse(localStorage.getItem(MANUAL_KEY));
-      if (Array.isArray(raw)) setManualEntries(raw);
-    } catch {}
+      localStorage.setItem(MANUAL_KEY, JSON.stringify(manualEntries));
+    } catch (e) {
+      console.error("Finance manual save error", e);
+    }
+  }, [manualEntries]);
+
+  useEffect(() => {
     try {
-      const raw = JSON.parse(localStorage.getItem(EXCLUDE_KEY));
-      if (Array.isArray(raw)) setExcludedIds(raw);
-    } catch {}
-  }, []);
+      localStorage.setItem(EXCLUDE_KEY, JSON.stringify(excludedIds));
+    } catch (e) {
+      console.error("Finance exclude save error", e);
+    }
+  }, [excludedIds]);
 
-// --- PART 1 END ---
+  useEffect(() => {
+    try {
+      // Не сохраняем пустое значение — иначе поле ломается
+      if (percent === "" || percent === null) return;
+      localStorage.setItem(PERCENT_KEY, String(percent));
+    } catch (e) {
+      console.error("Finance percent save error", e);
+    }
+  }, [percent]);
 
-// --- PART 2 START ---
+  // === расчёт диапазона дат ===
+  const [rangeStart, rangeEnd, rangeLabel] = useMemo(() => {
+    let start, end, label;
 
-  useEffect(() => localStorage.setItem(MANUAL_KEY, JSON.stringify(manualEntries)), [manualEntries]);
-  useEffect(() => localStorage.setItem(EXCLUDE_KEY, JSON.stringify(excludedIds)), [excludedIds]);
-  useEffect(() => localStorage.setItem(PERCENT_KEY, String(percent)), [percent]);
-
-  const [rangeStart, rangeEnd] = useMemo(() => {
-    let start, end;
     if (mode === "month") {
       start = new Date(year, month, 1);
       end = new Date(year, month + 1, 1);
+      const monthName = months[month] || "";
+      label = `${monthName} ${year}`;
     } else if (mode === "year") {
       start = new Date(year, 0, 1);
       end = new Date(year + 1, 0, 1);
+      label = `${year} ${t("finance_year_suffix")}`;
     } else {
       const from = rangeFrom ? new Date(rangeFrom) : new Date(year, month, 1);
       const to = rangeTo ? new Date(rangeTo) : now;
       start = from;
       end = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
+      label = `${rangeFrom || "…"} – ${rangeTo || "…"}`;
     }
-    return [start, end];
-  }, [mode, year, month, rangeFrom, rangeTo]);
+
+    return [start, end, label];
+  }, [mode, year, month, rangeFrom, rangeTo, months, t]);
 
   const isInRange = (d) => d >= rangeStart && d < rangeEnd;
 
-  const systemItems = useMemo(
-    () =>
-      bookings
-        .filter((b) => isPaid(b) && !isCanceled(b) && !excludedIds.includes(b.id))
-        .map((b) => {
-          const end = new Date(b.end || b.start);
-          if (!isInRange(end)) return null;
-          return {
-            id: "sys-" + b.id,
-            type: "system",
-            bookingId: b.id,
-            booking: b,
-            date: end.toISOString().slice(0, 10),
-            dateDisplay: fmtDate(b.start),
-            timeDisplay: `${fmtTime(b.start)} – ${fmtTime(b.end)}`,
-            amount: Number(b.price) || 0,
-            tags: b.services || [],
-            description: (b.services || []).join(", ") || t("finance_system"),
-            shortId: b.id.slice(0, 6),
-          };
-        })
-        .filter(Boolean),
-    [bookings, excludedIds, rangeStart, rangeEnd, lang]
-  );
+  // === системные доходы (из бронирований) ===
+  const systemItems = useMemo(() => {
+    return bookings
+      .filter((b) => {
+        if (isCanceled(b)) return false;
+        if (!isPaid(b)) return false;
+        const end = new Date(b.end || b.start);
+        if (!isInRange(end)) return false;
+        if (excludedIds.includes(b.id)) return false;
+        return true;
+      })
+      .map((b) => {
+        const end = new Date(b.end || b.start);
+        const dateISO = end.toISOString().slice(0, 10);
 
+        return {
+          id: "sys-" + b.id,
+          type: "system",
+          bookingId: b.id,
+          booking: b,
+          date: dateISO,
+          dateDisplay: fmtDate(b.start),
+          timeDisplay: `${fmtTime(b.start)} – ${fmtTime(b.end || b.start)}`,
+          amount: Number(b.price) || 0,
+          tags: Array.isArray(b.services) ? b.services : [],
+          description:
+            (Array.isArray(b.services) && b.services.join(", ")) ||
+            t("finance_system_default_description"),
+          shortId: b.id.slice(0, 6),
+        };
+      });
+  }, [bookings, excludedIds, rangeStart, rangeEnd, t]);
+
+  const systemTotal = systemItems.reduce((s, i) => s + i.amount, 0);
+
+  // === ручные доходы ===
   const manualItems = useMemo(
     () =>
       manualEntries
-        .filter((e) => isInRange(new Date(e.date)))
         .map((e) => ({
           id: "man-" + e.id,
           manualId: e.id,
@@ -126,51 +189,67 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
           dateDisplay: fmtDate(e.date),
           timeDisplay: e.time || "—",
           amount: Number(e.amount) || 0,
-          description: e.description || t("finance_manual"),
-          tags: [t("finance_tag_manual")],
-        })),
-    [manualEntries, rangeStart, rangeEnd, lang]
+          description: e.description || t("finance_manual_default_description"),
+          tags: [t("finance_manual_tag")],
+        }))
+        .filter((e) => isInRange(new Date(e.date))),
+    [manualEntries, rangeStart, rangeEnd, t]
   );
 
-  const systemTotal = systemItems.reduce((s, i) => s + i.amount, 0);
   const manualTotal = manualItems.reduce((s, i) => s + i.amount, 0);
 
-// --- PART 2 END ---
-
-// --- PART 3 START ---
-
+  // === сводка ===
   const totalIncome = systemTotal + manualTotal;
-  const totalExpenses = (totalIncome * percent) / 100;
+  const totalExpenses = totalIncome * (percent / 100);
   const balance = totalIncome - totalExpenses;
 
-  const combinedItems = useMemo(
-    () =>
-      [...systemItems, ...manualItems]
-        .map((item) => ({ ...item, expense: (item.amount * percent) / 100 }))
-        .sort((a, b) =>
-          a.date === b.date
-            ? a.timeDisplay.localeCompare(b.timeDisplay)
-            : a.date.localeCompare(b.date)
-        ),
-    [systemItems, manualItems, percent]
-  );
+  // === общий список для таблицы/экспорта (добавляем expense на каждый item) ===
+  const combinedItems = useMemo(() => {
+    const all = [...systemItems, ...manualItems].map((item) => {
+      const expense = (Number(item.amount) || 0) * (percent / 100);
+      return { ...item, expense };
+    });
 
+    return all.sort((a, b) => {
+      if (a.date === b.date) return a.timeDisplay.localeCompare(b.timeDisplay);
+      return a.date.localeCompare(b.date);
+    });
+  }, [systemItems, manualItems, percent]);
+
+  const groupedByDate = useMemo(() => {
+    const map = {};
+    combinedItems.forEach((item) => {
+      if (!map[item.date]) {
+        map[item.date] = {
+          date: item.date,
+          dateDisplay: item.dateDisplay,
+          items: [],
+        };
+      }
+      map[item.date].items.push(item);
+    });
+    return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
+  }, [combinedItems]);
+
+  // === ручной ввод ===
   const addManual = () => {
-    if (!formDate || !formAmount) return;
+    const amount = Number(formAmount);
+    if (!formDate || !amount || amount <= 0) return;
 
-    setManualEntries((prev) => [
-      {
-        id: Date.now(),
-        date: formDate,
-        amount: Number(formAmount),
-        description: formDesc || t("finance_manual"),
-        time:
-          formTimeFrom && formTimeTo
-            ? `${formTimeFrom} – ${formTimeTo}`
-            : formTimeFrom || formTimeTo || "",
-      },
-      ...prev,
-    ]);
+    const time =
+      formTimeFrom && formTimeTo
+        ? `${formTimeFrom} – ${formTimeTo}`
+        : formTimeFrom || formTimeTo || "";
+
+    const entry = {
+      id: Date.now(),
+      date: formDate,
+      amount,
+      description: formDesc || t("finance_manual_default_description"),
+      time,
+    };
+
+    setManualEntries((prev) => [entry, ...prev]);
 
     setFormAmount("");
     setFormDesc("");
@@ -178,11 +257,57 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
     setFormTimeTo("");
   };
 
-  const deleteItem = (item) => {
-    if (!window.confirm(t("finance_delete_confirm"))) return;
+  const deleteManual = (id) => {
+    setManualEntries((prev) => prev.filter((e) => e.id !== id));
+  };
 
-    if (item.type === "system") setExcludedIds((prev) => [...prev, item.bookingId]);
-    else setManualEntries((prev) => prev.filter((e) => e.id !== item.manualId));
+  const deleteItem = (item) => {
+    if (
+      !window.confirm(t("finance_confirm_delete"))
+    )
+      return;
+
+    if (item.type === "system") {
+      setExcludedIds((prev) =>
+        prev.includes(item.bookingId) ? prev : [...prev, item.bookingId]
+      );
+    } else {
+      deleteManual(item.manualId);
+    }
+  };
+
+  const editManual = (item) => {
+    if (item.type !== "manual") return;
+    const entry = manualEntries.find((e) => e.id === item.manualId);
+    if (!entry) return;
+
+    const newDesc = window.prompt(
+      t("finance_prompt_desc"),
+      entry.description || ""
+    );
+    if (newDesc === null) return;
+
+    const newAmountStr = window.prompt(
+      t("finance_prompt_amount"),
+      String(entry.amount)
+    );
+    if (newAmountStr === null) return;
+    const newAmount = Number(newAmountStr);
+    if (!newAmount || newAmount <= 0) return;
+
+    const newTime = window.prompt(
+      t("finance_prompt_time"),
+      entry.time || ""
+    );
+    if (newTime === null) return;
+
+    setManualEntries((prev) =>
+      prev.map((e) =>
+        e.id === entry.id
+          ? { ...e, description: newDesc, amount: newAmount, time: newTime }
+          : e
+      )
+    );
   };
 
   const callReceipt = (item) => {
@@ -190,28 +315,303 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
     onDownloadReceipt(item.booking);
   };
 
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div>
-        <div style={{ fontSize: 20, fontWeight: 600 }}>{t("finance_title")}</div>
-        <div style={{ fontSize: 12, opacity: 0.7 }}>{t("finance_income_caption")}</div>
-        <div style={{ fontSize: 11, opacity: 0.7 }}>
-          {t("finance_period")}: <b>{`${rangeFrom} – ${rangeTo}`}</b>
-        </div>
-      </div>
+  // === экспорт PDF — стиль квитанции, логотип слева, без штрихкода ===
+  const exportPDF = () => {
+    const win = window.open("", "FINANCE_REPORT", "width=900,height=700");
+    if (!win) return;
 
-      <div
-        style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}
-      >
+    win.document.write(`
+      <html>
+      <head>
+        <title>${t("finance_pdf_title")}</title>
+        <meta charSet="utf-8" />
+        <style>
+          * { box-sizing: border-box; }
+          body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 24px;
+            background: #0b1120;
+          }
+          .shell {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #f9fafb;
+            border-radius: 18px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 22px 60px rgba(15,23,42,0.45);
+            overflow: hidden;
+          }
+          .header {
+            padding: 18px 22px 14px 22px;
+            background: linear-gradient(135deg,#020617,#111827);
+            color: #f9fafb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+          }
+          .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+          }
+          .header-left img {
+            display:block;
+            height:68px;
+          }
+          .header-title {
+            display:flex;
+            flex-direction:column;
+            gap:2px;
+          }
+          .header-title-main {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: .04em;
+          }
+          .header-title-sub {
+            font-size: 11px;
+            opacity: 0.75;
+          }
+          .header-right {
+            text-align: right;
+            font-size: 12px;
+          }
+          .header-right b {
+            font-size: 13px;
+          }
+          .content {
+            padding: 16px 22px 22px 22px;
+            font-size: 13px;
+            color: #0f172a;
+          }
+          .intro {
+            font-size: 12px;
+            color: #4b5563;
+            margin-bottom: 10px;
+          }
+          .summary {
+            display: grid;
+            grid-template-columns: repeat(4,minmax(0,1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+          }
+          .card {
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+            padding: 8px 10px;
+          }
+          .card-title {
+            text-transform: uppercase;
+            font-size: 11px;
+            color: #6b7280;
+            margin-bottom: 3px;
+          }
+          .card-value {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 2px;
+          }
+          .card-caption {
+            font-size: 11px;
+            color: #9ca3af;
+          }
+          h2 {
+            font-size: 14px;
+            margin: 6px 0 6px 0;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px;
+            font-size: 12px;
+          }
+          th, td {
+            border: 1px solid #e5e7eb;
+            padding: 6px 8px;
+          }
+          th {
+            background: #f3f4f6;
+            text-align: left;
+          }
+          tbody tr:nth-child(even) {
+            background: #f9fafb;
+          }
+          .muted {
+            color: #9ca3af;
+            text-align: center;
+          }
+
+          @media print {
+            body {
+              background: #fff;
+              padding: 0;
+            }
+            .shell {
+              box-shadow: none;
+              border-radius: 0;
+              border: none;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="shell">
+<div class="header">
+  <div class="header-left">
+    <img src="/logo2.svg" alt="${settings.masterName || "IZ HAIR TREND"}" />
+
+    <div class="header-title">
+      <div class="header-title-main">
+        ${settings.masterName || "IZ HAIR TREND"}
+      </div>
+      <div class="header-title-sub">
+        ${t("finance_pdf_subtitle")}
+      </div>
+    </div>
+  </div>
+</div>
+
+          <div class="content">
+            <div class="intro">
+              ${t("finance_pdf_intro", { percent })}
+            </div>
+
+            <div class="summary">
+              <div class="card">
+                <div class="card-title">${t("finance_system_title")}</div>
+                <div class="card-value">€${systemTotal.toFixed(2)}</div>
+                <div class="card-caption">${t("finance_system_caption")}</div>
+              </div>
+              <div class="card">
+                <div class="card-title">${t("finance_manual_title")}</div>
+                <div class="card-value">€${manualTotal.toFixed(2)}</div>
+                <div class="card-caption">${t("finance_manual_caption")}</div>
+              </div>
+              <div class="card">
+                <div class="card-title">${t("finance_expenses_title", { percent })}</div>
+                <div class="card-value">€${totalExpenses.toFixed(2)}</div>
+                <div class="card-caption">${t("finance_expenses_caption")}</div>
+              </div>
+              <div class="card">
+                <div class="card-title">${t("finance_balance_title")}</div>
+                <div class="card-value">€${balance.toFixed(2)}</div>
+                <div class="card-caption">${t("finance_balance_caption", { percent })}</div>
+              </div>
+            </div>
+
+            <h2>${t("finance_records_title")}</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:90px;">${t("finance_table_date")}</th>
+                  <th style="width:120px;">${t("finance_table_time")}</th>
+                  <th>${t("finance_table_desc")}</th>
+                  <th style="width:80px;">${t("finance_table_amount")}</th>
+                  <th style="width:80px;">${t("finance_table_expense")}</th>
+                  <th style="width:80px;">${t("finance_table_receipt")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${
+                  groupedByDate.length === 0
+                    ? `<tr><td colspan="7" class="muted">${t("finance_no_records")}</td></tr>`
+                    : groupedByDate
+                        .map((g) =>
+                          g.items
+                            .map((item, idx) => {
+                              const kv =
+                                item.type === "system" ? item.shortId || "" : "";
+                              const dateCell =
+                                idx === 0 ? g.dateDisplay : "";
+                              return `<tr>
+                                <td>${dateCell}</td>
+                                <td>${item.timeDisplay}</td>
+                                <td>${item.description || ""}</td>
+                                <td>€${item.amount.toFixed(2)}</td>
+                                <td>€${item.expense.toFixed(2)}</td>
+                                <td>${kv ? "#" + kv : ""}</td>
+                              </tr>`;
+                            })
+                            .join("")
+                        )
+                        .join("")
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <script>
+          window.focus();
+          setTimeout(function(){ window.print(); }, 400);
+          // окно не закрываем — можно нажать Cancel и просто žiūrėti ataskaitą
+        </script>
+      </body>
+      </html>
+    `);
+
+    win.document.close();
+    win.focus();
+  };
+
+  // === стили-помощники ===
+  const wrapStyle = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 16,
+  };
+
+  const pillBase = {
+    padding: "6px 14px",
+    borderRadius: 999,
+    fontSize: 12,
+    whiteSpace: "nowrap",
+  };
+
+  const years = [
+    now.getFullYear() - 1,
+    now.getFullYear(),
+    now.getFullYear() + 1,
+  ];
+
+  // === render ===
+  return (
+    <div style={wrapStyle}>
+      {/* верх: заголовок + диапазон + экспорт + процент */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div
-          style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
         >
           <div>
-            <div style={{ fontSize: 20, fontWeight: 600 }}>{t("finance_filters")}</div>
-            <div style={{ fontSize: 12, opacity: 0.7 }}>{t("finance_filters_sub")}</div>
+            <div style={{ fontSize: 20, fontWeight: 600 }}>
+              {t("finance_title")}
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.7 }}>
+              {t("finance_subtitle")}
+            </div>
+            <div style={{ fontSize: 11, opacity: 0.7, marginTop: 4 }}>
+              {t("finance_period_prefix")}: <b>{rangeLabel}</b>
+            </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+          {/* выбор периода + процент */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              alignItems: "flex-end",
+            }}
+          >
             <div
               style={{
                 display: "flex",
@@ -222,49 +622,62 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
                 border: "1px solid rgba(168,85,247,0.4)",
               }}
             >
-              {["month", "year", "range"].map((m) => (
+              {[
+                { v: "month", label: t("finance_mode_month") },
+                { v: "year", label: t("finance_mode_year") },
+                { v: "range", label: t("finance_mode_range") },
+              ].map((o) => (
                 <button
-                  key={m}
-                  onClick={() => setMode(m)}
+                  key={o.v}
+                  onClick={() => setMode(o.v)}
                   style={{
+                    ...pillBase,
                     padding: "5px 12px",
                     borderRadius: 999,
                     border:
-                      mode === m
+                      mode === o.v
                         ? "1px solid rgba(244,244,245,0.9)"
                         : "1px solid transparent",
                     background:
-                      mode === m ? "rgba(248,250,252,0.95)" : "rgba(0,0,0,0)",
-                    color: mode === m ? "#020617" : "#e5e7eb",
-                    fontWeight: mode === m ? 600 : 400,
+                      mode === o.v
+                        ? "rgba(248,250,252,0.95)"
+                        : "rgba(0,0,0,0)",
+                    color: mode === o.v ? "#020617" : "#e5e7eb",
+                    fontWeight: mode === o.v ? 600 : 400,
                     cursor: "pointer",
-                    fontSize: 12,
                   }}
                 >
-                  {t(`finance_mode_${m}`)}
+                  {o.label}
                 </button>
               ))}
             </div>
 
             {mode === "month" && (
               <div style={{ display: "flex", gap: 6 }}>
-                <select value={month} onChange={(e) => setMonth(Number(e.target.value))} style={selectSmall}>
-                  {MONTHS.map((m, i) => (
-                    <option key={i} value={i}>{m}</option>
+                <select
+                  value={month}
+                  onChange={(e) => setMonth(Number(e.target.value))}
+                  style={selectSmall}
+                >
+                  {months.map((m, i) => (
+                    <option key={m} value={i}>
+                      {m}
+                    </option>
                   ))}
                 </select>
-
-                <select value={year} onChange={(e) => setYear(Number(e.target.value))} style={selectSmall}>
-                  {[year - 1, year, year + 1].map((y) => (
-                    <option key={y} value={y}>{y}</option>
+                <select
+                  value={year}
+                  onChange={(e) => setYear(Number(e.target.value))}
+                  style={selectSmall}
+                >
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
                   ))}
                 </select>
               </div>
             )}
-
-// --- PART 3 END ---
-
-// --- PART 4 START ---
 
             {mode === "year" && (
               <div style={{ display: "flex", gap: 6 }}>
@@ -273,8 +686,10 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
                   onChange={(e) => setYear(Number(e.target.value))}
                   style={selectSmall}
                 >
-                  {[year - 1, year, year + 1].map((y) => (
-                    <option key={y} value={y}>{y}</option>
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -297,14 +712,28 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
               </div>
             )}
 
+            {/* процент расходов */}
             <div style={{ fontSize: 11, color: "#e5e7eb" }}>
-              {t("finance_expense_percent")}: {" "}
+              {t("finance_expense_percent_label")}{" "}
               <input
                 type="number"
-                value={percent}
+                value={percent === "" ? "" : percent}
                 min={0}
                 max={100}
-                onChange={(e) => setPercent(Number(e.target.value))}
+                onChange={(e) => {
+                  const v = e.target.value;
+
+                  if (v === "") {
+                    // временно показываем пустое значение — не сбрасываем на 0
+                    setPercent("");
+                    return;
+                  }
+
+                  const n = Number(v);
+                  if (!isNaN(n)) {
+                    setPercent(Math.min(100, Math.max(0, n)));
+                  }
+                }}
                 style={{
                   width: 60,
                   padding: "4px 6px",
@@ -322,10 +751,12 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
           </div>
         </div>
 
-        <button onClick={() => window.print()} style={bigPdfBtn}>
-          <span style={{ marginRight: 6 }}>📄</span> {t("finance_export_pdf")}
+        {/* большая кнопка PDF */}
+        <button onClick={exportPDF} style={bigPdfBtn}>
+          <span style={{ marginRight: 6 }}>📄</span> {t("finance_export_pdf_button")}
         </button>
 
+        {/* текстовая сводка */}
         <div
           style={{
             display: "grid",
@@ -335,38 +766,45 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
           }}
         >
           <div>
-            <div style={{ fontWeight: 600 }}>{t("finance_system")}</div>
+            <div style={{ fontWeight: 600 }}>{t("finance_system_title")}</div>
             <div>€{systemTotal.toFixed(2)}</div>
-            <div style={{ opacity: 0.7 }}>{t("finance_system_caption")}</div>
+            <div style={{ opacity: 0.7 }}>
+              {t("finance_system_caption")}
+            </div>
           </div>
-
           <div>
-            <div style={{ fontWeight: 600 }}>{t("finance_manual")}</div>
+            <div style={{ fontWeight: 600 }}>{t("finance_manual_title")}</div>
             <div>€{manualTotal.toFixed(2)}</div>
-            <div style={{ opacity: 0.7 }}>{t("finance_manual_caption")}</div>
+            <div style={{ opacity: 0.7 }}>
+              {t("finance_manual_caption")}
+            </div>
           </div>
-
           <div>
-            <div style={{ fontWeight: 600 }}>{t("finance_expenses")}</div>
+            <div style={{ fontWeight: 600 }}>
+              {t("finance_expenses_title", { percent })}
+            </div>
             <div>€{totalExpenses.toFixed(2)}</div>
-            <div style={{ opacity: 0.7 }}>{t("finance_expenses_caption")}</div>
+            <div style={{ opacity: 0.7 }}>
+              {t("finance_expenses_caption")}
+            </div>
           </div>
-
           <div>
-            <div style={{ fontWeight: 600 }}>{t("finance_balance")}</div>
+            <div style={{ fontWeight: 600 }}>{t("finance_balance_title")}</div>
             <div>€{balance.toFixed(2)}</div>
-            <div style={{ opacity: 0.7 }}>{t("finance_balance_caption")}</div>
+            <div style={{ opacity: 0.7 }}>
+              {t("finance_balance_caption", { percent })}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Add manual entry */}
+      {/* Ручной ввод */}
       <div>
         <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
-          {t("finance_add_manual_title")}
+          {t("finance_manual_add_title")}
         </div>
         <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
-          {t("finance_add_manual_hint")}
+          {t("finance_manual_add_subtitle")}
         </div>
 
         <div
@@ -392,7 +830,11 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
               onChange={(e) => setFormTimeFrom(e.target.value)}
               style={{ ...manualInput, flex: 1 }}
             />
-            <span style={{ fontSize: 11, opacity: 0.6, alignSelf: "center" }}>–</span>
+            <span
+              style={{ fontSize: 11, opacity: 0.6, alignSelf: "center" }}
+            >
+              –
+            </span>
             <input
               type="time"
               value={formTimeTo}
@@ -404,21 +846,17 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
           <div style={manualField}>
             <input
               type="number"
-              placeholder={t("finance_amount_placeholder")}
+              placeholder={t("finance_placeholder_amount")}
               value={formAmount}
               onChange={(e) => setFormAmount(e.target.value)}
               style={manualInput}
             />
           </div>
 
-// --- PART 4 END ---
-
-// --- PART 5 START ---
-
           <div style={manualField}>
             <input
               type="text"
-              placeholder={t("finance_description_placeholder")}
+              placeholder={t("finance_placeholder_desc")}
               value={formDesc}
               onChange={(e) => setFormDesc(e.target.value)}
               style={manualInput}
@@ -426,13 +864,13 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
           </div>
 
           <button onClick={addManual} style={manualAddBtn}>
-            {t("finance_add_button")}
+            {t("finance_manual_add_button")}
           </button>
         </div>
       </div>
 
-      {/* History section */}
-      <div style={{ marginTop: 32 }}>
+      {/* История — строки-пилюли */}
+      <div>
         <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
           {t("finance_history_title")}
         </div>
@@ -459,6 +897,7 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {combinedItems.map((item) => (
             <div key={item.id} style={rowStyle}>
+              {/* левая часть: дата, время, теги / описание */}
               <div
                 style={{
                   display: "flex",
@@ -491,7 +930,13 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
                 </span>
 
                 {item.type === "system" ? (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 4,
+                    }}
+                  >
                     {renderTagPills(item.tags, serviceStyles)}
                   </div>
                 ) : (
@@ -510,7 +955,15 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
                 )}
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {/* правая часть: сумма, номер, кнопки */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexWrap: "nowrap",
+                }}
+              >
                 {item.type === "system" && (
                   <span
                     style={{
@@ -539,9 +992,10 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
                   €{item.amount.toFixed(2)}
                 </span>
 
+                {/* кнопки */}
                 {item.type === "system" && (
                   <button
-                    title={t("finance_receipt")}
+                    title={t("finance_receipt_btn_title")}
                     onClick={() => callReceipt(item)}
                     style={iconBtn}
                   >
@@ -551,7 +1005,7 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
 
                 {item.type === "manual" && (
                   <button
-                    title={t("finance_edit")}
+                    title={t("finance_edit_btn_title")}
                     onClick={() => editManual(item)}
                     style={iconBtnPurple}
                   >
@@ -560,7 +1014,7 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
                 )}
 
                 <button
-                  title={t("finance_delete")}
+                  title={t("finance_delete_btn_title")}
                   onClick={() => deleteItem(item)}
                   style={iconBtnRed}
                 >
@@ -575,12 +1029,8 @@ export default function FinancePanel({ bookings = [], serviceStyles = {}, onDown
   );
 }
 
-// --- PART 5 END ---
+/* ===== Вспомогательные стили / функции для таблицы ===== */
 
-
-// --- PART 6 (final styles & helpers) ---
-
-// Row pill styling
 const rowStyle = {
   display: "flex",
   alignItems: "center",
@@ -589,14 +1039,31 @@ const rowStyle = {
   borderRadius: 18,
   background: "rgba(15,10,25,0.96)",
   border: "1px solid rgba(139,92,246,0.7)",
+  boxShadow: "0 0 18px rgba(15,23,42,0.95)",
   overflowX: "auto",
 };
 
-const pillBase = {
-  padding: "4px 10px",
-  borderRadius: 12,
-  fontSize: 12,
-  whiteSpace: "nowrap",
+const selectSmall = {
+  padding: "6px 10px",
+  borderRadius: 10,
+  border: "1px solid rgba(148,163,184,0.6)",
+  background: "rgba(15,23,42,0.95)",
+  color: "#e5e7eb",
+  fontSize: 11,
+};
+
+const bigPdfBtn = {
+  width: "100%",
+  borderRadius: 16,
+  padding: "8px 0",
+  border: "1px solid rgba(129,140,248,0.85)",
+  background:
+    "linear-gradient(90deg, rgba(67,56,202,0.95), rgba(124,58,237,0.95))",
+  color: "#f9fafb",
+  fontWeight: 500,
+  fontSize: 13,
+  cursor: "pointer",
+  boxShadow: "0 10px 36px rgba(55,48,163,0.8)",
 };
 
 const manualField = {
@@ -618,7 +1085,8 @@ const manualInput = {
 const manualAddBtn = {
   borderRadius: 14,
   border: "1px solid rgba(139,92,246,0.8)",
-  background: "linear-gradient(135deg, rgba(88,28,135,0.95), rgba(124,58,237,0.95))",
+  background:
+    "linear-gradient(135deg, rgba(88,28,135,0.95), rgba(124,58,237,0.95))",
   color: "#f9fafb",
   fontSize: 13,
   fontWeight: 600,
@@ -672,5 +1140,3 @@ function renderTagPills(tags, serviceStyles) {
     );
   });
 }
-
-// --- END OF FILE ---
