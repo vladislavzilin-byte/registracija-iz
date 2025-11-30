@@ -21,10 +21,17 @@ const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
 const formatLithuanianPhone = (value) => {
   let digits = value.replace(/\D/g, "");
-  if (!digits.startsWith("")) digits = "" + digits.replace(/^0+/, "");
+
+  // Если не начинается с 370 — добавляем
+  if (!digits.startsWith("370")) {
+    digits = "370" + digits.replace(/^0+/, "");
+  }
+
   if (digits.length > 11) digits = digits.slice(0, 11);
+
   return "+" + digits;
 };
+
 
 /* ===================== Forgot Password Modal ===================== */
 function ForgotPasswordModal({ open, onClose }) {
