@@ -45,7 +45,7 @@ ru: {
   mb_edit_profile: 'Редактировать профиль',
   mb_save: 'Сохранить',
   mb_cancel: 'Отмена',
-
+mb_pay_bank: 'Банковский перевод',
   mb_filters_all: 'Все',
   mb_filters_active: 'Активные',
   mb_filters_history: 'История',
@@ -251,7 +251,7 @@ lt: {
   mb_edit_profile: 'Redaguoti profilį',
   mb_save: 'Išsaugoti',
   mb_cancel: 'Atšaukti',
-
+mb_pay_bank: 'Banko pavedimas',
   mb_filters_all: 'Visi',
   mb_filters_active: 'Aktyvūs',
   mb_filters_history: 'Istorija',
@@ -450,7 +450,7 @@ en: {
   mb_edit_profile: 'Edit profile',
   mb_save: 'Save',
   mb_cancel: 'Cancel',
-
+mb_pay_bank: 'Bank transfer',
   mb_filters_all: 'All',
   mb_filters_active: 'Active',
   mb_filters_history: 'History',
