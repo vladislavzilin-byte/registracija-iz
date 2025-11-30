@@ -111,6 +111,17 @@ export const dict = {
     receipt_qr_hint: 'QR-код визитки',
     receipt_footer_text:
       'Эта квитанция сформирована автоматически и действует без подписи. Вы можете сохранить её как PDF через меню печати браузера.',
+receipt_number_label: 'Квитанция №',
+receipt_created_label: 'Создано:',
+receipt_client_label: 'Клиент:',
+receipt_phone_label: 'Телефон:',
+receipt_date_label: 'Дата:',
+receipt_time_label: 'Время:',
+receipt_services_label: 'Услуги:',
+receipt_advance_label: 'Аванс:',
+receipt_payment_status_label: 'Статус оплаты:',
+receipt_status_paid: 'Оплачено',
+receipt_status_unpaid: 'Не оплачено',
 
     /* ============================================================
          ADMIN
@@ -386,6 +397,17 @@ export const dict = {
     receipt_qr_hint: 'Vizitinės QR kodas',
     receipt_footer_text:
       'Šis kvitas sugeneruotas automatiškai ir galioja be parašo. Galite jį išsaugoti kaip PDF per naršyklės spausdinimo meniu.',
+receipt_number_label: 'Kvito Nr.',
+receipt_created_label: 'Sukurta:',
+receipt_client_label: 'Klientas:',
+receipt_phone_label: 'Telefonas:',
+receipt_date_label: 'Data:',
+receipt_time_label: 'Laikas:',
+receipt_services_label: 'Paslaugos:',
+receipt_advance_label: 'Avansas:',
+receipt_payment_status_label: 'Mokėjimo būsena:',
+receipt_status_paid: 'Apmokėta',
+receipt_status_unpaid: 'Neapmokėta',
 
     /* ========== Admin ========== */
     master_name: 'Meistrės vardas',
@@ -650,6 +672,17 @@ export const dict = {
     receipt_qr_hint: 'Business card QR code',
     receipt_footer_text:
       'This receipt is generated automatically and is valid without a signature. You can save it as PDF via your browser print menu.',
+receipt_number_label: 'Receipt №',
+receipt_created_label: 'Created:',
+receipt_client_label: 'Client:',
+receipt_phone_label: 'Phone:',
+receipt_date_label: 'Date:',
+receipt_time_label: 'Time:',
+receipt_services_label: 'Services:',
+receipt_advance_label: 'Advance:',
+receipt_payment_status_label: 'Payment status:',
+receipt_status_paid: 'Paid',
+receipt_status_unpaid: 'Unpaid',
 
     /* ========== Admin ========== */
     master_name: 'Master name',
