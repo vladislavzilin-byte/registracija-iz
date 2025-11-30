@@ -318,9 +318,9 @@ export default function Calendar() {
     touchStartX.current = null
   }
 
-  const monthLabelRaw = format(currentMonth, 'LLLL yyyy')
-  const monthLabel =
-    monthLabelRaw.charAt(0).toUpperCase() + monthLabelRaw.slice(1)
+ const monthIndex = currentMonth.getMonth()
+const year = currentMonth.getFullYear()
+const monthLabel = t(`month_${monthIndex}`) + ' ' + year
 
   const navBtnStyle = {
     width: 130,
