@@ -37,6 +37,36 @@ ru: {
   no_records: 'Нет записей',
   only_future: 'Только будущие',
 
+  calendar_prices_title: 'Цены',
+calendar_prices_toggle: 'Смотреть цены',
+calendar_prices_section_title: 'Цены услуг',
+
+weekday_mon_short: 'Пн',
+weekday_tue_short: 'Вт',
+weekday_wed_short: 'Ср',
+weekday_thu_short: 'Чт',
+weekday_fri_short: 'Пт',
+weekday_sat_short: 'Сб',
+weekday_sun_short: 'Вс',
+
+slots_for: 'Слоты на',
+reserved_label: 'Занято',
+processing: 'Обработка...',
+no_slots: 'Нет доступных слотов',
+
+cannot_book_past: 'Нельзя записаться на прошедшее время',
+already_booked: 'Это время уже занято',
+login_or_register: 'Войдите или зарегистрируйтесь, чтобы записаться',
+
+modal_select_services_title: 'Какие услуги вы хотите выбрать?',
+modal_select_services_hint: 'Выберите одну или несколько услуг:',
+modal_cancel: 'Отменить',
+modal_confirm: 'Подтвердить'
+ 
+  /* ============================================================
+       MY BOOKINGS (MB)
+  ============================================================ */
+   
   /* ============================================================
        MY BOOKINGS (MB)
   ============================================================ */
