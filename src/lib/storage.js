@@ -10,7 +10,7 @@ const DEFAULT_USERS = [
     phone: '+37060000000',
     email: 'vladislavzilin@gmail.com',
     password: 'vladiokas',
-    instagram: '',
+    instagram: 'vladislav.zilin',
   },
 ];
 
