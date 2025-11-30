@@ -58,6 +58,9 @@ ru: {
   mb_status_confirmed_unpaid: 'Бронирование подтверждено • Ожидает оплаты',
   mb_status_pending_paid: 'Ожидает подтверждения • Оплачено',
   mb_status_pending_unpaid: 'Ожидает подтверждения • Не оплачено',
+  mb_status_unpaid: 'Не оплачено',
+mb_pay_button: 'Оплатить',
+ 
   mb_status_canceled_client: 'Отменено клиентом',
   mb_status_canceled_admin: 'Отменено администратором',
 
@@ -261,6 +264,9 @@ lt: {
   mb_status_confirmed_unpaid: 'Vizitas patvirtintas • Laukia apmokėjimo',
   mb_status_pending_paid: 'Laukia patvirtinimo • Apmokėta',
   mb_status_pending_unpaid: 'Laukia patvirtinimo • Neapmokėta',
+   mb_status_unpaid: 'Neapmokėta',
+mb_pay_button: 'Apmokėti',
+
   mb_status_canceled_client: 'Atšaukta kliento',
   mb_status_canceled_admin: 'Atšaukta administratoriaus',
 
@@ -457,6 +463,8 @@ en: {
   mb_status_confirmed_unpaid: 'Booking confirmed • Awaiting payment',
   mb_status_pending_paid: 'Pending approval • Paid',
   mb_status_pending_unpaid: 'Pending approval • Unpaid',
+   mb_status_unpaid: 'Unpaid',
+mb_pay_button: 'Pay',
   mb_status_canceled_client: 'Canceled by client',
   mb_status_canceled_admin: 'Canceled by admin',
 
