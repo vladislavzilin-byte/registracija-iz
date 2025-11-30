@@ -935,12 +935,12 @@ export default function MyBookings() {
                 Paysera
               </button>
               <button
-                disabled={paymentLoading}
-                style={payOptionBtn}
-                onClick={() => startPayment('bank')}
-              >
-                Banko pavedimas
-              </button>
+  disabled={paymentLoading}
+  style={payOptionBtn}
+  onClick={() => startPayment('bank')}
+>
+  {t('mb_pay_bank')}
+</button>
             </div>
 
             {/* Реквизиты (без QR) */}
