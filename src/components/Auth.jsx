@@ -21,7 +21,7 @@ const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
 const formatLithuanianPhone = (value) => {
   let digits = value.replace(/\D/g, "");
-  if (!digits.startsWith("+")) digits = "+" + digits.replace(/^0+/, "");
+  if (!digits.startsWith("")) digits = "" + digits.replace(/^0+/, "");
   if (digits.length > 11) digits = digits.slice(0, 11);
   return "+" + digits;
 };
