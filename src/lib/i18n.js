@@ -39,6 +39,19 @@ export const dict = {
 login_error_invalid: 'Неверный логин или пароль',
 forgot_password: 'Забыли пароль?',
     login_or_register: 'Войдите или зарегистрируйтесь',
+auth_err_name: "Введите имя",
+auth_err_identifier: "Введите email или телефон",
+auth_err_invalid_login: "Неверный логин или пароль",
+
+auth_recover_title: "Восстановление пароля",
+auth_enter_phone: "Введите номер телефона",
+auth_show_password: "Показать пароль",
+
+auth_user_not_found: "Пользователь не найден",
+auth_password_encrypted: "Пароль зашифрован и не может быть показан.",
+auth_password_not_found: "Пароль не найден",
+
+password_confirm: "Подтвердите пароль",
 
     /* ============================================================
          MY BOOKINGS (MB)
@@ -330,6 +343,19 @@ finance_no_records: 'Нет записей за выбранный период'
 login_error_invalid: 'Neteisingas el. paštas / telefonas arba slaptažodis',
 forgot_password: 'Pamiršote slaptažodį?',
     login_or_register: 'Prisijunkite arba užsiregistruokite.',
+auth_err_name: "Įveskite vardą",
+auth_err_identifier: "Įveskite el. paštą arba telefoną",
+auth_err_invalid_login: "Neteisingas prisijungimas arba slaptažodis",
+
+auth_recover_title: "Slaptažodžio atkūrimas",
+auth_enter_phone: "Įveskite telefono numerį",
+auth_show_password: "Rodyti slaptažodį",
+
+auth_user_not_found: "Vartotojas nerastas",
+auth_password_encrypted: "Slaptažodis yra užšifruotas ir negali būti parodytas.",
+auth_password_not_found: "Slaptažodis nerastas",
+
+password_confirm: "Patvirtinkite slaptažodį",
 
     /* ========== MyBookings ========== */
     mb_title: 'Mano vizitai',
@@ -606,7 +632,19 @@ finance_no_records: 'Nėra įrašų pasirinktame laikotarpyje',
 login_error_invalid: 'Invalid login or password',
 forgot_password: 'Forgot password?',
     login_or_register: 'Please log in or register.',
+auth_err_name: "Enter your name",
+auth_err_identifier: "Enter email or phone",
+auth_err_invalid_login: "Invalid login or password",
 
+auth_recover_title: "Password recovery",
+auth_enter_phone: "Enter phone number",
+auth_show_password: "Show password",
+
+auth_user_not_found: "User not found",
+auth_password_encrypted: "Password is encrypted and cannot be shown.",
+auth_password_not_found: "Password not found",
+
+password_confirm: "Confirm password",
     /* ========== MyBookings ========== */
     mb_title: 'My bookings',
     mb_profile_title: 'Profile',
