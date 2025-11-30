@@ -35,7 +35,12 @@ export const dict = {
     only_future: 'Только будущие',
 
     /* ------------------ Финансы ------------------ */
-    finance_title: 'Финансы',
+    finance_mode_month: 'Месяц',
+finance_mode_year: 'Год',
+finance_mode_range: 'Период',
+finance_expense_percent_label: 'Процент расходов:',
+       search_placeholder: 'Поиск...'
+   finance_title: 'Финансы',
     finance_subtitle: 'Доходы от бронирований и ручных записей',
 
     finance_system_title: 'Система',
@@ -125,7 +130,12 @@ export const dict = {
     only_future: 'Tik būsimi',
 
     /* ------------------ Finansai ------------------ */
-    finance_title: 'Finansai',
+    finance_mode_month: 'Mėnuo',
+finance_mode_year: 'Metai',
+finance_mode_range: 'Laikotarpis',
+finance_expense_percent_label: 'Išlaidų procentas:',
+search_placeholder: 'Paieška...'
+       finance_title: 'Finansai',
     finance_subtitle: 'Pajamos iš rezervacijų ir rankinių įrašų',
 
     finance_system_title: 'Sistema',
@@ -217,7 +227,11 @@ export const dict = {
     /* ------------------ Finance ------------------ */
     finance_title: 'Finance',
     finance_subtitle: 'Income from bookings & manual entries',
-
+finance_mode_month: 'Month',
+finance_mode_year: 'Year',
+finance_mode_range: 'Range',
+finance_expense_percent_label: 'Expense percent:',
+search_placeholder: 'Search...'
     finance_system_title: 'System',
     finance_manual_title: 'Manual',
     finance_expenses_title: 'Expenses ({percent}%)',
