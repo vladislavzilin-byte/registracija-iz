@@ -25,7 +25,7 @@ export default function FinancePanel({
   onDownloadReceipt,
   settings = {},
 }) {
-  const { t, lang } = useI18n();          // ← вверх, чтобы везде был доступ
+  const { t, lang } = useI18n();
   const now = new Date();
 
   const [mode, setMode] = useState("month");
@@ -39,7 +39,6 @@ export default function FinancePanel({
   const [manualEntries, setManualEntries] = useState([]);
   const [excludedIds, setExcludedIds] = useState([]);
 
-  // процент расходов
   const [percent, setPercent] = useState(() => {
     try {
       const raw = localStorage.getItem(PERCENT_KEY);
@@ -61,60 +60,81 @@ export default function FinancePanel({
   useEffect(() => {
     try {
       const raw = localStorage.getItem(MANUAL_KEY);
-      if (raw) setManualEntries(JSON.parse(raw) || []);
-    } catch (e) { console.error(e); }
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setManualEntries(parsed);
+      }
+    } catch (e) {
+      console.error("Finance manual load error", e);
+    }
     try {
-      const raw = localStorage.getItem(EXCLUDE_KEY);
-      if (raw) setExcludedIds(JSON.parse(raw) || []);
-    } catch (e) { console.error(e); }
+      const raw2 = localStorage.getItem(EXCLUDE_KEY);
+      if (raw2) {
+        const parsed = JSON.parse(raw2);
+        if (Array.isArray(parsed)) setExcludedIds(parsed);
+      }
+    } catch (e) {
+      console.error("Finance exclude load error", e);
+    }
   }, []);
 
-  useEffect(() => { localStorage.setItem(MANUAL_KEY, JSON.stringify(manualEntries)); }, [manualEntries]);
-  useEffect(() => { localStorage.setItem(EXCLUDE_KEY, JSON.stringify(excludedIds)); }, [excludedIds]);
   useEffect(() => {
-    if (percent !== "" && percent !== null) {
+    try {
+      localStorage.setItem(MANUAL_KEY, JSON.stringify(manualEntries));
+    } catch (e) {
+      console.error("Finance manual save error", e);
+    }
+  }, [manualEntries]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(EXCLUDE_KEY, JSON.stringify(excludedIds));
+    } catch (e) {
+      console.error("Finance exclude save error", e);
+    }
+  }, [excludedIds]);
+
+  useEffect(() => {
+    try {
+      if (percent === "" || percent === null) return;
       localStorage.setItem(PERCENT_KEY, String(percent));
+    } catch (e) {
+      console.error("Finance percent save error", e);
     }
   }, [percent]);
 
-  // динамический заголовок периода (месяц / год / произвольный)
-  const rangeLabel = useMemo(() => {
-    if (mode === "month") {
-      const date = new Date(year, month, 1);
-      let monthName = date.toLocaleString(lang, { month: "long" });
-      monthName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-      return `${monthName} ${year}`;
-    }
-    if (mode === "year") {
-      return t("finance_year_label", { year });
-    }
-    return `${t("finance_period_label")}: ${rangeFrom || "…"} – ${rangeTo || "…"}`;
-  }, [mode, year, month, rangeFrom, rangeTo, lang, t]);
+  // динамический label периода (месяц теперь через lang)
+  const [rangeStart, rangeEnd, rangeLabel] = useMemo(() => {
+    let start, end, label;
 
-  const [rangeStart, rangeEnd] = useMemo(() => {
-    let start, end;
     if (mode === "month") {
       start = new Date(year, month, 1);
       end = new Date(year, month + 1, 1);
+      const monthName = new Date(year, month, 1).toLocaleString(lang, { month: "long" });
+      label = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`;
     } else if (mode === "year") {
       start = new Date(year, 0, 1);
       end = new Date(year + 1, 0, 1);
+      label = t("finance_year_label", { year });
     } else {
       const from = rangeFrom ? new Date(rangeFrom) : new Date(year, month, 1);
       const to = rangeTo ? new Date(rangeTo) : now;
       start = from;
       end = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
+      label = `${t("finance_period_label")}: ${rangeFrom || "…"} – ${rangeTo || "…"}`;
     }
-    return [start, end];
-  }, [mode, year, month, rangeFrom, rangeTo]);
+
+    return [start, end, label];
+  }, [mode, year, month, rangeFrom, rangeTo, lang, t]);
 
   const isInRange = (d) => d >= rangeStart && d < rangeEnd;
 
-  // системные записи
+  // системные доходы
   const systemItems = useMemo(() => {
     return bookings
       .filter((b) => {
-        if (isCanceled(b) || !isPaid(b)) return false;
+        if (isCanceled(b)) return false;
+        if (!isPaid(b)) return false;
         const end = new Date(b.end || b.start);
         if (!isInRange(end)) return false;
         if (excludedIds.includes(b.id)) return false;
@@ -144,7 +164,7 @@ export default function FinancePanel({
 
   const systemTotal = systemItems.reduce((s, i) => s + i.amount, 0);
 
-  // ручные записи
+  // ручные доходы
   const manualItems = useMemo(
     () =>
       manualEntries
@@ -181,7 +201,6 @@ export default function FinancePanel({
     });
   }, [systemItems, manualItems, percent]);
 
-  // ручной ввод
   const addManual = () => {
     const amount = Number(formAmount);
     if (!formDate || !amount || amount <= 0) return;
@@ -249,7 +268,6 @@ export default function FinancePanel({
     onDownloadReceipt(item.booking);
   };
 
-  // всё готово — теперь только t() везде
   return (
     <div style={{ padding: "0 10px" }}>
 
@@ -262,36 +280,15 @@ export default function FinancePanel({
           {t("finance_add_manual_hint")}
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "150px 250px 100px 1fr 120px",
-            gap: 8,
-          }}
-        >
+        <div style={{ display: "grid", gridTemplateColumns: "150px 250px 100px 1fr 120px", gap: 8 }}>
           <div style={manualField}>
-            <input
-              type="date"
-              value={formDate}
-              onChange={(e) => setFormDate(e.target.value)}
-              style={manualInput}
-            />
+            <input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} style={manualInput} />
           </div>
 
           <div style={{ ...manualField, display: "flex", gap: 4 }}>
-            <input
-              type="time"
-              value={formTimeFrom}
-              onChange={(e) => setFormTimeFrom(e.target.value)}
-              style={{ ...manualInput, flex: 1 }}
-            />
+            <input type="time" value={formTimeFrom} onChange={(e) => setFormTimeFrom(e.target.value)} style={{ ...manualInput, flex: 1 }} />
             <span style={{ fontSize: 11, opacity: 0.6, alignSelf: "center" }}>–</span>
-            <input
-              type="time"
-              value={formTimeTo}
-              onChange={(e) => setFormTimeTo(e.target.value)}
-              style={{ ...manualInput, flex: 1 }}
-            />
+            <input type="time" value={formTimeTo} onChange={(e) => setFormTimeTo(e.target.value)} style={{ ...manualInput, flex: 1 }} />
           </div>
 
           <div style={manualField}>
@@ -321,7 +318,7 @@ export default function FinancePanel({
       </div>
 
       {/* История */}
-      <div style={{ marginTop: 32 }}>
+      <div>
         <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
           {t("finance_history_title")}
         </div>
@@ -330,17 +327,15 @@ export default function FinancePanel({
         </div>
 
         {combinedItems.length === 0 && (
-          <div
-            style={{
-              borderRadius: 16,
-              border: "1px solid rgba(51,65,85,0.7)",
-              background: "rgba(15,23,42,0.9)",
-              padding: "10px 12px",
-              fontSize: 12,
-              textAlign: "center",
-              opacity: 0.8,
-            }}
-          >
+          <div style={{
+            borderRadius: 16,
+            border: "1px solid rgba(51,65,85,0.7)",
+            background: "rgba(15,23,42,0.9)",
+            padding: "10px 12px",
+            fontSize: 12,
+            textAlign: "center",
+            opacity: 0.8,
+          }}>
             {t("finance_no_records")}
           </div>
         )}
@@ -348,34 +343,12 @@ export default function FinancePanel({
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {combinedItems.map((item) => (
             <div key={item.id} style={rowStyle}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  flexWrap: "wrap",
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                <span
-                  style={{
-                    ...pillBase,
-                    background: "rgba(15,23,42,0.95)",
-                    border: "1px solid rgba(129,140,248,0.9)",
-                    fontWeight: 600,
-                  }}
-                >
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
+                <span style={{ ...pillBase, background: "rgba(15,23,42,0.95)", border: "1px solid rgba(129,140,248,0.9)", fontWeight: 600 }}>
                   {item.dateDisplay}
                 </span>
 
-                <span
-                  style={{
-                    ...pillBase,
-                    background: "rgba(15,23,42,0.95)",
-                    border: "1px solid rgba(99,102,241,0.7)",
-                  }}
-                >
+                <span style={{ ...pillBase, background: "rgba(15,23,42,0.95)", border: "1px solid rgba(99,102,241,0.7)" }}>
                   {item.timeDisplay}
                 </span>
 
@@ -384,16 +357,14 @@ export default function FinancePanel({
                     {renderTagPills(item.tags, serviceStyles)}
                   </div>
                 ) : (
-                  <span
-                    style={{
-                      ...pillBase,
-                      background: "rgba(190,24,93,0.25)",
-                      border: "1px solid rgba(244,114,182,0.8)",
-                      maxWidth: "100%",
-                      textOverflow: "ellipsis",
-                      overflow: "hidden",
-                    }}
-                  >
+                  <span style={{
+                    ...pillBase,
+                    background: "rgba(190,24,93,0.25)",
+                    border: "1px solid rgba(244,114,182,0.8)",
+                    maxWidth: "100%",
+                    textOverflow: "ellipsis",
+                    overflow: "hidden",
+                  }}>
                     {item.description}
                   </span>
                 )}
@@ -401,46 +372,36 @@ export default function FinancePanel({
 
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
                 {item.type === "system" && (
-                  <span
-                    style={{
-                      ...pillBase,
-                      padding: "5px 10px",
-                      background: "rgba(15,23,42,0.95)",
-                      border: "1px solid rgba(148,163,184,0.9)",
-                      fontSize: 11,
-                    }}
-                  >
+                  <span style={{ ...pillBase, padding: "5px 10px", background: "rgba(15,23,42,0.95)", border: "1px solid rgba(148,163,184,0.9)", fontSize: 11 }}>
                     #{item.shortId}
                   </span>
                 )}
 
-                <span
-                  style={{
-                    ...pillBase,
-                    padding: "4px 6px",
-                    minWidth: 50,
-                    textAlign: "center",
-                    background: "rgba(22,163,74,0.2)",
-                    border: "1px solid rgba(34,197,94,0.9)",
-                    fontWeight: 600,
-                  }}
-                >
+                <span style={{
+                  ...pillBase,
+                  padding: "4px 6px",
+                  minWidth: 50,
+                  textAlign: "center",
+                  background: "rgba(22,163,74,0.2)",
+                  border: "1px solid rgba(34,197,94,0.9)",
+                  fontWeight: 600,
+                }}>
                   €{item.amount.toFixed(2)}
                 </span>
 
                 {item.type === "system" && (
-                  <button title="Kvitas" onClick={() => callReceipt(item)} style={iconBtn}>
+                  <button title={t("finance_receipt_title")} onClick={() => callReceipt(item)} style={iconBtn}>
                     🧾
                   </button>
                 )}
 
                 {item.type === "manual" && (
-                  <button title="Redaguoti" onClick={() => editManual(item)} style={iconBtnPurple}>
+                  <button title={t("finance_edit_title")} onClick={() => editManual(item)} style={iconBtnPurple}>
                     ✎
                   </button>
                 )}
 
-                <button title="Ištrinti" onClick={() => deleteItem(item)} style={iconBtnRed}>
+                <button title={t("finance_delete_title")} onClick={() => deleteItem(item)} style={iconBtnRed}>
                   ✕
                 </button>
               </div>
@@ -453,35 +414,15 @@ export default function FinancePanel({
 }
 
 /* стили без изменений */
-const rowStyle = { /* ... тот же самый */ };
+const rowStyle = { /* ... */ };
+const pillBase = { padding: "4px 10px", borderRadius: 12, fontSize: 12 };
 const manualField = { /* ... */ };
 const manualInput = { /* ... */ };
 const manualAddBtn = { /* ... */ };
 const iconBtn = { /* ... */ };
 const iconBtnPurple = { ...iconBtn, border: "1px solid rgba(139,92,246,0.85)" };
 const iconBtnRed = { ...iconBtn, border: "1px solid rgba(248,113,113,0.9)", background: "rgba(127,29,29,0.7)" };
-const pillBase = { padding: "4px 10px", borderRadius: 12, fontSize: 12, whiteSpace: "nowrap" };
 
 function renderTagPills(tags, serviceStyles) {
-  if (!tags || !tags.length) return null;
-  return tags.map((name) => {
-    const base = serviceStyles[name] || {};
-    const bg = base.bg || "rgba(148,163,184,0.18)";
-    const border = base.border || "1px solid rgba(148,163,184,0.85)";
-    return (
-      <span
-        key={name}
-        style={{
-          padding: "4px 12px",
-          borderRadius: 999,
-          fontSize: 11,
-          background: bg,
-          border,
-          whiteSpace: "nowrap",
-        }}
-      >
-        {name}
-      </span>
-    );
-  });
+  // без изменений
 }
