@@ -1,211 +1,139 @@
 import { useState } from "react";
 import { useI18n } from "../lib/i18n";
-import sha256 from "../lib/sha256"; // если нет — я дам
+import sha256 from "../lib/sha256";
+import { getUsers, saveUsers, setCurrentUser } from "../lib/storage";
 
 export default function ResetPasswordModal({ open, onClose }) {
   const { t } = useI18n();
-
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
-  const [token, setToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   if (!open) return null;
 
   const api = async (url, data) =>
-    (await fetch(url, {
+    await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    })).json();
+    }).then(r => r.json());
 
-  /* ========================
-      STEP 1 — SEND OTP
-  ======================== */
   const handleSendOtp = async () => {
     setError("");
-    if (!email.trim()) {
-      setError(t("auth_err_email"));
-      return;
-    }
+    if (!email.trim()) return setError(t("auth_err_email"));
     setLoading(true);
-
     const res = await api("/api/reset/send-code", { email });
-
     setLoading(false);
-
-    if (!res.ok) {
-      setError("Ошибка сервера");
-      return;
-    }
-
+    if (!res.ok) return setError("Не удалось отправить код");
     setStep(2);
   };
 
-  /* ========================
-      STEP 2 — VERIFY OTP
-  ======================== */
   const handleVerifyOtp = async () => {
     setError("");
-    if (!code.trim()) {
-      setError(t("auth_err_code_required"));
-      return;
-    }
+    if (!code.trim()) return setError(t("auth_err_code_required"));
     setLoading(true);
-
-  const res = await api("/api/reset/verify-code", { email, code });
-
+    const res = await api("/api/reset/verify-code", { email, code });
     setLoading(false);
-
-    if (!res.ok) {
-      if (res.error === "invalid_code") setError(t("auth_err_code_wrong"));
-      else if (res.error === "expired") setError(t("auth_err_code_expired"));
-      else setError(t("auth_err_unknown"));
-      return;
-    }
-
-    setToken(res.token);
+    if (!res.ok) return setError(t("auth_err_code_wrong") || "Неверный или истёкший код");
     setStep(3);
   };
 
-  /* ========================
-      STEP 3 — NEW PASSWORD
-  ======================== */
   const handleSetPassword = async () => {
     setError("");
-
-    if (newPassword.length < 6) {
-      setError(t("auth_err_pwd_short"));
-      return;
-    }
-
-    setLoading(true);
+    if (newPassword.length < 6) return setError(t("auth_err_pwd_short"));
+    if (newPassword !== confirmPassword) return setError("Пароли не совпадают");
 
     const passwordHash = await sha256(newPassword);
+    const users = getUsers();
+    const userIndex = users.findIndex(u => u.email?.toLowerCase() === email.toLowerCase());
 
-    const res = await api("/api/set-new-password", {
-      email,
-      token,
-      newPasswordHash: passwordHash,
-    });
+    if (userIndex === -1) return setError("Пользователь не найден");
 
-    setLoading(false);
+    users[userIndex].passwordHash = passwordHash;
+    saveUsers(users);
+    setCurrentUser(users[userIndex]);
 
-    if (!res.ok) {
-      setError(t("auth_err_unknown"));
-      return;
-    }
-
-    // УСПЕХ
-    alert(t("auth_password_changed"));
+    alert(t("auth_password_changed") || "Пароль успешно изменён!");
     onClose();
   };
 
   return (
     <div style={overlay}>
       <div style={modal}>
-        {/* === STEP 1 === */}
         {step === 1 && (
           <>
-            <h2>{t("auth_reset_title")}</h2>
-
+            <h2>{t("auth_reset_title") || "Восстановление пароля"}</h2>
             <input
               className="glass-input"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-
             {error && <div style={errStyle}>{error}</div>}
-
             <button className="cta" onClick={handleSendOtp} disabled={loading}>
-              {loading ? t("processing") : t("auth_send_code")}
+              {loading ? "Отправка..." : "Отправить код"}
             </button>
           </>
         )}
 
-        {/* === STEP 2 === */}
         {step === 2 && (
           <>
-            <h2>{t("auth_enter_code")}</h2>
-
+            <h2>Введите код из письма</h2>
+            <div style={{fontSize: "0.9rem", opacity: 0.8, marginBottom: 10}}>
+              auth_code_sent_to {email}
+            </div>
             <input
               className="glass-input"
               placeholder="000000"
-              maxLength={6}
+              maxLength={10}
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              style={{ textAlign: "center", letterSpacing: 4 }}
+              style={{ textAlign: "center", letterSpacing: 8, fontSize: "1.4rem" }}
             />
-
             {error && <div style={errStyle}>{error}</div>}
-
             <button className="cta" onClick={handleVerifyOtp} disabled={loading}>
-              {loading ? t("processing") : t("auth_verify_code")}
+              {loading ? "Проверка..." : "Продолжить"}
             </button>
           </>
         )}
 
-        {/* === STEP 3 === */}
         {step === 3 && (
           <>
-            <h2>{t("auth_new_password")}</h2>
-
+            <h2>Новый пароль</h2>
             <input
               className="glass-input"
               type="password"
-              placeholder={t("password")}
+              placeholder="Новый пароль"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
-
+            <input
+              className="glass-input"
+              type="password"
+              placeholder="Повторите пароль"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              style={{ marginTop: 10 }}
+            />
             {error && <div style={errStyle}>{error}</div>}
-
             <button className="cta" onClick={handleSetPassword} disabled={loading}>
-              {loading ? t("processing") : t("auth_set_new_password")}
+              {loading ? "Сохранение..." : "Изменить пароль"}
             </button>
           </>
         )}
 
-        <div
-          onClick={onClose}
-          style={{ marginTop: 15, cursor: "pointer", color: "#b58fff" }}
-        >
-          {t("close")}
+        <div onClick={onClose} style={{ marginTop: 20, cursor: "pointer", color: "#b58fff" }}>
+          Закрыть
         </div>
       </div>
     </div>
   );
 }
 
-/* ============================
-    STYLES
-============================ */
-const overlay = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(0,0,0,0.55)",
-  backdropFilter: "blur(6px)",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 2000,
-};
-
-const modal = {
-  background: "rgba(30,0,60,0.7)",
-  padding: "26px",
-  borderRadius: "16px",
-  border: "1px solid rgba(168,85,247,0.35)",
-  width: "320px",
-  color: "#fff",
-};
-
-const errStyle = {
-  color: "#ff8f9f",
-  margin: "10px 0",
-  fontSize: "0.9rem",
-};
+const overlay = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 2000 };
+const modal = { background: "rgba(30,0,60,0.85)", padding: "30px", borderRadius: "18px", border: "1px solid rgba(168,85,247,0.4)", width: "340px", color: "#fff" };
+const errStyle = { color: "#ff6b6b", margin: "12px 0 0", fontSize: "0.95rem" };
