@@ -7,55 +7,48 @@ export default async function handler(req, res) {
   }
 
   const { email } = req.body;
-
-  if (!email) {
-    return res.status(400).json({ ok: false, error: "Email is required" });
-  }
+  if (!email) return res.status(400).json({ ok: false, error: "Email required" });
 
   try {
-    // Generate 6-digit code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // ---------- 1) Create code ----------
+    const code = String(Math.floor(100000 + Math.random() * 900000));
 
-    // Create JWT containing email + code
+    // ---------- 2) Create JWT with code ----------
     const token = jwt.sign(
-      { email, code },
-      process.env.JWT_SECRET,
-      { expiresIn: "10m" } // valid for 10 minutes
+      {
+        email,
+        code,
+        exp: Math.floor(Date.now() / 1000) + 600 // 10 min
+      },
+      process.env.JWT_SECRET
     );
 
-    // Set HttpOnly cookie (frontend cannot read it)
-    res.setHeader(
-      "Set-Cookie",
-      `reset_token=${token}; HttpOnly; Secure; Path=/; Max-Age=600; SameSite=Strict`
-    );
-
-    // SMTP transport
+    // ---------- 3) Send email ----------
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT),
       secure: process.env.SMTP_SECURE === "true",
       auth: {
         user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
+        pass: process.env.SMTP_PASS
+      }
     });
-
-    // Email HTML
-    const html = `
-      <h2>Ваш код для восстановления пароля</h2>
-      <div style="font-size:32px;font-weight:bold;color:#2a4cff">${code}</div>
-      <p>Код действителен 10 минут.</p>
-    `;
 
     await transporter.sendMail({
-      from: `${process.env.FROM_NAME} <${process.env.FROM_EMAIL}>`,
+      from: `"${process.env.FROM_NAME}" <${process.env.FROM_EMAIL}>`,
       to: email,
-      subject: "Код для восстановления пароля",
-      html,
+      subject: "Ваш код для восстановления пароля",
+      html: `
+        <h2>Ваш код для восстановления пароля</h2>
+        <div style="font-size:32px;font-weight:bold;color:#2563eb">${code}</div>
+        <p>Код действует 10 минут.</p>
+      `
     });
 
-    return res.json({ ok: true });
+    // ---------- 4) Return JWT token ----------
+    return res.json({ ok: true, token });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: String(err) });
+    console.error("SEND CODE ERROR:", err);
+    return res.status(500).json({ ok: false, error: "Failed to send code" });
   }
 }
