@@ -1,82 +1,61 @@
 import nodemailer from "nodemailer";
+import jwt from "jsonwebtoken";
 
 export default async function handler(req, res) {
-  console.log("REQUEST BODY:", req.body);
-  console.log("ENV:", {
-    HOST: process.env.SMTP_HOST,
-    PORT: process.env.SMTP_PORT,
-    SECURE: process.env.SMTP_SECURE,
-    USER: process.env.SMTP_USER,
-    PASS: process.env.SMTP_PASS ? "SET" : "MISSING",
-    FROM_EMAIL: process.env.FROM_EMAIL,
-    FROM_NAME: process.env.FROM_NAME,
-  });
-
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
-  const { email } = req.body || {};
+  const { email } = req.body;
 
   if (!email) {
-    return res.status(400).json({ ok: false, error: "No email provided" });
+    return res.status(400).json({ ok: false, error: "Email is required" });
   }
 
   try {
+    // Generate 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Create JWT containing email + code
+    const token = jwt.sign(
+      { email, code },
+      process.env.JWT_SECRET,
+      { expiresIn: "10m" } // valid for 10 minutes
+    );
+
+    // Set HttpOnly cookie (frontend cannot read it)
+    res.setHeader(
+      "Set-Cookie",
+      `reset_token=${token}; HttpOnly; Secure; Path=/; Max-Age=600; SameSite=Strict`
+    );
+
+    // SMTP transport
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT),
-      // Главное исправление — теперь берётся из .env, а не хардкод true
-      secure: process.env.SMTP_SECURE?.toLowerCase() === "true",
+      secure: process.env.SMTP_SECURE === "true",
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      // Если вдруг будут ошибки с сертификатом Apple — раскомментируй
-      // tls: {
-      //   rejectUnauthorized: false
-      // }
     });
 
-    console.log("CHECKING CONNECTION...");
-    await transporter.verify();
-    console.log("SMTP CONNECTION OK");
-
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-
-    console.log("GENERATED CODE FOR", email, "→", code); // очень удобно при тестах
+    // Email HTML
+    const html = `
+      <h2>Ваш код для восстановления пароля</h2>
+      <div style="font-size:32px;font-weight:bold;color:#2a4cff">${code}</div>
+      <p>Код действителен 10 минут.</p>
+    `;
 
     await transporter.sendMail({
-      from: `"${process.env.FROM_NAME}" <${process.env.FROM_EMAIL}>`,
+      from: `${process.env.FROM_NAME} <${process.env.FROM_EMAIL}>`,
       to: email,
-      subject: "Код восстановления",
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
-          <h2>Ваш код для восстановления пароля</h2>
-          <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #6366f1; margin: 30px 0;">
-            ${code}
-          </div>
-          <p>Код действителен 10 минут.</p>
-        </div>
-      `
+      subject: "Код для восстановления пароля",
+      html,
     });
 
-    console.log("EMAIL SENT SUCCESSFULLY!");
-
-    // Сохраняем код для последующей проверки в verify-code.js
-    if (!global.resetCodes) {
-      global.resetCodes = {};
-    }
-
-    global.resetCodes[email.toLowerCase().trim()] = {
-      code,
-      expires: Date.now() + 10 * 60 * 1000 // 10 минут
-    };
-
-    return res.status(200).json({ ok: true, codeSent: true });
-
+    return res.json({ ok: true });
   } catch (err) {
-    console.error("SMTP ERROR:", err);
     return res.status(500).json({ ok: false, error: String(err) });
   }
 }
