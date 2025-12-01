@@ -19,7 +19,10 @@ export default async function handler(req, res) {
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT),
       secure: process.env.SMTP_SECURE?.toLowerCase() === "true",
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
     });
 
     await transporter.verify();
@@ -30,15 +33,21 @@ export default async function handler(req, res) {
     await transporter.sendMail({
       from: `"${process.env.FROM_NAME}" <${process.env.FROM_EMAIL}>`,
       to: email,
-      subject: "Код восстановления",
-      html: `<h2>Ваш код:</h2><div style="font-size:32px;font-weight:bold;letter-spacing:10px">${code}</div><p>Действителен 10 минут</p>`,
+      subject: "Код восстановления • izbooking",
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 30px; text-align: center; background:#0f0a1a; color:#fff; max-width:420px; margin:auto; border-radius:16px;">
+          <h2 style="color:#c4b5fd;">Ваш код восстановления</h2>
+          <div style="font-size:42px; font-weight:bold; letter-spacing:15px; color:#a78bfa;">${code}</div>
+          <p style="color:#888; margin-top:30px;">Действителен 10 минут</p>
+        </div>
+      `,
     });
 
     await redis.set(`reset:${normalizedEmail}`, code, { ex: 600 });
 
     return res.status(200).json({ ok: true });
   } catch (err) {
-    console.error(err);
+    console.error("SEND ERROR:", err);
     return res.status(500).json({ ok: false, error: "smtp_error" });
   }
 }
