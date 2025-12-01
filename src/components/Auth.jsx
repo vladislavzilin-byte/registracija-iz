@@ -19,10 +19,12 @@ async function sha256(message) {
 const normalizePhone = (p) => (p || "").replace(/\D/g, "");
 const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
-// оставляю как у тебя, ничего не ломаю
+// корректная логика LT телефона
 const formatLithuanianPhone = (value) => {
   let digits = value.replace(/\D/g, "");
-  if (!digits.startsWith("")) digits = "" + digits.replace(/^0+/, "");
+  if (!digits.startsWith("370")) {
+    digits = "370" + digits.replace(/^0+/, "");
+  }
   if (digits.length > 11) digits = digits.slice(0, 11);
   return "+" + digits;
 };
@@ -42,7 +44,6 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
   const [showNewPwd, setShowNewPwd] = useState(false);
   const [showNewPwd2, setShowNewPwd2] = useState(false);
 
-  // глаз иконки переиспользуем
   const eyeIcon = {
     position: "absolute",
     right: 12,
@@ -187,7 +188,6 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
         throw new Error(data.error || "invalid_code");
       }
 
-      // Код валиден — меняем пароль в локальном хранилище
       const users = getUsers() || [];
       const hash = await sha256(newPwd);
 
@@ -198,7 +198,6 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
           u.email.toLowerCase() === String(emailForReset).toLowerCase()
         ) {
           const nu = { ...u, passwordHash: hash };
-          // старый plaintext-пароль удаляем
           if ("password" in nu) delete nu.password;
           updatedUser = nu;
           return nu;
@@ -214,7 +213,6 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
       }
 
       setMsg(t("auth_reset_success"));
-      // Можно сразу закрыть через пару секунд
       setTimeout(() => {
         handleClose();
       }, 1200);
@@ -388,7 +386,6 @@ export default function Auth({ onAuth }) {
 
   const [toast, setToast] = useState("");
 
-  /* ===================== Auto-profile updater ===================== */
   useEffect(() => {
     const interval = setInterval(() => {
       const updated = getCurrentUser();
@@ -405,7 +402,6 @@ export default function Auth({ onAuth }) {
     setTimeout(() => setToast(""), 2200);
   };
 
-  /* ===================== Validation ===================== */
   const validateForm = () => {
     const errs = {};
 
@@ -424,7 +420,6 @@ export default function Auth({ onAuth }) {
     return errs;
   };
 
-  /* ===================== Submit ===================== */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -440,7 +435,6 @@ export default function Auth({ onAuth }) {
     let users = getUsers();
     if (!Array.isArray(users)) users = [];
 
-    /* ---------- Registration ---------- */
     if (mode === "register") {
       const phoneNorm = normalizePhone(phone);
       const existing = users.find(
@@ -472,7 +466,6 @@ export default function Auth({ onAuth }) {
       return;
     }
 
-    /* ---------- Login ---------- */
     const id = identifier.trim();
     const phoneNorm = normalizePhone(id);
     const emailNorm = id.toLowerCase();
@@ -505,7 +498,6 @@ export default function Auth({ onAuth }) {
     onAuth?.(null);
   };
 
-  /* ===================== Password Eye Icons ===================== */
   const eyeIcon = {
     position: "absolute",
     right: 12,
@@ -541,7 +533,6 @@ export default function Auth({ onAuth }) {
     </svg>
   );
 
-  /* ===================== PROFILE VIEW ===================== */
   if (current) {
     const initials = current.name
       ? current.name
@@ -595,7 +586,6 @@ export default function Auth({ onAuth }) {
     );
   }
 
-  /* ===================== LOGIN / REGISTER FORM ===================== */
   return (
     <>
       {toast && <div style={toastStyle}>{toast}</div>}
@@ -624,7 +614,6 @@ export default function Auth({ onAuth }) {
           onSubmit={handleSubmit}
           style={{ display: "flex", flexDirection: "column", gap: 12 }}
         >
-          {/* ------------ LOGIN ------------ */}
           {mode === "login" ? (
             <>
               <input
@@ -669,7 +658,6 @@ export default function Auth({ onAuth }) {
               </div>
             </>
           ) : (
-            /* ------------ REGISTER ------------ */
             <>
               <input
                 className={`glass-input ${errorFields.name ? "error" : ""}`}
