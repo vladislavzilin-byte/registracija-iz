@@ -1,7 +1,10 @@
 {
   "functions": {
     "api/reset/send-code.js": {
-      "includeFiles": ".env"
+      "includeFiles": [".env"]
+    },
+    "api/reset/verify-code.js": {
+      "includeFiles": [".env"]
     }
   }
 }
