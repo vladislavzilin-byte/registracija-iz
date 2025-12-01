@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/reset/send-code.js": {
+      "includeFiles": ".env"
+    }
+  }
+}
