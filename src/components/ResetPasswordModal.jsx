@@ -33,7 +33,7 @@ export default function ResetPasswordModal({ open, onClose }) {
     }
     setLoading(true);
 
-    const res = await api("/api/send-otp", { email });
+    const res = await api("/api/reset/send-code", { email });
 
     setLoading(false);
 
@@ -56,7 +56,7 @@ export default function ResetPasswordModal({ open, onClose }) {
     }
     setLoading(true);
 
-    const res = await api("/api/verify-code", { email, code });
+  const res = await api("/api/reset/verify-code", { email, code });
 
     setLoading(false);
 
