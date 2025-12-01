@@ -56,7 +56,7 @@ export default function ResetPasswordModal({ open, onClose }) {
     }
     setLoading(true);
 
-    const res = await api("/api/verify-otp", { email, code });
+    const res = await api("/api/verify-code", { email, code });
 
     setLoading(false);
 
