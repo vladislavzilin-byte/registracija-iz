@@ -12,9 +12,10 @@ export default async function handler(req, res) {
   const { email, lang = "ru" } = req.body || {};
   if (!email) return res.status(400).json({ ok: false });
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
   const normalizedEmail = email.toLowerCase().trim();
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
 
+  // 🌍 Три языка
   const translations = {
     ru: {
       subject: "Ваш код для восстановления пароля",
@@ -23,8 +24,8 @@ export default async function handler(req, res) {
       ignore: "Если вы не запрашивали код — просто игнорируйте письмо.",
     },
     lt: {
-      subject: "Slaptažodžio atstatymo kodas",
-      title: "Jūsų slaptažodžio atstatymo kodas",
+      subject: "Slaptažodžio atkūrimo kodas",
+      title: "Jūsų slaptažodžio atkūrimo kodas",
       info: "Kodas galioja 10 minučių.",
       ignore: "Jeigu neprašėte šio kodo — tiesiog ignoruokite laišką.",
     },
@@ -38,8 +39,8 @@ export default async function handler(req, res) {
 
   const t = translations[lang] || translations["ru"];
 
-  // 🚀 Фиксируется логотип
-  const logoUrl = `https://${req.headers.host}/logo2.svg`;
+  // 📌 Правильный, стабильный URL (PNG → лучше для email)
+  const logoUrl = `https://${req.headers.host}/logo-email.png`;
 
   try {
     const transporter = nodemailer.createTransport({
@@ -57,10 +58,11 @@ export default async function handler(req, res) {
           background:white;
           padding:32px;
           border-radius:16px;
-          box-shadow:0 4px 14px rgba(0,0,0,0.08)"
-        >
-          <div style="text-align:center;">
-            <img src="${logoUrl}" style="width:180px; margin-bottom:20px;">
+          box-shadow:0 4px 14px rgba(0,0,0,0.1);
+        ">
+          
+          <div style="text-align:center;margin-bottom:20px;">
+            <img src="${logoUrl}" alt="Logo" style="width:180px;" />
           </div>
 
           <h2 style="text-align:center;color:#000;font-size:22px;margin-bottom:25px;">
@@ -75,35 +77,38 @@ export default async function handler(req, res) {
             font-weight:bold;
             letter-spacing:8px;
             border-radius:8px;
-            margin: 0 auto 25px;
-            width: 240px;
+            margin:0 auto 25px;
+            width:260px;
           ">
             ${code}
           </div>
 
-          <p style="text-align:center;color:#444;font-size:14px;">
+          <p style="text-align:center;color:#444;font-size:14px;margin-top:10px;">
             ${t.info}
           </p>
 
           <p style="text-align:center;color:#888;font-size:12px;margin-top:30px;">
             ${t.ignore}
           </p>
+
         </div>
       </div>
     `;
 
     await transporter.sendMail({
-      from: `"izbooking" <${process.env.FROM_EMAIL}>`,
+      from: `"IZ Booking" <${process.env.FROM_EMAIL}>`,
       to: email,
       subject: t.subject,
       html,
     });
 
+    // Сохраняем код на 10 минут
     await redis.set(`reset:${normalizedEmail}`, code, { ex: 600 });
 
     return res.status(200).json({ ok: true });
+
   } catch (err) {
-    console.error(err);
+    console.error("EMAIL ERROR:", err);
     return res.status(500).json({ ok: false });
   }
 }
