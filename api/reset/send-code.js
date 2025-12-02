@@ -1,4 +1,10 @@
 import nodemailer from "nodemailer";
+import { Redis } from "@upstash/redis";
+
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN
+});
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
@@ -15,15 +21,20 @@ export default async function handler(req, res) {
       secure: process.env.SMTP_SECURE?.toLowerCase() === "true",
       auth: {
         user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
+        pass: process.env.SMTP_PASS
+      }
     });
 
     await transporter.verify();
 
+    // Генерируем код
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log(`ПИСЬМО С КОДОМ ${code} → ${email}`);
+    console.log(`RESET CODE ${code} for ${email}`);
 
+    // Сохраняем в Upstash KV на 10 минут
+    await redis.set(`reset:${normalizedEmail}`, code, { ex: 600 });
+
+    // Отправляем письмо
     await transporter.sendMail({
       from: `"${process.env.FROM_NAME}" <${process.env.FROM_EMAIL}>`,
       to: email,
@@ -36,19 +47,13 @@ export default async function handler(req, res) {
           </div>
           <p>Действителен 10 минут</p>
         </div>
-      `,
+      `
     });
 
-    // Сохраняем в глобальную переменную (работает пока функция "тёплая" на Vercel — тебе хватит)
-    if (!global.resetCodes) global.resetCodes = {};
-    global.resetCodes[normalizedEmail] = {
-      code,
-      expires: Date.now() + 10 * 60 * 1000,
-    };
-
     return res.status(200).json({ ok: true });
+
   } catch (err) {
-    console.error(err);
+    console.error("SEND ERROR:", err);
     return res.status(500).json({ ok: false });
   }
 }
