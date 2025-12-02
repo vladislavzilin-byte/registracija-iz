@@ -99,90 +99,77 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
   };
 
   // Шаг 1 — ищем пользователя локально и шлём код на его email
-  const handleSendCode = async () => {
-    setError("");
-    setMsg("");
+ // Шаг 1 — ищем пользователя локально и шлём код на его email
+const handleSendCode = async () => {
+  setError("");
+  setMsg("");
 
-    const id = identifier.trim();
-    if (!id) {
-      setError(t("auth_err_identifier"));
-      return;
-    }
-
-    const users = getUsers() || [];
-    const phoneNorm = normalizePhone(id);
-    const emailNorm = id.toLowerCase();
-
-    const user = users.find((u) => {
-      const phoneMatch =
-        u.phone && normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
-      const emailMatch = u.email && u.email.toLowerCase() === emailNorm;
-      return phoneMatch || emailMatch;
-    });
-
-    if (!user) {
-      setError(t("auth_user_not_found"));
-      return;
-    }
-
-    if (!user.email) {
-      setError(t("auth_no_email_for_reset"));a
-      return;
-    }
-
-    setLoading(true);
-    try {
-     try {
-  const resp = await fetch("/api/reset/send-code", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email: user.email,
-      lang,
-    }),
-  });
-
-  const data = await resp.json().catch(() => ({}));
-
-  // 🔥 Новая проверка anti-spam cooldown
-  if (data.cooldown) {
-    setError(
-      t("auth_wait_30sec") ||
-        "Подождите 30 секунд перед повторной отправкой кода."
-    );
-    setLoading(false);
+  const id = identifier.trim();
+  if (!id) {
+    setError(t("auth_err_identifier"));
     return;
   }
 
-  if (!resp.ok || !data.ok) {
-    throw new Error(data.error || "send_failed");
+  const users = getUsers() || [];
+  const phoneNorm = normalizePhone(id);
+  const emailNorm = id.toLowerCase();
+
+  const user = users.find((u) => {
+    const phoneMatch =
+      u.phone && normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
+    const emailMatch = u.email && u.email.toLowerCase() === emailNorm;
+    return phoneMatch || emailMatch;
+  });
+
+  if (!user) {
+    setError(t("auth_user_not_found"));
+    return;
   }
 
-  setEmailForReset(user.email);
-  setStep("code");
-  setMsg(t("auth_code_sent"));
-} catch (e) {
-  console.error(e);
-  setError(t("auth_send_error"));
-} finally {
-  setLoading(false);
-}
+  if (!user.email) {
+    setError(t("auth_no_email_for_reset"));
+    return;
+  }
 
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok || !data.ok) {
-        throw new Error(data.error || "send_failed");
-      }
+  setLoading(true);
+  try {
+    const resp = await fetch("/api/reset/send-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: user.email,
+        lang,
+      }),
+    });
 
-      setEmailForReset(user.email);
-      setStep("code");
-      setMsg(t("auth_code_sent"));
-    } catch (e) {
-      console.error(e);
-      setError(t("auth_send_error"));
-    } finally {
+    const data = await resp.json().catch(() => ({}));
+
+    // 🔥 Anti-spam cooldown
+    if (data.cooldown) {
+      setError(
+        t("auth_wait_30sec") ||
+          "Подождите 30 секунд перед повторной отправкой кода."
+      );
       setLoading(false);
+      return;
     }
-  };
+
+    if (!data.ok) {
+      setError(t("auth_send_error"));
+      return;
+    }
+
+    // УСПЕХ
+    setEmailForReset(user.email);
+    setStep("code");
+    setMsg(t("auth_code_sent"));
+  } catch (e) {
+    console.error(e);
+    setError(t("auth_send_error"));
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Шаг 2 — проверяем код на сервере, обновляем пароль локально
   const handleConfirm = async () => {
