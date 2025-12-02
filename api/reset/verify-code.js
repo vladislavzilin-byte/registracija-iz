@@ -1,4 +1,4 @@
-// api/reset/verify-code.js   (или app/api/reset/verify-code/route.js)
+// api/reset/verify-code.js   ←←←←← УБЕДИСЬ, ЧТО ПУТЬ ПРАВИЛЬНЫЙ!
 
 import { Redis } from "@upstash/redis";
 
@@ -13,32 +13,35 @@ export default async function handler(req, res) {
   const { email, code } = req.body || {};
 
   if (!email || !code) {
-    return res.status(400).json({ ok: false, error: "missing_data" });
+    return res.status(400).json({ ok: false, error: "no email or code" });
   }
 
   const normalizedEmail = email.toLowerCase().trim();
-  const userCode = String(code).replace(/\D/g, ""); // убираем пробелы и всё лишнее
+  const enteredCode = String(code).replace(/\D/g, ""); // 911770 → "911770"
 
-  try {
-    // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
-    // ВАЖНО: ключ должен быть ТОЧНО таким же, как в send-code.js!
-    const correctCode = await redis.get(`reset_code:${normalizedEmail}`);
-    // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+  console.log("Проверка кода для:", normalizedEmail, "| введено:", enteredCode);
 
-    if (!correct) {
-      return res.status(400).json({ ok: false, error: "expired_or_not_found" });
-    }
+  redis
+    .get(`reset_code:${normalizedEmail}`)           // ←←←←←←←←←←←←←←←←←←←←←←←←←←←
+    .then((storedCode) => {
+      console.log("Найденный в Redis код:", storedCode);
 
-    if (correct !== userCode) {
-      return res.status(400).json({ ok: false, error: "wrong_code" });
-    }
+      if (!storedCode) {
+        return res.status(400).json({ ok: false, error: "expired_or_not_found" });
+      }
 
-    // Код подошёл — удаляем его навсегда
-    await redis.del(`reset_code:${normalizedEmail}`);
+      if (storedCode !== enteredCode) {
+        return res.status(400).json({ ok: false, error: "wrong_code" });
+      }
 
-    return res.status(200).json({ ok: true });
-  } catch (error) {
-    console.error("VERIFY ERROR:", error);
-    return res.status(500).json({ ok: false });
-  }
+      // Код верный — удаляем его
+      return redis.del(`reset_code:${normalizedEmail}`).then(() => {
+        console.log("Код подтверждён и удалён");
+        return res.status(200).json({ ok: true });
+      });
+    })
+    .catch((err) => {
+      console.error("Redis error в verify-code:", err);
+      return res.status(500).json({ ok: false });
+    });
 }
