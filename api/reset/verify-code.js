@@ -25,11 +25,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ ok: false, error: "wrong_code" });
     }
 
-    // Удаляем после использования
     await redis.del(`reset:${normalizedEmail}`);
 
     return res.status(200).json({ ok: true });
-
   } catch (err) {
     console.error("VERIFY ERROR:", err);
     return res.status(500).json({ ok: false });
