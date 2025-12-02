@@ -83,12 +83,14 @@ export default async function handler(req, res) {
       </div>
     `;
 
-    await transporter.sendMail({
-      from: `"izbooking" <${process.env.FROM_EMAIL}>`,
-      to: email,
-      subject: t.subject,
-      html,
-    });
+await fetch("/api/reset/send-code", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    email,
+    lang: i18n.language || "ru"
+  }),
+});
 
     // Store code in Redis
     await redis.set(`reset:${normalizedEmail}`, code, { ex: 600 });
