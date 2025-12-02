@@ -40,7 +40,7 @@ export default async function handler(req, res) {
   const t = translations[lang] || translations["ru"];
 
   // 🌐 URL логотипа
-  const logoUrl = `${process.env.RUNTIME_HOST}/logo2.svg`;
+  const logoUrl = `https://${req.headers.host}/logo2.svg`;
 
   try {
     const transporter = nodemailer.createTransport({
