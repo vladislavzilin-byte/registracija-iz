@@ -1,21 +1,29 @@
+import { Redis } from "@upstash/redis";
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
   const { email, code } = req.body || {};
   if (!email || !code) return res.status(400).json({ ok: false });
 
-  const normalizedEmail = email.toLowerCase().trim();
   const cleanCode = code.toString().replace(/\D/g, "");
 
-  if (!global.resetCodes) global.resetCodes = {};
+  try {
+    const stored = await redis.get(`reset:${email.toLowerCase()}`);
 
-  const rec = global.resetCodes[normalizedEmail];
+    if (!stored || stored !== cleanCode) {
+      return res.status(400).json({ ok: false });
+    }
 
-  if (!rec || Date.now() > rec.expires || rec.code !== cleanCode) {
-    delete global.resetCodes[normalizedEmail];
-    return res.status(400).json({ ok: false, error: "invalid" });
+    await redis.del(`reset:${email.toLowerCase()}`);
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).end();
   }
-
-  delete global.resetCodes[normalizedEmail];
-  return res.status(200).json({ ok: true });
 }
