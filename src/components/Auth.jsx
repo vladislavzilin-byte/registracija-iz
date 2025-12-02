@@ -215,10 +215,17 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
         onPasswordChanged?.(updatedUser);
       }
 
-      setMsg(t("auth_reset_success"));
-      setTimeout(() => {
-        handleClose();
-      }, 1200);
+      // 1) Показываем сообщение об успехе
+setMsg(t("auth_reset_success"));
+
+// 2) Через 1.2 сек — закрываем модалку и логиним
+setTimeout(() => {
+  if (updatedUser) {
+    setCurrentUser(updatedUser);
+    onPasswordChanged?.(updatedUser);
+  }
+  handleClose();
+}, 1200);
     } catch (e) {
       console.error(e);
       setError(t("auth_invalid_or_expired_code"));
