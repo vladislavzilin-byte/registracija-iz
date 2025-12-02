@@ -1,4 +1,4 @@
-// pages/api/reset/verify-code.js   ИЛИ   app/api/reset/verify-code/route.js
+// api/reset/verify-code.js
 import { Redis } from "@upstash/redis";
 
 const redis = new Redis({
@@ -7,33 +7,36 @@ const redis = new Redis({
 });
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
+  if (req.method !== "POST") {
+    return res.status(405).end();
+  }
 
-  const { email, code } = req.body || {};
-
-  {};
+  const { email, code } = req.body;
 
   if (!email || !code) {
-    return res.status(400).json({ ok: false, error: "missing_data" });
+    return res.status(400).json({ ok: false, error: "Email and code required" });
   }
 
   const normalizedEmail = email.toLowerCase().trim();
-  const cleanCode = code.toString().replace(/\D/g, ""); // убираем пробелы и всё лишнее
+  const userCode = String(code).replace(/\D/g, ""); // убираем пробелы и буквы
 
   try {
-    const storedCode = await redis.get(`reset:${normalizedEmail}`);
+    const correctCode = await redis.get(`reset_code:${normalizedEmail}`);
 
-    // Если кода нет или он не совпадает
-    if (!storedCode || storedCode !== cleanCode) {
-      return res.status(400).json({ ok: false, error: "invalid_or_expired" });
+    if (!correctCode) {
+      return res.status(400).json({ ok: false, error: "expired_or_not_found" });
     }
 
-    // Код подошёл — удаляем, чтобы нельзя было использовать повторно
-    await redis.del(`reset:${normalizedEmail}`);
+    if (correctCode !== userCode) {
+      return res.status(400).json({ ok: false, error: "wrong_code" });
+    }
+
+    // Код верный — удаляем, чтобы нельзя было использовать ещё раз
+    await redis.del(`reset_code:${normalizedEmail}`);
 
     return res.status(200).json({ ok: true });
-  } catch (err) {
-    console.error("Ошибка verify-code:", err);
+  } catch (error) {
+    console.error("Ошибка verify-code:", error);
     return res.status(500).json({ ok: false });
   }
 }
