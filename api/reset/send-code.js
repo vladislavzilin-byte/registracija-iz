@@ -13,9 +13,32 @@ export default async function handler(req, res) {
   if (!email) return res.status(400).json({ ok: false });
 
   const normalizedEmail = email.toLowerCase().trim();
+
+  /* --------------------------------------------------------
+     ⛔ Anti-spam: запрет повторной отправки 30 секунд
+  -------------------------------------------------------- */
+  const cooldownKey = `cooldown:${normalizedEmail}`;
+  const hasCooldown = await redis.get(cooldownKey);
+
+  if (hasCooldown) {
+    return res.status(429).json({
+      ok: false,
+      cooldown: true,
+      message: "Подождите 30 секунд перед повторной отправкой кода.",
+    });
+  }
+
+  // Устанавливаем блокировку на 30 секунд
+  await redis.set(cooldownKey, "1", { ex: 30 });
+
+  /* --------------------------------------------------------
+     Генерируем код
+  -------------------------------------------------------- */
   const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // 🌍 Три языка
+  /* --------------------------------------------------------
+     🌍 Три языка
+  -------------------------------------------------------- */
   const translations = {
     ru: {
       subject: "Ваш код для восстановления пароля",
@@ -39,8 +62,61 @@ export default async function handler(req, res) {
 
   const t = translations[lang] || translations["ru"];
 
-  // 📌 Стабильный URL логотипа (PNG)
+  /* --------------------------------------------------------
+     📌 Логотип — используется RAW PNG
+  -------------------------------------------------------- */
   const logoUrl = "https://registracija-iz.vercel.app/logo-email.png";
+
+  /* --------------------------------------------------------
+     📌 Gmail-friendly HTML письмо
+  -------------------------------------------------------- */
+  const html = `
+<div style="font-family:Arial,sans-serif;background:#ffffff;margin:0;padding:0;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:480px;margin:0 auto;">
+    
+    <tr>
+      <td style="padding:25px 20px 10px 20px;text-align:center;">
+        <img src="${logoUrl}" alt="Logo" style="width:160px;display:block;margin:auto;" />
+      </td>
+    </tr>
+
+    <tr>
+      <td style="text-align:center;font-size:22px;font-weight:600;padding:10px 20px;">
+        ${t.title}
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:20px;">
+        <div style="
+          background:#eee;
+          padding:20px;
+          border-radius:10px;
+          font-size:32px;
+          font-weight:bold;
+          text-align:center;
+          letter-spacing:8px;
+        ">
+          ${code}
+        </div>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="text-align:center;font-size:14px;padding:10px 20px;color:#555;">
+        ${t.info}
+      </td>
+    </tr>
+
+    <tr>
+      <td style="text-align:center;font-size:13px;padding:10px 20px;color:#777;">
+        ${t.ignore}
+      </td>
+    </tr>
+
+  </table>
+</div>
+`;
 
   try {
     const transporter = nodemailer.createTransport({
@@ -50,55 +126,6 @@ export default async function handler(req, res) {
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
     });
 
-    // 📌 Gmail-friendly, НЕ сворачивается, без больших div
-    const html = `
-      <div style="font-family: Arial, sans-serif; background:#ffffff; padding:0; margin:0;">
-        <table width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:480px;margin:0 auto;">
-          
-          <tr>
-            <td style="padding:25px 20px 10px 20px; text-align:center;">
-              <img src="${logoUrl}" alt="Logo" style="width:180px; display:block; margin:auto;" />
-            </td>
-          </tr>
-
-          <tr>
-            <td style="text-align:center; font-size:22px; font-weight:600; padding:10px 20px; color:#000;">
-              ${t.title}
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:20px 20px 10px 20px;">
-              <div style="
-                background:#eaeaea;
-                padding:18px 0;
-                font-size:38px;
-                text-align:center;
-                font-weight:bold;
-                letter-spacing:8px;
-                border-radius:8px;
-              ">
-                ${code}
-              </div>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="text-align:center; font-size:14px; padding:15px 20px; color:#444;">
-              ${t.info}
-            </td>
-          </tr>
-
-          <tr>
-            <td style="text-align:center; font-size:12px; padding:15px 30px 25px; color:#777;">
-              ${t.ignore}
-            </td>
-          </tr>
-
-        </table>
-      </div>
-    `;
-
     await transporter.sendMail({
       from: `"IZ Booking" <${process.env.FROM_EMAIL}>`,
       to: email,
@@ -106,7 +133,7 @@ export default async function handler(req, res) {
       html,
     });
 
-    // ⏳ Сохраняем код в Redis на 10 минут
+    // Сохраняем код на 10 минут
     await redis.set(`reset:${normalizedEmail}`, code, { ex: 600 });
 
     return res.status(200).json({ ok: true });
