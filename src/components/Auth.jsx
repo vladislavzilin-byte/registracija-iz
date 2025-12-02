@@ -15,7 +15,7 @@ async function sha256(message) {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
-
+ 
 const normalizePhone = (p) => (p || "").replace(/\D/g, "");
 const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
