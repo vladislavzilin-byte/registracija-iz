@@ -99,44 +99,49 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
   };
 
   // Шаг 1 — ищем пользователя локально и шлём код на его email
-  const handleSendCode = async () => {
-    setError("");
-    setMsg("");
+ const { t, lang } = useI18n();   // ← ДОБАВИЛОСЬ lang
 
-    const id = identifier.trim();
-    if (!id) {
-      setError(t("auth_err_identifier"));
-      return;
-    }
+const handleSendCode = async () => {
+  setError("");
+  setMsg("");
 
-    const users = getUsers() || [];
-    const phoneNorm = normalizePhone(id);
-    const emailNorm = id.toLowerCase();
+  const id = identifier.trim();
+  if (!id) {
+    setError(t("auth_err_identifier"));
+    return;
+  }
 
-    const user = users.find((u) => {
-      const phoneMatch =
-        u.phone && normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
-      const emailMatch = u.email && u.email.toLowerCase() === emailNorm;
-      return phoneMatch || emailMatch;
+  const users = getUsers() || [];
+  const phoneNorm = normalizePhone(id);
+  const emailNorm = id.toLowerCase();
+
+  const user = users.find((u) => {
+    const phoneMatch =
+      u.phone && normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
+    const emailMatch = u.email && u.email.toLowerCase() === emailNorm;
+    return phoneMatch || emailMatch;
+  });
+
+  if (!user) {
+    setError(t("auth_user_not_found"));
+    return;
+  }
+
+  if (!user.email) {
+    setError(t("auth_no_email_for_reset"));
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const resp = await fetch("/api/reset/send-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: user.email,
+        lang,          // ← ВОТ ЭТА СТРОКА РЕШАЕТ ВСЁ
+      }),
     });
-
-    if (!user) {
-      setError(t("auth_user_not_found"));
-      return;
-    }
-
-    if (!user.email) {
-      setError(t("auth_no_email_for_reset"));
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const resp = await fetch("/api/reset/send-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: user.email }),
-      });
 
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok || !data.ok) {
