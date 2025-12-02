@@ -15,20 +15,22 @@ export default function ResetPasswordModal({ open, onClose }) {
 
   if (!open) return null;
 
-  const api = async (url, data) =>
-    await fetch(url, {
+  const api = async (url, data) => {
+    const r = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    }).then(r => r.json());
+    });
+    return { response: r, data: await r.json() };
+  };
 
   const handleSendOtp = async () => {
     setError("");
     if (!email.trim()) return setError(t("auth_err_email"));
     setLoading(true);
-    const res = await api("/api/reset/send-code", { email });
+    const { response } = await api("/api/reset/send-code", { email });
     setLoading(false);
-    if (!res.ok) return setError("Не удалось отправить код");
+    if (!response.ok) return setError("Не удалось отправить код");
     setStep(2);
   };
 
@@ -36,9 +38,11 @@ export default function ResetPasswordModal({ open, onClose }) {
     setError("");
     if (!code.trim()) return setError(t("auth_err_code_required"));
     setLoading(true);
-    const res = await api("/api/reset/verify-code", { email, code });
+    const { response, data } = await api("/api/reset/verify-code", { email, code });
     setLoading(false);
-    if (!res.ok) return setError(t("auth_err_code_wrong") || "Неверный или истёкший код");
+    if (!response.ok || !data.ok) {
+      return setError(t("auth_err_code_wrong") || "Неверный или истёкший код");
+    }
     setStep(3);
   };
 
@@ -50,7 +54,6 @@ export default function ResetPasswordModal({ open, onClose }) {
     const passwordHash = await sha256(newPassword);
     const users = getUsers();
     const userIndex = users.findIndex(u => u.email?.toLowerCase() === email.toLowerCase());
-
     if (userIndex === -1) return setError("Пользователь не найден");
 
     users[userIndex].passwordHash = passwordHash;
@@ -67,12 +70,7 @@ export default function ResetPasswordModal({ open, onClose }) {
         {step === 1 && (
           <>
             <h2>{t("auth_reset_title") || "Восстановление пароля"}</h2>
-            <input
-              className="glass-input"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            <input className="glass-input" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
             {error && <div style={errStyle}>{error}</div>}
             <button className="cta" onClick={handleSendOtp} disabled={loading}>
               {loading ? "Отправка..." : "Отправить код"}
@@ -91,7 +89,7 @@ export default function ResetPasswordModal({ open, onClose }) {
               placeholder="000000"
               maxLength={10}
               value={code}
-              onChange={(e) => setCode(e.target.value)}
+              onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0,6))}
               style={{ textAlign: "center", letterSpacing: 8, fontSize: "1.4rem" }}
             />
             {error && <div style={errStyle}>{error}</div>}
@@ -104,24 +102,11 @@ export default function ResetPasswordModal({ open, onClose }) {
         {step === 3 && (
           <>
             <h2>Новый пароль</h2>
-            <input
-              className="glass-input"
-              type="password"
-              placeholder="Новый пароль"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
-            <input
-              className="glass-input"
-              type="password"
-              placeholder="Повторите пароль"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              style={{ marginTop: 10 }}
-            />
+            <input className="glass-input" type="password" placeholder="Новый пароль" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+            <input className="glass-input" type="password" placeholder="Повторите пароль" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={{ marginTop: 10 }} />
             {error && <div style={errStyle}>{error}</div>}
             <button className="cta" onClick={handleSetPassword} disabled={loading}>
-              {loading ? "Сохранение..." : "Изменить пароль"}
+              Изменить пароль
             </button>
           </>
         )}
@@ -135,5 +120,5 @@ export default function ResetPasswordModal({ open, onClose }) {
 }
 
 const overlay = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 2000 };
-const modal = { background: "rgba(30,0,60,0.85)", padding: "30px", borderRadius: "18px", border: "1px solid rgba(168,85,247,0.4)", width: "340px", color: "#fff" };
+const modal = { background: "rgba(30,0,60,0.85)", padding: "30px", borderRadius: "18px", border: "1px solid rgba(168,85,000,0.4)", width: "340px", color: "#管道" };
 const errStyle = { color: "#ff6b6b", margin: "12px 0 0", fontSize: "0.95rem" };
