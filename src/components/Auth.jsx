@@ -29,41 +29,11 @@ const formatLithuanianPhone = (value) => {
   return "+" + digits;
 };
 
-/* ===== simple login rate-limit (per browser) ===== */
-const RATE_KEY = "auth_rate_limit_iz";
-const MAX_ATTEMPTS = 5;
-const BLOCK_MS = 5 * 60 * 1000; // 5 минут
-
-function loadRateState() {
-  if (typeof window === "undefined") return { attempts: 0, blockedUntil: 0 };
-  try {
-    const raw = localStorage.getItem(RATE_KEY);
-    if (!raw) return { attempts: 0, blockedUntil: 0 };
-    const obj = JSON.parse(raw);
-    return {
-      attempts: obj.attempts || 0,
-      blockedUntil: obj.blockedUntil || 0,
-    };
-  } catch {
-    return { attempts: 0, blockedUntil: 0 };
-  }
-}
-
-function saveRateState(state) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(RATE_KEY, JSON.stringify(state));
-  } catch {
-    // ignore
-  }
-}
-
 /* ===================== Reset / Forgot Password Modal ===================== */
 function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
-  const { t, lang } = useI18n(); // ← t + lang
-
-  const [step, setStep] = useState("identify");
-  const [identifier, setIdentifier] = useState("");
+  const { t } = useI18n();
+  const [step, setStep] = useState("identify"); // 'identify' | 'code'
+  const [identifier, setIdentifier] = useState(""); // телефон или email
   const [emailForReset, setEmailForReset] = useState("");
   const [code, setCode] = useState("");
   const [newPwd, setNewPwd] = useState("");
@@ -73,6 +43,39 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
   const [error, setError] = useState("");
   const [showNewPwd, setShowNewPwd] = useState(false);
   const [showNewPwd2, setShowNewPwd2] = useState(false);
+
+  const eyeIcon = {
+    position: "absolute",
+    right: 12,
+    top: 10,
+    cursor: "pointer",
+    opacity: 0.85,
+  };
+  const eyeOpen = (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#b58fff"
+      strokeWidth="1.8"
+    >
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+  );
+  const eyeClosed = (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#b58fff"
+      strokeWidth="1.8"
+    >
+      <path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.36 21.36 0 015.1-6.36M1 1l22 22"></path>
+    </svg>
+  );
 
   if (!open) return null;
 
@@ -90,15 +93,12 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
   };
 
   const handleClose = () => {
-    if (!loading) {
-      resetState();
-      onClose?.();
-    }
+    if (loading) return;
+    resetState();
+    onClose?.();
   };
 
-  /* =====================================================
-     STEP 1 — SEND CODE
-  ===================================================== */
+  // Шаг 1 — ищем пользователя локально и шлём код на его email
   const handleSendCode = async () => {
     setError("");
     setMsg("");
@@ -135,14 +135,10 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
       const resp = await fetch("/api/reset/send-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: user.email,
-          lang, // ← язык отправляем на сервер
-        }),
+        body: JSON.stringify({ email: user.email }),
       });
 
       const data = await resp.json().catch(() => ({}));
-
       if (!resp.ok || !data.ok) {
         throw new Error(data.error || "send_failed");
       }
@@ -150,17 +146,15 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
       setEmailForReset(user.email);
       setStep("code");
       setMsg(t("auth_code_sent"));
-    } catch (err) {
-      console.error(err);
+    } catch (e) {
+      console.error(e);
       setError(t("auth_send_error"));
     } finally {
       setLoading(false);
     }
   };
 
-  /* =====================================================
-     STEP 2 — VERIFY CODE & CHANGE PASSWORD
-  ===================================================== */
+  // Шаг 2 — проверяем код на сервере, обновляем пароль локально
   const handleConfirm = async () => {
     setError("");
     setMsg("");
@@ -230,9 +224,6 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
     }
   };
 
-  /* =====================================================
-     UI
-  ===================================================== */
   return (
     <div style={overlayStyle} onClick={handleClose}>
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
@@ -372,276 +363,186 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
   );
 }
 
-/* ===================== MAIN AUTH COMPONENT ===================== */
-
-function Auth({ onAuth }) {
+/* ===================== MAIN COMPONENT ===================== */
+export default function Auth({ onAuth }) {
   const { t } = useI18n();
 
   const [mode, setMode] = useState("login");
-
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
-
   const [name, setName] = useState("");
   const [instagram, setInstagram] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
 
   const [error, setError] = useState("");
   const [errorFields, setErrorFields] = useState({});
+  const [recoverOpen, setRecoverOpen] = useState(false);
+  const [current, setCurrent] = useState(getCurrentUser());
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [current, setCurrent] = useState(null);
-
   const [toast, setToast] = useState("");
-  const [recoverOpen, setRecoverOpen] = useState(false);
-
-  const [rateState, setRateState] = useState({
-    attempts: 0,
-    blockedUntil: 0,
-  });
 
   useEffect(() => {
-    const cu = getCurrentUser();
-    if (cu) setCurrent(cu);
-  }, []);
-
-  useEffect(() => {
-    const s = loadRateState();
-    setRateState(s);
-  }, []);
-
-  const isBlocked =
-    rateState.blockedUntil && Date.now() < Number(rateState.blockedUntil);
-
-  const updateRateState = (updater) => {
-    setRateState((prev) => {
-      const next = typeof updater === "function" ? updater(prev) : updater;
-      saveRateState(next);
-      return next;
-    });
-  };
+    const interval = setInterval(() => {
+      const updated = getCurrentUser();
+      if (updated && JSON.stringify(updated) !== JSON.stringify(current)) {
+        setCurrent(updated);
+        onAuth?.(updated);
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [current, onAuth]);
 
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(""), 2200);
   };
 
-  const resetErrors = () => {
-    setError("");
-    setErrorFields({});
-  };
+  const validateForm = () => {
+    const errs = {};
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setCurrent(null);
+    if (mode === "register") {
+      if (!name.trim()) errs.name = t("auth_err_name");
+      if (!phone.trim()) errs.phone = t("auth_err_phone");
+      if (email && !validateEmail(email)) errs.email = t("auth_err_email");
+      if (password.length < 6) errs.password = t("auth_err_pwd_short");
+      if (password !== passwordConfirm)
+        errs.passwordConfirm = t("auth_err_pwd_match");
+    } else {
+      if (!identifier.trim()) errs.identifier = t("auth_err_identifier");
+      if (!password) errs.password = t("auth_err_enter_password");
+    }
+
+    return errs;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    resetErrors();
+    setError("");
+    setErrorFields({});
 
-    if (mode === "login") {
-      const fields = {};
-      if (!identifier.trim()) fields.identifier = true;
-      if (!password) fields.password = true;
-
-      if (Object.keys(fields).length) {
-        setErrorFields(fields);
-        setError(t("auth_err_identifier") || "Введите логин и пароль");
-        return;
-      }
-
-      if (isBlocked) {
-        const msLeft = rateState.blockedUntil - Date.now();
-        const minutesLeft = Math.ceil(msLeft / 60000);
-        setError(
-          t("auth_rate_limited") ||
-            `Слишком много попыток. Попробуйте через ~${minutesLeft} мин.`
-        );
-        return;
-      }
-
-      const users = getUsers() || [];
-      const id = identifier.trim();
-      const phoneNorm = normalizePhone(id);
-      const emailNorm = id.toLowerCase();
-
-      const user = users.find((u) => {
-        const phoneMatch =
-          u.phone && normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
-        const emailMatch = u.email && u.email.toLowerCase() === emailNorm;
-        return phoneMatch || emailMatch;
-      });
-
-      if (!user) {
-        setError(t("auth_user_not_found") || "Пользователь не найден");
-        setErrorFields({ identifier: true });
-        updateRateState((prev) => {
-          const attempts = prev.attempts + 1;
-          const blockedUntil =
-            attempts >= MAX_ATTEMPTS ? Date.now() + BLOCK_MS : prev.blockedUntil;
-          return { attempts, blockedUntil };
-        });
-        return;
-      }
-
-      try {
-        let loggedUser = user;
-        const usersAll = [...users];
-
-        if (user.passwordHash) {
-          const hash = await sha256(password);
-          if (hash !== user.passwordHash) {
-            setError(t("auth_wrong_password") || "Неверный пароль");
-            setErrorFields({ password: true });
-            updateRateState((prev) => {
-              const attempts = prev.attempts + 1;
-              const blockedUntil =
-                attempts >= MAX_ATTEMPTS
-                  ? Date.now() + BLOCK_MS
-                  : prev.blockedUntil;
-              return { attempts, blockedUntil };
-            });
-            return;
-          }
-        } else if (user.password) {
-          // старый аккаунт с plaintext паролем
-          if (user.password !== password) {
-            setError(t("auth_wrong_password") || "Неверный пароль");
-            setErrorFields({ password: true });
-            updateRateState((prev) => {
-              const attempts = prev.attempts + 1;
-              const blockedUntil =
-                attempts >= MAX_ATTEMPTS
-                  ? Date.now() + BLOCK_MS
-                  : prev.blockedUntil;
-              return { attempts, blockedUntil };
-            });
-            return;
-          }
-          // конвертируем в hash
-          const newHash = await sha256(password);
-          const updatedUsers = usersAll.map((u) => {
-            if (u === user) {
-              const nu = { ...u, passwordHash: newHash };
-              delete nu.password;
-              loggedUser = nu;
-              return nu;
-            }
-            return u;
-          });
-          saveUsers(updatedUsers);
-        } else {
-          setError(t("auth_wrong_password") || "Неверный пароль");
-          setErrorFields({ password: true });
-          updateRateState((prev) => {
-            const attempts = prev.attempts + 1;
-            const blockedUntil =
-              attempts >= MAX_ATTEMPTS
-                ? Date.now() + BLOCK_MS
-                : prev.blockedUntil;
-            return { attempts, blockedUntil };
-          });
-          return;
-        }
-
-        // success
-        updateRateState({ attempts: 0, blockedUntil: 0 });
-        setCurrentUser(loggedUser);
-        setCurrent(loggedUser);
-        onAuth?.(loggedUser);
-        setIdentifier("");
-        setPassword("");
-        showToast(t("auth_login_success") || t("login"));
-      } catch (err) {
-        console.error(err);
-        setError(t("auth_generic_error") || "Ошибка входа");
-      }
-
+    const errs = validateForm();
+    if (Object.keys(errs).length) {
+      setError(Object.values(errs)[0]);
+      setErrorFields(errs);
       return;
     }
 
-    // ================= REGISTER =================
-    const fields = {};
-    if (!name.trim()) fields.name = true;
-    if (!email.trim() || !validateEmail(email.trim())) fields.email = true;
-    if (!normalizePhone(phone)) fields.phone = true;
-    if (password.length < 6) fields.password = true;
-    if (password !== passwordConfirm) fields.passwordConfirm = true;
+    let users = getUsers();
+    if (!Array.isArray(users)) users = [];
 
-    if (Object.keys(fields).length) {
-      setErrorFields(fields);
-      setError(
-        t("auth_err_form") || "Проверьте корректность заполнения полей."
+    if (mode === "register") {
+      const phoneNorm = normalizePhone(phone);
+      const existing = users.find(
+        (u) =>
+          normalizePhone(u.phone) === phoneNorm ||
+          (u.email && u.email.toLowerCase() === email.toLowerCase())
       );
-      return;
-    }
+      if (existing) {
+        setError(t("auth_err_user_exists"));
+        return;
+      }
 
-    const users = getUsers() || [];
-    const emailNorm = email.trim().toLowerCase();
-    const phoneNorm = normalizePhone(phone);
-
-    if (
-      users.some(
-        (u) => u.email && u.email.toLowerCase() === emailNorm
-      )
-    ) {
-      setErrorFields((prev) => ({ ...prev, email: true }));
-      setError(t("auth_email_exists") || "Такой email уже зарегистрирован.");
-      return;
-    }
-
-    if (
-      users.some(
-        (u) => u.phone && normalizePhone(u.phone) === phoneNorm
-      )
-    ) {
-      setErrorFields((prev) => ({ ...prev, phone: true }));
-      setError(t("auth_phone_exists") || "Этот телефон уже используется.");
-      return;
-    }
-
-    try {
-      const hash = await sha256(password);
+      const passwordHash = await sha256(password);
       const newUser = {
-        id: Date.now(),
         name: name.trim(),
-        instagram: instagram.trim(),
-        email: email.trim(),
-        phone,
-        passwordHash: hash,
+        instagram,
+        phone: phoneNorm,
+        email: email.trim().toLowerCase(),
+        passwordHash,
       };
 
-      const updatedUsers = [...users, newUser];
-      saveUsers(updatedUsers);
+      users.push(newUser);
+      saveUsers(users);
       setCurrentUser(newUser);
       setCurrent(newUser);
+
+      showToast(t("auth_account_created"));
       onAuth?.(newUser);
-
-      setName("");
-      setInstagram("");
-      setEmail("");
-      setPhone("");
-      setPassword("");
-      setPasswordConfirm("");
-      setError("");
-      setErrorFields({});
-
-      showToast(t("auth_register_success") || t("register"));
-    } catch (err) {
-      console.error(err);
-      setError(t("auth_generic_error") || "Ошибка регистрации");
+      return;
     }
+
+    const id = identifier.trim();
+    const phoneNorm = normalizePhone(id);
+    const emailNorm = id.toLowerCase();
+    const hash = await sha256(password);
+
+    const found = users.find((u) => {
+      const phoneMatch =
+        normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
+      const emailMatch = u.email && u.email.toLowerCase() === emailNorm;
+      const pwdMatch =
+        (u.passwordHash && u.passwordHash === hash) ||
+        (!u.passwordHash && u.password === password);
+
+      return (phoneMatch || emailMatch) && pwdMatch;
+    });
+
+    if (!found) {
+      setError(t("auth_err_invalid_login"));
+      return;
+    }
+
+    setCurrentUser(found);
+    setCurrent(found);
+    onAuth?.(found);
   };
 
-  /* ================= AUTH UI ================= */
+  const logout = () => {
+    setCurrentUser(null);
+    setCurrent(null);
+    onAuth?.(null);
+  };
 
-  // Если пользователь уже авторизован — показываем профиль
+  const eyeIcon = {
+    position: "absolute",
+    right: 12,
+    top: 10,
+    cursor: "pointer",
+    opacity: 0.85,
+  };
+
+  const eyeOpen = (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#b58fff"
+      strokeWidth="1.8"
+    >
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+  );
+
+  const eyeClosed = (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#b58fff"
+      strokeWidth="1.8"
+    >
+      <path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.36 21.36 0 015.1-6.36M1 1l22 22"></path>
+    </svg>
+  );
+
   if (current) {
+    const initials = current.name
+      ? current.name
+          .split(" ")
+          .map((p) => p[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase()
+      : "U";
+
     return (
       <>
         {toast && <div style={toastStyle}>{toast}</div>}
@@ -653,19 +554,17 @@ function Auth({ onAuth }) {
           <div
             style={{
               position: "relative",
-              zIndex: 1,
+              zIndex: 2,
               display: "flex",
-              alignItems: "center",
               justifyContent: "space-between",
-              gap: 18,
+              alignItems: "center",
+              padding: "6px 8px",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <div style={avatarStyle}>
-                {(current.name || "?").charAt(0).toUpperCase()}
-              </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={avatarStyle}>{initials}</div>
               <div>
-                <div style={nameStyle}>{current.name || t("name")}</div>
+                <div style={nameStyle}>{current.name}</div>
                 {current.phone && (
                   <div style={contactStyle}>{current.phone}</div>
                 )}
@@ -678,16 +577,15 @@ function Auth({ onAuth }) {
               </div>
             </div>
 
-            <button style={logoutButton} onClick={handleLogout}>
-              {t("logout") || "Выйти"}
+            <button onClick={logout} style={logoutButton}>
+              {t("logout")}
             </button>
           </div>
         </div>
       </>
-    };
+    );
   }
 
-  // Форма логина / регистрации
   return (
     <>
       {toast && <div style={toastStyle}>{toast}</div>}
@@ -856,7 +754,6 @@ function Auth({ onAuth }) {
         onClose={() => setRecoverOpen(false)}
         onPasswordChanged={(user) => {
           setCurrent(user);
-          setCurrentUser(user);
           onAuth?.(user);
           showToast(t("auth_reset_success"));
         }}
@@ -864,8 +761,6 @@ function Auth({ onAuth }) {
     </>
   );
 }
-
-export default Auth;
 
 /* ===================== STYLES ===================== */
 const segmentStyles = `
@@ -1043,16 +938,3 @@ const toastStyle = {
   borderRadius: 12,
   color: "#fff",
 };
-
-const eyeIcon = {
-  position: "absolute",
-  right: 10,
-  top: "50%",
-  transform: "translateY(-50%)",
-  cursor: "pointer",
-  fontSize: 18,
-  opacity: 0.85,
-};
-
-const eyeOpen = "👁";
-const eyeClosed = "🙈";
