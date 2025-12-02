@@ -126,37 +126,47 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
     }
 
     if (!user.email) {
-      setError(t("auth_no_email_for_reset"));
+      setError(t("auth_no_email_for_reset"));a
       return;
     }
 
     setLoading(true);
     try {
-     const resp = await fetch("/api/reset/send-code", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    email: user.email,
-    lang,
-  }),
-});
+     try {
+  const resp = await fetch("/api/reset/send-code", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: user.email,
+      lang,
+    }),
+  });
 
-const data = await resp.json().catch(() => ({}));
+  const data = await resp.json().catch(() => ({}));
 
-// 🔥 Новая проверка anti-spam cooldown
-if (data.cooldown) {
-  setError(t("auth_wait_30sec") || "Подождите 30 секунд перед повторной отправкой кода.");
+  // 🔥 Новая проверка anti-spam cooldown
+  if (data.cooldown) {
+    setError(
+      t("auth_wait_30sec") ||
+        "Подождите 30 секунд перед повторной отправкой кода."
+    );
+    setLoading(false);
+    return;
+  }
+
+  if (!resp.ok || !data.ok) {
+    throw new Error(data.error || "send_failed");
+  }
+
+  setEmailForReset(user.email);
+  setStep("code");
+  setMsg(t("auth_code_sent"));
+} catch (e) {
+  console.error(e);
+  setError(t("auth_send_error"));
+} finally {
   setLoading(false);
-  return;
 }
-
-if (!resp.ok || !data.ok) {
-  throw new Error(data.error || "send_failed");
-}
-
-setEmailForReset(user.email);
-setStep("code");
-setMsg(t("auth_code_sent"));
 
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok || !data.ok) {
