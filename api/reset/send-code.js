@@ -1,16 +1,10 @@
 import nodemailer from "nodemailer";
-import { Redis } from "@upstash/redis";
-
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
   const { email } = req.body || {};
-  if (!email) return res.status(400).json({ ok: false, error: "no_email" });
+  if (!email) return res.status(400).json({ ok: false });
 
   const normalizedEmail = email.toLowerCase().trim();
 
@@ -28,26 +22,33 @@ export default async function handler(req, res) {
     await transporter.verify();
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log(`Код для ${normalizedEmail}: ${code}`);
+    console.log(`ПИСЬМО С КОДОМ ${code} → ${email}`);
 
     await transporter.sendMail({
       from: `"${process.env.FROM_NAME}" <${process.env.FROM_EMAIL}>`,
       to: email,
-      subject: "Код восстановления • izbooking",
+      subject: "Ваш код",
       html: `
-        <div style="font-family: Arial, sans-serif; padding: 30px; text-align: center; background:#0f0a1a; color:#fff; max-width:420px; margin:auto; border-radius:16px;">
-          <h2 style="color:#c4b5fd;">Ваш код восстановления</h2>
-          <div style="font-size:42px; font-weight:bold; letter-spacing:15px; color:#a78bfa;">${code}</div>
-          <p style="color:#888; margin-top:30px;">Действителен 10 минут</p>
+        <div style="font-family:Arial,sans-serif;text-align:center;padding:40px;background:#111;color:white;">
+          <h2>Ваш код для восстановления пароля</h2>
+          <div style="font-size:42px;letter-spacing:12px;font-weight:bold;margin:30px;color:#a78bfa;">
+            ${code}
+          </div>
+          <p>Действителен 10 минут</p>
         </div>
       `,
     });
 
-    await redis.set(`reset:${normalizedEmail}`, code, { ex: 600 });
+    // Сохраняем в глобальную переменную (работает пока функция "тёплая" на Vercel — тебе хватит)
+    if (!global.resetCodes) global.resetCodes = {};
+    global.resetCodes[normalizedEmail] = {
+      code,
+      expires: Date.now() + 10 * 60 * 1000,
+    };
 
     return res.status(200).json({ ok: true });
   } catch (err) {
-    console.error("SEND ERROR:", err);
-    return res.status(500).json({ ok: false, error: "smtp_error" });
+    console.error(err);
+    return res.status(500).json({ ok: false });
   }
 }
