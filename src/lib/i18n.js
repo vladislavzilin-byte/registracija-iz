@@ -90,6 +90,7 @@ auth_err_enter_password: 'Введите пароль',
 auth_err_invalid_login: 'Неверный логин или пароль',
 auth_err_user_exists: 'Такой пользователь уже существует',
 auth_account_created: 'Аккаунт создан',
+     auth_reset_success: "Ваш пароль успешно изменён!",
 forgot_password: 'Забыли пароль?',
 
 password_confirm: "Подтвердите пароль",
@@ -411,6 +412,7 @@ auth_checking: "Tikrinama...",
 auth_change_password: "Pakeisti slaptažodį",
 auth_send_code: "Siųsti kodą",
 auth_enter_code: "Kodas iš el. laiško",
+     auth_reset_success: "Jūsų slaptažodis sėkmingai pakeistas!",
 password_confirm: "Patvirtinkite slaptažodį",
 
     /* ========== MyBookings ========== */
@@ -715,6 +717,7 @@ auth_checking: "Checking...",
 auth_change_password: "Change password",
 auth_send_code: "Send code",
 auth_enter_code: "Code from email",
+     auth_reset_success: "Your password has been successfully changed!",
 password_confirm: "Confirm password",
     /* ========== MyBookings ========== */
     mb_title: 'My bookings',
