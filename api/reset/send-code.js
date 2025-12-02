@@ -1,55 +1,57 @@
 import nodemailer from "nodemailer";
 import { Redis } from "@upstash/redis";
 
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL,
-  token: process.env.KV_REST_API_TOKEN
-});
-
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
+
+  console.log("DEBUG: send-code started");
 
   const { email } = req.body || {};
   if (!email) return res.status(400).json({ ok: false });
 
-  const normalizedEmail = email.toLowerCase().trim();
-
   try {
+    const redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN
+    });
+
+    console.log("DEBUG: Redis OK");
+
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT),
-      secure: process.env.SMTP_SECURE?.toLowerCase() === "true",
+      secure: process.env.SMTP_SECURE === "true",
       auth: {
         user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
+        pass: process.env.SMTP_PASS,
+      },
     });
 
+    console.log("DEBUG: Transporter OK");
+
     await transporter.verify();
+    console.log("DEBUG: SMTP verified");
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log(`RESET CODE ${code} for ${email}`);
-
-    await redis.set(`reset:${normalizedEmail}`, code, { ex: 600 });
+    console.log(`DEBUG: generated code ${code}`);
 
     await transporter.sendMail({
       from: `"${process.env.FROM_NAME}" <${process.env.FROM_EMAIL}>`,
       to: email,
       subject: "Ваш код",
-      html: `
-        <div style="font-family:Arial,sans-serif;text-align:center;padding:40px;background:#111;color:white;">
-          <h2>Ваш код для восстановления пароля</h2>
-          <div style="font-size:42px;letter-spacing:12px;font-weight:bold;margin:30px;color:#a78bfa;">
-            ${code}
-          </div>
-          <p>Действителен 10 минут</p>
-        </div>
-      `
+      text: `Ваш код: ${code}`,
     });
 
+    console.log("DEBUG: mail sent");
+
+    await redis.set(`reset:${email}`, code, { ex: 600 });
+
+    console.log("DEBUG: redis saved");
+
     return res.status(200).json({ ok: true });
+
   } catch (err) {
-    console.error("SEND ERROR:", err);
-    return res.status(500).json({ ok: false });
+    console.error("ERROR in send-code:", err);
+    return res.status(500).json({ ok: false, error: err.message });
   }
 }
