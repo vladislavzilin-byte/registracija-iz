@@ -31,9 +31,10 @@ const formatLithuanianPhone = (value) => {
 
 /* ===================== Reset / Forgot Password Modal ===================== */
 function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
-  const { t } = useI18n();
-  const [step, setStep] = useState("identify"); // 'identify' | 'code'
-  const [identifier, setIdentifier] = useState(""); // телефон или email
+  const { t, lang } = useI18n();   // ← t + lang
+
+  const [step, setStep] = useState("identify");
+  const [identifier, setIdentifier] = useState("");
   const [emailForReset, setEmailForReset] = useState("");
   const [code, setCode] = useState("");
   const [newPwd, setNewPwd] = useState("");
@@ -43,39 +44,6 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
   const [error, setError] = useState("");
   const [showNewPwd, setShowNewPwd] = useState(false);
   const [showNewPwd2, setShowNewPwd2] = useState(false);
-
-  const eyeIcon = {
-    position: "absolute",
-    right: 12,
-    top: 10,
-    cursor: "pointer",
-    opacity: 0.85,
-  };
-  const eyeOpen = (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#b58fff"
-      strokeWidth="1.8"
-    >
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
-      <circle cx="12" cy="12" r="3"></circle>
-    </svg>
-  );
-  const eyeClosed = (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#b58fff"
-      strokeWidth="1.8"
-    >
-      <path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.36 21.36 0 015.1-6.36M1 1l22 22"></path>
-    </svg>
-  );
 
   if (!open) return null;
 
@@ -93,57 +61,59 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
   };
 
   const handleClose = () => {
-    if (loading) return;
-    resetState();
-    onClose?.();
+    if (!loading) {
+      resetState();
+      onClose?.();
+    }
   };
 
-  // Шаг 1 — ищем пользователя локально и шлём код на его email
- const { t, lang } = useI18n();   // ← ДОБАВИЛОСЬ lang
+  /* =====================================================
+     STEP 1 — SEND CODE
+  ===================================================== */
+  const handleSendCode = async () => {
+    setError("");
+    setMsg("");
 
-const handleSendCode = async () => {
-  setError("");
-  setMsg("");
+    const id = identifier.trim();
+    if (!id) {
+      setError(t("auth_err_identifier"));
+      return;
+    }
 
-  const id = identifier.trim();
-  if (!id) {
-    setError(t("auth_err_identifier"));
-    return;
-  }
+    const users = getUsers() || [];
+    const phoneNorm = normalizePhone(id);
+    const emailNorm = id.toLowerCase();
 
-  const users = getUsers() || [];
-  const phoneNorm = normalizePhone(id);
-  const emailNorm = id.toLowerCase();
-
-  const user = users.find((u) => {
-    const phoneMatch =
-      u.phone && normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
-    const emailMatch = u.email && u.email.toLowerCase() === emailNorm;
-    return phoneMatch || emailMatch;
-  });
-
-  if (!user) {
-    setError(t("auth_user_not_found"));
-    return;
-  }
-
-  if (!user.email) {
-    setError(t("auth_no_email_for_reset"));
-    return;
-  }
-
-  setLoading(true);
-  try {
-    const resp = await fetch("/api/reset/send-code", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: user.email,
-        lang,          // ← ВОТ ЭТА СТРОКА РЕШАЕТ ВСЁ
-      }),
+    const user = users.find((u) => {
+      const phoneMatch =
+        u.phone && normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
+      const emailMatch = u.email && u.email.toLowerCase() === emailNorm;
+      return phoneMatch || emailMatch;
     });
 
+    if (!user) {
+      setError(t("auth_user_not_found"));
+      return;
+    }
+
+    if (!user.email) {
+      setError(t("auth_no_email_for_reset"));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const resp = await fetch("/api/reset/send-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          lang, // ← язык отправляем на сервер
+        }),
+      });
+
       const data = await resp.json().catch(() => ({}));
+
       if (!resp.ok || !data.ok) {
         throw new Error(data.error || "send_failed");
       }
@@ -151,8 +121,8 @@ const handleSendCode = async () => {
       setEmailForReset(user.email);
       setStep("code");
       setMsg(t("auth_code_sent"));
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error(err);
       setError(t("auth_send_error"));
     } finally {
       setLoading(false);
