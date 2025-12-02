@@ -11,19 +11,22 @@ export default async function handler(req, res) {
   const { email, code } = req.body || {};
   if (!email || !code) return res.status(400).json({ ok: false });
 
-  const cleanCode = code.toString().replace(/\D/g, "");
+  const cleanCode = code.toString().replace(/\D/g, "").slice(0, 6);
+  const key = `reset:${email.toLowerCase().trim()}`;
 
   try {
-    const stored = await redis.get(`reset:${email.toLowerCase()}`);
+    const stored = await redis.get(key);
 
     if (!stored || stored !== cleanCode) {
+      console.log(`НЕВЕРНЫЙ КОД: ожидалось ${stored}, пришло ${cleanCode}`);
       return res.status(400).json({ ok: false });
     }
 
-    await redis.del(`reset:${email.toLowerCase()}`);
-    return res.status(200).json({ ok: true });
+    await redis.del(key);
+    console.log(`КОД ПРИНЯТ ДЛЯ ${email}`);
+    return res.status(200).json({ ok:true });
   } catch (err) {
-    console.error(err);
+    console.error("REDIS ERROR:", err);
     return res.status(500).end();
   }
 }
