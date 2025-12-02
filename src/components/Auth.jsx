@@ -158,7 +158,10 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
   };
 
   // Шаг 2 — проверяем код на сервере, обновляем пароль локально
+    // Шаг 2 — проверяем код на сервере, обновляем пароль локально
   const handleConfirm = async () => {
+    if (loading) return; // защита от двойного клика
+
     setError("");
     setMsg("");
 
@@ -187,7 +190,15 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
       });
 
       const data = await resp.json().catch(() => ({}));
-      if (!resp.ok || !data.ok) {
+
+      // более мягкая проверка успешности ответа
+      const success =
+        resp.ok &&
+        !data.error &&
+        data.ok !== false &&
+        data.success !== false;
+
+      if (!success) {
         throw new Error(data.error || "invalid_code");
       }
 
@@ -214,6 +225,18 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
         setCurrentUser(updatedUser);
         onPasswordChanged?.(updatedUser);
       }
+
+      setMsg(t("auth_reset_success"));
+      setTimeout(() => {
+        handleClose();
+      }, 1200);
+    } catch (e) {
+      console.error(e);
+      setError(t("auth_invalid_or_expired_code"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
       // 1) Показываем сообщение об успехе
 setMsg(t("auth_reset_success"));
