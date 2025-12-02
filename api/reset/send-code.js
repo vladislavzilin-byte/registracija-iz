@@ -1,22 +1,23 @@
+// pages/api/reset/send-code.js   ИЛИ   app/api/reset/send-code/route.js
 import nodemailer from "nodemailer";
 import { Redis } from "@upstash/redis";
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
-  console.log("DEBUG: send-code started");
+export default async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).json({ ok: false });
 
   const { email } = req.body || {};
-  if (!email) return res.status(400).json({ ok: false });
+  if (!email || typeof email !== "string") {
+    return res.status(400).json({ ok: false, error: "no_email" });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
 
   try {
-    const redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN
-    });
-
-    console.log("DEBUG: Redis OK");
-
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT),
@@ -27,31 +28,31 @@ export default async function handler(req, res) {
       },
     });
 
-    console.log("DEBUG: Transporter OK");
-
-    await transporter.verify();
-    console.log("DEBUG: SMTP verified");
-
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log(`DEBUG: generated code ${code}`);
 
     await transporter.sendMail({
-      from: `"${process.env.FROM_NAME}" <${process.env.FROM_EMAIL}>`,
-      to: email,
-      subject: "Ваш код",
-      text: `Ваш код: ${code}`,
+      from: `"${process.env.FROM_NAME || "Мой сервис"}" <${process.env.FROM_EMAIL}>`,
+      to: normalizedEmail,
+      subject: "Код восстановления пароля",
+      html: `
+        <div style="font-family:Arial,sans-serif;text-align:center;padding:50px;background:#000;color:#fff;border-radius:16px;max-width:420px;margin:auto;">
+          <h2>Ваш код для восстановления пароля</h2>
+          <div style="font-size:52px;letter-spacing:16px;font-weight:bold;margin:40px 0;color:#c084fc;">
+            ${code}
+          </div>
+          <p style="color:#999;font-size:14px;">Действителен 10 минут</p>
+        </div>
+      `,
     });
 
-    console.log("DEBUG: mail sent");
+    // Сохраняем в Upstash Redis на 10 минут
+    await redis.set(`reset:${normalizedEmail}`, code, { ex: 600 });
 
-    await redis.set(`reset:${email}`, code, { ex: 600 });
-
-    console.log("DEBUG: redis saved");
+    console.log(`Код ${code} отправлен на ${normalizedEmail}`);
 
     return res.status(200).json({ ok: true });
-
   } catch (err) {
-    console.error("ERROR in send-code:", err);
-    return res.status(500).json({ ok: false, error: err.message });
+    console.error("Ошибка send-code:", err);
+    return res.status(500).json({ ok: false, error: "send_failed" });
   }
 }
