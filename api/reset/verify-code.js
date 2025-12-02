@@ -11,22 +11,24 @@ export default async function handler(req, res) {
   const { email, code } = req.body || {};
   if (!email || !code) return res.status(400).json({ ok: false });
 
-  const cleanCode = code.toString().replace(/\D/g, "").slice(0, 6);
   const key = `reset:${email.toLowerCase().trim()}`;
+  const cleanCode = code.toString().replace(/\D/g, "").slice(0, 6);
 
   try {
     const stored = await redis.get(key);
 
-    if (!stored || stored !== cleanCode) {
+    if (stored !== cleanCode) {
       console.log(`НЕВЕРНЫЙ КОД: ожидалось ${stored}, пришло ${cleanCode}`);
       return res.status(400).json({ ok: false });
     }
 
+    // Удаляем код сразу после успешной проверки
     await redis.del(key);
-    console.log(`КОД ПРИНЯТ ДЛЯ ${email}`);
-    return res.status(200).json({ ok:true });
+    console.log(`КОД ПРИНЯТ И УДАЛЁН: ${cleanCode} для ${email}`);
+    
+    return res.status(200).json({ ok: true });
   } catch (err) {
-    console.error("REDIS ERROR:", err);
-    return res.status(500).end();
+    console.error("UPSTASH ERROR:", err);
+    return res.status(500).json({ ok: false });
   }
 }
