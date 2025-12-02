@@ -338,228 +338,307 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
   );
 }
 
-/* ===================== MAIN COMPONENT ===================== */
-export default function Auth({ onAuth }) {
-  const { t } = useI18n();
+/* ===================== Reset / Forgot Password Modal ===================== */
+function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
+  const { t, lang } = useI18n();   // ← t + lang
 
-  const [mode, setMode] = useState("login");
+  const [step, setStep] = useState("identify");
   const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [name, setName] = useState("");
-  const [instagram, setInstagram] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-
+  const [emailForReset, setEmailForReset] = useState("");
+  const [code, setCode] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+  const [newPwdConfirm, setNewPwdConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
-  const [errorFields, setErrorFields] = useState({});
-  const [recoverOpen, setRecoverOpen] = useState(false);
-  const [current, setCurrent] = useState(getCurrentUser());
+  const [showNewPwd, setShowNewPwd] = useState(false);
+  const [showNewPwd2, setShowNewPwd2] = useState(false);
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  if (!open) return null;
 
-  const [toast, setToast] = useState("");
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const updated = getCurrentUser();
-      if (updated && JSON.stringify(updated) !== JSON.stringify(current)) {
-        setCurrent(updated);
-        onAuth?.(updated);
-      }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [current, onAuth]);
-
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(""), 2200);
-  };
-
-  const validateForm = () => {
-    const errs = {};
-
-    if (mode === "register") {
-      if (!name.trim()) errs.name = t("auth_err_name");
-      if (!phone.trim()) errs.phone = t("auth_err_phone");
-      if (email && !validateEmail(email)) errs.email = t("auth_err_email");
-      if (password.length < 6) errs.password = t("auth_err_pwd_short");
-      if (password !== passwordConfirm)
-        errs.passwordConfirm = t("auth_err_pwd_match");
-    } else {
-      if (!identifier.trim()) errs.identifier = t("auth_err_identifier");
-      if (!password) errs.password = t("auth_err_enter_password");
-    }
-
-    return errs;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const resetState = () => {
+    setStep("identify");
+    setIdentifier("");
+    setEmailForReset("");
+    setCode("");
+    setNewPwd("");
+    setNewPwdConfirm("");
+    setMsg("");
     setError("");
-    setErrorFields({});
+    setShowNewPwd(false);
+    setShowNewPwd2(false);
+  };
 
-    const errs = validateForm();
-    if (Object.keys(errs).length) {
-      setError(Object.values(errs)[0]);
-      setErrorFields(errs);
-      return;
+  const handleClose = () => {
+    if (!loading) {
+      resetState();
+      onClose?.();
     }
+  };
 
-    let users = getUsers();
-    if (!Array.isArray(users)) users = [];
-
-    if (mode === "register") {
-      const phoneNorm = normalizePhone(phone);
-      const existing = users.find(
-        (u) =>
-          normalizePhone(u.phone) === phoneNorm ||
-          (u.email && u.email.toLowerCase() === email.toLowerCase())
-      );
-      if (existing) {
-        setError(t("auth_err_user_exists"));
-        return;
-      }
-
-      const passwordHash = await sha256(password);
-      const newUser = {
-        name: name.trim(),
-        instagram,
-        phone: phoneNorm,
-        email: email.trim().toLowerCase(),
-        passwordHash,
-      };
-
-      users.push(newUser);
-      saveUsers(users);
-      setCurrentUser(newUser);
-      setCurrent(newUser);
-
-      showToast(t("auth_account_created"));
-      onAuth?.(newUser);
-      return;
-    }
+  /* =====================================================
+     STEP 1 — SEND CODE
+  ===================================================== */
+  const handleSendCode = async () => {
+    setError("");
+    setMsg("");
 
     const id = identifier.trim();
-    const phoneNorm = normalizePhone(id);
-    const emailNorm = id.toLowerCase();
-    const hash = await sha256(password);
-
-    const found = users.find((u) => {
-      const phoneMatch =
-        normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
-      const emailMatch = u.email && u.email.toLowerCase() === emailNorm;
-      const pwdMatch =
-        (u.passwordHash && u.passwordHash === hash) ||
-        (!u.passwordHash && u.password === password);
-
-      return (phoneMatch || emailMatch) && pwdMatch;
-    });
-
-    if (!found) {
-      setError(t("auth_err_invalid_login"));
+    if (!id) {
+      setError(t("auth_err_identifier"));
       return;
     }
 
-    setCurrentUser(found);
-    setCurrent(found);
-    onAuth?.(found);
+    const users = getUsers() || [];
+    const phoneNorm = normalizePhone(id);
+    const emailNorm = id.toLowerCase();
+
+    const user = users.find((u) => {
+      const phoneMatch =
+        u.phone && normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
+      const emailMatch = u.email && u.email.toLowerCase() === emailNorm;
+      return phoneMatch || emailMatch;
+    });
+
+    if (!user) {
+      setError(t("auth_user_not_found"));
+      return;
+    }
+
+    if (!user.email) {
+      setError(t("auth_no_email_for_reset"));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const resp = await fetch("/api/reset/send-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          lang, // ← язык отправляем на сервер
+        }),
+      });
+
+      const data = await resp.json().catch(() => ({}));
+
+      if (!resp.ok || !data.ok) {
+        throw new Error(data.error || "send_failed");
+      }
+
+      setEmailForReset(user.email);
+      setStep("code");
+      setMsg(t("auth_code_sent"));
+    } catch (err) {
+      console.error(err);
+      setError(t("auth_send_error"));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const logout = () => {
-    setCurrentUser(null);
-    setCurrent(null);
-    onAuth?.(null);
+  /* =====================================================
+     STEP 2 — VERIFY CODE & CHANGE PASSWORD
+  ===================================================== */
+  const handleConfirm = async () => {
+    setError("");
+    setMsg("");
+
+    if (!code.trim()) {
+      setError(t("auth_err_code_required"));
+      return;
+    }
+    if (newPwd.length < 6) {
+      setError(t("auth_err_pwd_short"));
+      return;
+    }
+    if (newPwd !== newPwdConfirm) {
+      setError(t("auth_err_pwd_match"));
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const resp = await fetch("/api/reset/verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: emailForReset,
+          code: code.trim(),
+        }),
+      });
+
+      const data = await resp.json().catch(() => ({}));
+
+      if (!resp.ok || !data.ok) {
+        throw new Error(data.error || "invalid_code");
+      }
+
+      // update local password
+      const users = getUsers() || [];
+      const hash = await sha256(newPwd);
+
+      let updatedUser = null;
+      const updatedUsers = users.map((u) => {
+        if (u.email && u.email.toLowerCase() === emailForReset.toLowerCase()) {
+          const nu = { ...u, passwordHash: hash };
+          if ("password" in nu) delete nu.password;
+          updatedUser = nu;
+          return nu;
+        }
+        return u;
+      });
+
+      saveUsers(updatedUsers);
+
+      if (updatedUser) {
+        setCurrentUser(updatedUser);
+        onPasswordChanged?.(updatedUser);
+      }
+
+      setMsg(t("auth_reset_success"));
+      setTimeout(() => handleClose(), 1200);
+    } catch (err) {
+      console.error(err);
+      setError(t("auth_invalid_or_expired_code"));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const eyeIcon = {
-    position: "absolute",
-    right: 12,
-    top: 10,
-    cursor: "pointer",
-    opacity: 0.85,
-  };
+  /* =====================================================
+     UI
+  ===================================================== */
+  return (
+    <div style={overlayStyle} onClick={handleClose}>
+      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+        <h3 style={{ color: "#fff", marginBottom: 12 }}>
+          {t("auth_recover_title")}
+        </h3>
 
-  const eyeOpen = (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#b58fff"
-      strokeWidth="1.8"
-    >
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
-      <circle cx="12" cy="12" r="3"></circle>
-    </svg>
-  );
+        {step === "identify" && (
+          <>
+            <p
+              style={{
+                margin: "0 0 10px 0",
+                fontSize: 14,
+                color: "#cbd5f5",
+                opacity: 0.9,
+              }}
+            >
+              {t("auth_reset_step1_text")}
+            </p>
 
-  const eyeClosed = (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#b58fff"
-      strokeWidth="1.8"
-    >
-      <path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.36 21.36 0 015.1-6.36M1 1l22 22"></path>
-    </svg>
-  );
+            <input
+              type="text"
+              placeholder={t("phone_or_email")}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              style={inputStyle}
+            />
 
-  if (current) {
-    const initials = current.name
-      ? current.name
-          .split(" ")
-          .map((p) => p[0])
-          .join("")
-          .slice(0, 2)
-          .toUpperCase()
-      : "U";
+            {error && (
+              <div style={{ color: "#ff9bbb", marginTop: 10 }}>{error}</div>
+            )}
+            {msg && (
+              <div style={{ color: "#a5f3fc", marginTop: 8 }}>{msg}</div>
+            )}
 
-    return (
-      <>
-        {toast && <div style={toastStyle}>{toast}</div>}
+            <button
+              onClick={handleSendCode}
+              style={buttonStyle}
+              disabled={loading}
+            >
+              {loading ? t("auth_sending") : t("auth_send_code")}
+            </button>
 
-        <div style={profileCard}>
-          <div style={auroraBg} />
-          <div style={borderGlow} />
+            <button onClick={handleClose} style={closeBtnStyle}>
+              {t("mb_close")}
+            </button>
+          </>
+        )}
 
-          <div
-            style={{
-              position: "relative",
-              zIndex: 2,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "6px 8px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={avatarStyle}>{initials}</div>
-              <div>
-                <div style={nameStyle}>{current.name}</div>
-                {current.phone && (
-                  <div style={contactStyle}>{current.phone}</div>
-                )}
-                {current.email && (
-                  <div style={contactStyle}>{current.email}</div>
-                )}
-                {current.instagram && (
-                  <div style={contactStyle}>{current.instagram}</div>
-                )}
-              </div>
+        {step === "code" && (
+          <>
+            <p
+              style={{
+                margin: "0 0 8px 0",
+                fontSize: 14,
+                color: "#cbd5f5",
+                opacity: 0.9,
+              }}
+            >
+              {t("auth_reset_step2_text")}
+            </p>
+
+            <p
+              style={{
+                margin: "0 0 10px 0",
+                fontSize: 13,
+                color: "#9ca3af",
+              }}
+            >
+              {t("auth_code_sent_to")}{" "}
+              <span style={{ color: "#e5e7eb", fontWeight: 500 }}>
+                {emailForReset}
+              </span>
+            </p>
+
+            <input
+              type="text"
+              placeholder={t("auth_enter_code")}
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              style={{ ...inputStyle, letterSpacing: 2 }}
+            />
+
+            <div style={{ position: "relative", marginTop: 10 }}>
+              <input
+                type={showNewPwd ? "text" : "password"}
+                placeholder={t("password")}
+                value={newPwd}
+                onChange={(e) => setNewPwd(e.target.value)}
+                style={inputStyle}
+              />
             </div>
 
-            <button onClick={logout} style={logoutButton}>
-              {t("logout")}
+            <div style={{ position: "relative", marginTop: 10 }}>
+              <input
+                type={showNewPwd2 ? "text" : "password"}
+                placeholder={t("password_confirm")}
+                value={newPwdConfirm}
+                onChange={(e) => setNewPwdConfirm(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+
+            {error && (
+              <div style={{ color: "#ff9bbb", marginTop: 10 }}>{error}</div>
+            )}
+            {msg && (
+              <div style={{ color: "#a5f3fc", marginTop: 8 }}>{msg}</div>
+            )}
+
+            <button
+              onClick={handleConfirm}
+              style={buttonStyle}
+              disabled={loading}
+            >
+              {loading ? t("auth_checking") : t("auth_change_password")}
             </button>
-          </div>
-        </div>
-      </>
-    );
-  }
+
+            <button onClick={handleClose} style={closeBtnStyle}>
+              {t("mb_close")}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
   return (
     <>
