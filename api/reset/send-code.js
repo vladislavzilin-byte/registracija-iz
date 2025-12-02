@@ -40,8 +40,8 @@ export default async function handler(req, res) {
   const t = translations[lang] || translations["ru"];
 
   // 📌 Правильный, стабильный URL (PNG → лучше для email)
-  const logoUrl =
-  "https://raw.githubusercontent.com/vladislavzilin-byte/registracija-iz/main/public/logo-email.png";
+const logoUrl =
+  "https://raw.githubusercontent.com/vladislavzilin-byte/registracija-iz/main/public/logo-email.png?raw=1";
 
   try {
     const transporter = nodemailer.createTransport({
