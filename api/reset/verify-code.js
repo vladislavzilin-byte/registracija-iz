@@ -1,3 +1,10 @@
+import { Redis } from "@upstash/redis";
+
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN
+});
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
@@ -7,21 +14,24 @@ export default async function handler(req, res) {
   const normalizedEmail = email.toLowerCase().trim();
   const cleanCode = code.toString().replace(/\D/g, "");
 
-  if (!global.resetCodes) global.resetCodes = {};
+  try {
+    const stored = await redis.get(`reset:${normalizedEmail}`);
 
-  const record = global.resetCodes[normalizedEmail];
+    if (!stored) {
+      return res.status(400).json({ ok: false, error: "invalid_or_expired" });
+    }
 
-  if (!record || Date.now() > record.expires) {
-    delete global.resetCodes[normalizedEmail];
-    return res.status(400).json({ ok: false, error: "invalid_or_expired" });
+    if (stored !== cleanCode) {
+      return res.status(400).json({ ok: false, error: "wrong_code" });
+    }
+
+    // Удаляем после использования
+    await redis.del(`reset:${normalizedEmail}`);
+
+    return res.status(200).json({ ok: true });
+
+  } catch (err) {
+    console.error("VERIFY ERROR:", err);
+    return res.status(500).json({ ok: false });
   }
-
-  if (record.code !== cleanCode) {
-    return res.status(400).json({ ok: false, error: "wrong_code" });
-  }
-
-  // Код подошёл — удаляем его
-  delete global.resetCodes[normalizedEmail];
-
-  return res.status(200).json({ ok: true });
 }
