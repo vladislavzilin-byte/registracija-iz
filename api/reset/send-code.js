@@ -15,7 +15,6 @@ export default async function handler(req, res) {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const normalizedEmail = email.toLowerCase().trim();
 
-  // 🌍 Локализованный текст
   const translations = {
     ru: {
       subject: "Ваш код для восстановления пароля",
@@ -39,7 +38,7 @@ export default async function handler(req, res) {
 
   const t = translations[lang] || translations["ru"];
 
-  // 🌐 URL логотипа
+  // 🚀 Фиксируется логотип
   const logoUrl = `https://${req.headers.host}/logo2.svg`;
 
   try {
@@ -51,48 +50,55 @@ export default async function handler(req, res) {
     });
 
     const html = `
-      <div style="font-family:Arial, sans-serif; background:#f8f8f8; padding:40px;">
+      <div style="font-family:Arial,sans-serif;background:#f4f4f4;padding:40px;">
         <div style="
           max-width:480px;
           margin:0 auto;
           background:white;
           padding:32px;
-          border-radius:12px;
-          box-shadow:0 4px 14px rgba(0,0,0,0.08)
-        ">
-          <div style="text-align:center; margin-bottom:24px;">
-            <img src="${logoUrl}" alt="Logo" style="max-width:180px;">
+          border-radius:16px;
+          box-shadow:0 4px 14px rgba(0,0,0,0.08)"
+        >
+          <div style="text-align:center;">
+            <img src="${logoUrl}" style="width:180px; margin-bottom:20px;">
           </div>
 
-          <h2 style="text-align:center; color:#111; font-size:22px; margin-bottom:10px;">
+          <h2 style="text-align:center;color:#000;font-size:22px;margin-bottom:25px;">
             ${t.title}
           </h2>
 
-          <div style="font-size:42px; letter-spacing:12px; text-align:center; color:#a78bfa; font-weight:bold; margin:20px 0;">
+          <div style="
+            background:#eaeaea;
+            padding:12px 0;
+            font-size:40px;
+            text-align:center;
+            font-weight:bold;
+            letter-spacing:8px;
+            border-radius:8px;
+            margin: 0 auto 25px;
+            width: 240px;
+          ">
             ${code}
           </div>
 
-          <p style="text-align:center; color:#333; font-size:14px;">
+          <p style="text-align:center;color:#444;font-size:14px;">
             ${t.info}
           </p>
 
-          <p style="text-align:center; color:#888; font-size:12px; margin-top:20px;">
+          <p style="text-align:center;color:#888;font-size:12px;margin-top:30px;">
             ${t.ignore}
           </p>
         </div>
       </div>
     `;
 
-await fetch("/api/reset/send-code", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    email,
-    lang: i18n.language || "ru"
-  }),
-});
+    await transporter.sendMail({
+      from: `"izbooking" <${process.env.FROM_EMAIL}>`,
+      to: email,
+      subject: t.subject,
+      html,
+    });
 
-    // Store code in Redis
     await redis.set(`reset:${normalizedEmail}`, code, { ex: 600 });
 
     return res.status(200).json({ ok: true });
