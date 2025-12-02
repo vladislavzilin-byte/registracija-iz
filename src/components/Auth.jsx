@@ -31,7 +31,7 @@ const formatLithuanianPhone = (value) => {
 
 /* ===================== Reset / Forgot Password Modal ===================== */
 function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [step, setStep] = useState("identify"); // 'identify' | 'code'
   const [identifier, setIdentifier] = useState(""); // телефон или email
   const [emailForReset, setEmailForReset] = useState("");
