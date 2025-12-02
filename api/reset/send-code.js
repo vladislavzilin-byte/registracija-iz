@@ -40,8 +40,9 @@ export default async function handler(req, res) {
   const t = translations[lang] || translations["ru"];
 
   // 📌 Правильный, стабильный URL (PNG → лучше для email)
-const logoUrl = `https://${req.headers.host}/logo-email.png`;
-
+// Рабочий RAW URL (именно с "?raw=1")
+const logoUrl =
+  "https://registracija-iz.vercel.app/logo-email.png";
 
   try {
     const transporter = nodemailer.createTransport({
