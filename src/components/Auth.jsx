@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import {
   getUsers,
   saveUsers,
-  setCurrentUser,
   getCurrentUser,
+  setCurrentUser,
 } from "../lib/storage";
 import { useI18n } from "../lib/i18n";
 
-/* ===================== helpers ===================== */
+/* ===================== HELPERS ===================== */
 async function sha256(message) {
   const msgUint8 = new TextEncoder().encode(message);
   const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
@@ -19,7 +19,7 @@ async function sha256(message) {
 const normalizePhone = (p) => (p || "").replace(/\D/g, "");
 const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
-// корректная логика LT телефона
+// Lithuanian phone formatting
 const formatLithuanianPhone = (value) => {
   let digits = value.replace(/\D/g, "");
   if (!digits.startsWith("370")) {
@@ -29,9 +29,21 @@ const formatLithuanianPhone = (value) => {
   return "+" + digits;
 };
 
-/* ===================== Reset / Forgot Password Modal ===================== */
+/* ===================== Eye Icons ===================== */
+const eyeOpen = (
+  <svg width="20" height="20" fill="#ccc">
+    <path d="M10 3C5 3 1.73 7.11 1 10c.73 2.89 4 7 9 7s8.27-4.11 9-7c-.73-2.89-4-7-9-7zm0 12a5 5 0 110-10 5 5 0 010 10z" />
+  </svg>
+);
+const eyeClosed = (
+  <svg width="20" height="20" fill="#ccc">
+    <path d="M2 3l14 14-1.5 1.5L10 13.5l-4.5 4.5L4 17l4.5-4.5L2 4.5 3.5 3z" />
+  </svg>
+);
+
+/* ===================== Forgot Password Modal ===================== */
 function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
-  const { t, lang } = useI18n();   // ← t + lang
+  const { t, lang } = useI18n();
 
   const [step, setStep] = useState("identify");
   const [identifier, setIdentifier] = useState("");
@@ -67,9 +79,7 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
     }
   };
 
-  /* =====================================================
-     STEP 1 — SEND CODE
-  ===================================================== */
+  // STEP 1 — SEND RESET CODE
   const handleSendCode = async () => {
     setError("");
     setMsg("");
@@ -108,46 +118,35 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: user.email,
-          lang, // ← язык отправляем на сервер
+          lang,
         }),
       });
 
       const data = await resp.json().catch(() => ({}));
 
-      if (!resp.ok || !data.ok) {
-        throw new Error(data.error || "send_failed");
-      }
+      if (!resp.ok || !data.ok) throw new Error(data.error || "send_failed");
 
       setEmailForReset(user.email);
       setStep("code");
       setMsg(t("auth_code_sent"));
-    } catch (err) {
-      console.error(err);
+    } catch {
       setError(t("auth_send_error"));
     } finally {
       setLoading(false);
     }
   };
 
-  // Шаг 2 — проверяем код на сервере, обновляем пароль локально
+  // STEP 2 — VERIFY & UPDATE PASSWORD
   const handleConfirm = async () => {
     setError("");
     setMsg("");
 
-    if (!code.trim()) {
-      setError(t("auth_err_code_required"));
-      return;
-    }
-    if (newPwd.length < 6) {
-      setError(t("auth_err_pwd_short"));
-      return;
-    }
-    if (newPwd !== newPwdConfirm) {
-      setError(t("auth_err_pwd_match"));
-      return;
-    }
+    if (!code.trim()) return setError(t("auth_err_code_required"));
+    if (newPwd.length < 6) return setError(t("auth_err_pwd_short"));
+    if (newPwd !== newPwdConfirm) return setError(t("auth_err_pwd_match"));
 
     setLoading(true);
+
     try {
       const resp = await fetch("/api/reset/verify-code", {
         method: "POST",
@@ -159,40 +158,30 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
       });
 
       const data = await resp.json().catch(() => ({}));
-      if (!resp.ok || !data.ok) {
-        throw new Error(data.error || "invalid_code");
-      }
+      if (!resp.ok || !data.ok) throw new Error();
 
       const users = getUsers() || [];
       const hash = await sha256(newPwd);
 
       let updatedUser = null;
       const updatedUsers = users.map((u) => {
-        if (
-          u.email &&
-          u.email.toLowerCase() === String(emailForReset).toLowerCase()
-        ) {
-          const nu = { ...u, passwordHash: hash };
-          if ("password" in nu) delete nu.password;
-          updatedUser = nu;
-          return nu;
+        if (u.email?.toLowerCase() === emailForReset.toLowerCase()) {
+          updatedUser = { ...u, passwordHash: hash };
+          delete updatedUser.password;
+          return updatedUser;
         }
         return u;
       });
 
       saveUsers(updatedUsers);
-
       if (updatedUser) {
         setCurrentUser(updatedUser);
         onPasswordChanged?.(updatedUser);
       }
 
       setMsg(t("auth_reset_success"));
-      setTimeout(() => {
-        handleClose();
-      }, 1200);
-    } catch (e) {
-      console.error(e);
+      setTimeout(() => handleClose(), 1200);
+    } catch {
       setError(t("auth_invalid_or_expired_code"));
     } finally {
       setLoading(false);
@@ -208,14 +197,7 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
 
         {step === "identify" && (
           <>
-            <p
-              style={{
-                margin: "0 0 10px 0",
-                fontSize: 14,
-                color: "#cbd5f5",
-                opacity: 0.9,
-              }}
-            >
+            <p style={{ margin: "0 0 10px", fontSize: 14, color: "#cbd5f5" }}>
               {t("auth_reset_step1_text")}
             </p>
 
@@ -227,12 +209,8 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
               style={inputStyle}
             />
 
-            {error && (
-              <div style={{ color: "#ff9bbb", marginTop: 10 }}>{error}</div>
-            )}
-            {msg && (
-              <div style={{ color: "#a5f3fc", marginTop: 8 }}>{msg}</div>
-            )}
+            {error && <div style={{ color: "#ff9bbb" }}>{error}</div>}
+            {msg && <div style={{ color: "#a5f3fc" }}>{msg}</div>}
 
             <button
               onClick={handleSendCode}
@@ -250,27 +228,13 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
 
         {step === "code" && (
           <>
-            <p
-              style={{
-                margin: "0 0 8px 0",
-                fontSize: 14,
-                color: "#cbd5f5",
-                opacity: 0.9,
-              }}
-            >
+            <p style={{ marginBottom: 8, fontSize: 14, color: "#cbd5f5" }}>
               {t("auth_reset_step2_text")}
             </p>
-            <p
-              style={{
-                margin: "0 0 10px 0",
-                fontSize: 13,
-                color: "#9ca3af",
-              }}
-            >
+
+            <p style={{ marginBottom: 10, fontSize: 13, color: "#9ca3af" }}>
               {t("auth_code_sent_to")}{" "}
-              <span style={{ color: "#e5e7eb", fontWeight: 500 }}>
-                {emailForReset}
-              </span>
+              <span style={{ color: "#e5e7eb" }}>{emailForReset}</span>
             </p>
 
             <input
@@ -289,6 +253,7 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
                 onChange={(e) => setNewPwd(e.target.value)}
                 style={inputStyle}
               />
+
               <span
                 onClick={() => setShowNewPwd(!showNewPwd)}
                 style={eyeIcon}
@@ -305,6 +270,7 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
                 onChange={(e) => setNewPwdConfirm(e.target.value)}
                 style={inputStyle}
               />
+
               <span
                 onClick={() => setShowNewPwd2(!showNewPwd2)}
                 style={eyeIcon}
@@ -313,12 +279,8 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
               </span>
             </div>
 
-            {error && (
-              <div style={{ color: "#ff9bbb", marginTop: 10 }}>{error}</div>
-            )}
-            {msg && (
-              <div style={{ color: "#a5f3fc", marginTop: 8 }}>{msg}</div>
-            )}
+            {error && <div style={{ color: "#ff9bbb" }}>{error}</div>}
+            {msg && <div style={{ color: "#a5f3fc" }}>{msg}</div>}
 
             <button
               onClick={handleConfirm}
@@ -338,311 +300,109 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
   );
 }
 
-/* ===================== Reset / Forgot Password Modal ===================== */
-function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
-  const { t, lang } = useI18n();   // ← t + lang
+/* ===================== MAIN AUTH COMPONENT ===================== */
 
-  const [step, setStep] = useState("identify");
+export default function Auth({ onAuth }) {
+  const { t } = useI18n();
+
+  const [mode, setMode] = useState("login");
   const [identifier, setIdentifier] = useState("");
-  const [emailForReset, setEmailForReset] = useState("");
-  const [code, setCode] = useState("");
-  const [newPwd, setNewPwd] = useState("");
-  const [newPwdConfirm, setNewPwdConfirm] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [instagram, setInstagram] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [error, setError] = useState("");
-  const [showNewPwd, setShowNewPwd] = useState(false);
-  const [showNewPwd2, setShowNewPwd2] = useState(false);
+  const [errorFields, setErrorFields] = useState({});
+  const [toast, setToast] = useState("");
+  const [recoverOpen, setRecoverOpen] = useState(false);
 
-  if (!open) return null;
-
-  const resetState = () => {
-    setStep("identify");
-    setIdentifier("");
-    setEmailForReset("");
-    setCode("");
-    setNewPwd("");
-    setNewPwdConfirm("");
-    setMsg("");
-    setError("");
-    setShowNewPwd(false);
-    setShowNewPwd2(false);
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2500);
   };
 
-  const handleClose = () => {
-    if (!loading) {
-      resetState();
-      onClose?.();
+  /* ===================== SUBMIT ===================== */
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setErrorFields({});
+
+    if (mode === "login") {
+      const users = getUsers() || [];
+      const id = identifier.trim().toLowerCase();
+
+      const user = users.find(
+        (u) =>
+          (u.email && u.email.toLowerCase() === id) ||
+          (u.phone && normalizePhone(u.phone) === normalizePhone(id))
+      );
+
+      if (!user) {
+        setError(t("auth_user_not_found"));
+        setErrorFields({ identifier: true });
+        return;
+      }
+
+      const hashed = await sha256(password);
+      if (user.passwordHash !== hashed) {
+        setError(t("auth_err_invalid_password"));
+        setErrorFields({ password: true });
+        return;
+      }
+
+      setCurrentUser(user);
+      onAuth?.(user);
+      return;
     }
-  };
 
-  /* =====================================================
-     STEP 1 — SEND CODE
-  ===================================================== */
-  const handleSendCode = async () => {
-    setError("");
-    setMsg("");
+    /* === registration === */
+    const newErr = {};
 
-    const id = identifier.trim();
-    if (!id) {
-      setError(t("auth_err_identifier"));
+    if (!name.trim()) newErr.name = true;
+    if (!email.trim() || !validateEmail(email)) newErr.email = true;
+    if (!phone.trim()) newErr.phone = true;
+    if (password.length < 6) newErr.password = true;
+    if (password !== passwordConfirm) newErr.passwordConfirm = true;
+
+    if (Object.keys(newErr).length) {
+      setErrorFields(newErr);
+      setError(t("auth_err_fill_all"));
       return;
     }
 
     const users = getUsers() || [];
-    const phoneNorm = normalizePhone(id);
-    const emailNorm = id.toLowerCase();
 
-    const user = users.find((u) => {
-      const phoneMatch =
-        u.phone && normalizePhone(u.phone) === phoneNorm && !!phoneNorm;
-      const emailMatch = u.email && u.email.toLowerCase() === emailNorm;
-      return phoneMatch || emailMatch;
-    });
-
-    if (!user) {
-      setError(t("auth_user_not_found"));
+    if (users.find((u) => u.email?.toLowerCase() === email.toLowerCase())) {
+      setError(t("auth_err_email_taken"));
+      setErrorFields({ email: true });
       return;
     }
 
-    if (!user.email) {
-      setError(t("auth_no_email_for_reset"));
-      return;
-    }
+    const passwordHash = await sha256(password);
 
-    setLoading(true);
-    try {
-      const resp = await fetch("/api/reset/send-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: user.email,
-          lang, // ← язык отправляем на сервер
-        }),
-      });
+    const newUser = {
+      name,
+      instagram,
+      email,
+      phone,
+      passwordHash,
+    };
 
-      const data = await resp.json().catch(() => ({}));
-
-      if (!resp.ok || !data.ok) {
-        throw new Error(data.error || "send_failed");
-      }
-
-      setEmailForReset(user.email);
-      setStep("code");
-      setMsg(t("auth_code_sent"));
-    } catch (err) {
-      console.error(err);
-      setError(t("auth_send_error"));
-    } finally {
-      setLoading(false);
-    }
+    saveUsers([...users, newUser]);
+    setCurrentUser(newUser);
+    onAuth?.(newUser);
   };
-
-  /* =====================================================
-     STEP 2 — VERIFY CODE & CHANGE PASSWORD
-  ===================================================== */
-  const handleConfirm = async () => {
-    setError("");
-    setMsg("");
-
-    if (!code.trim()) {
-      setError(t("auth_err_code_required"));
-      return;
-    }
-    if (newPwd.length < 6) {
-      setError(t("auth_err_pwd_short"));
-      return;
-    }
-    if (newPwd !== newPwdConfirm) {
-      setError(t("auth_err_pwd_match"));
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const resp = await fetch("/api/reset/verify-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: emailForReset,
-          code: code.trim(),
-        }),
-      });
-
-      const data = await resp.json().catch(() => ({}));
-
-      if (!resp.ok || !data.ok) {
-        throw new Error(data.error || "invalid_code");
-      }
-
-      // update local password
-      const users = getUsers() || [];
-      const hash = await sha256(newPwd);
-
-      let updatedUser = null;
-      const updatedUsers = users.map((u) => {
-        if (u.email && u.email.toLowerCase() === emailForReset.toLowerCase()) {
-          const nu = { ...u, passwordHash: hash };
-          if ("password" in nu) delete nu.password;
-          updatedUser = nu;
-          return nu;
-        }
-        return u;
-      });
-
-      saveUsers(updatedUsers);
-
-      if (updatedUser) {
-        setCurrentUser(updatedUser);
-        onPasswordChanged?.(updatedUser);
-      }
-
-      setMsg(t("auth_reset_success"));
-      setTimeout(() => handleClose(), 1200);
-    } catch (err) {
-      console.error(err);
-      setError(t("auth_invalid_or_expired_code"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* =====================================================
-     UI
-  ===================================================== */
-  return (
-    <div style={overlayStyle} onClick={handleClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ color: "#fff", marginBottom: 12 }}>
-          {t("auth_recover_title")}
-        </h3>
-
-        {step === "identify" && (
-          <>
-            <p
-              style={{
-                margin: "0 0 10px 0",
-                fontSize: 14,
-                color: "#cbd5f5",
-                opacity: 0.9,
-              }}
-            >
-              {t("auth_reset_step1_text")}
-            </p>
-
-            <input
-              type="text"
-              placeholder={t("phone_or_email")}
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              style={inputStyle}
-            />
-
-            {error && (
-              <div style={{ color: "#ff9bbb", marginTop: 10 }}>{error}</div>
-            )}
-            {msg && (
-              <div style={{ color: "#a5f3fc", marginTop: 8 }}>{msg}</div>
-            )}
-
-            <button
-              onClick={handleSendCode}
-              style={buttonStyle}
-              disabled={loading}
-            >
-              {loading ? t("auth_sending") : t("auth_send_code")}
-            </button>
-
-            <button onClick={handleClose} style={closeBtnStyle}>
-              {t("mb_close")}
-            </button>
-          </>
-        )}
-
-        {step === "code" && (
-          <>
-            <p
-              style={{
-                margin: "0 0 8px 0",
-                fontSize: 14,
-                color: "#cbd5f5",
-                opacity: 0.9,
-              }}
-            >
-              {t("auth_reset_step2_text")}
-            </p>
-
-            <p
-              style={{
-                margin: "0 0 10px 0",
-                fontSize: 13,
-                color: "#9ca3af",
-              }}
-            >
-              {t("auth_code_sent_to")}{" "}
-              <span style={{ color: "#e5e7eb", fontWeight: 500 }}>
-                {emailForReset}
-              </span>
-            </p>
-
-            <input
-              type="text"
-              placeholder={t("auth_enter_code")}
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              style={{ ...inputStyle, letterSpacing: 2 }}
-            />
-
-            <div style={{ position: "relative", marginTop: 10 }}>
-              <input
-                type={showNewPwd ? "text" : "password"}
-                placeholder={t("password")}
-                value={newPwd}
-                onChange={(e) => setNewPwd(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <div style={{ position: "relative", marginTop: 10 }}>
-              <input
-                type={showNewPwd2 ? "text" : "password"}
-                placeholder={t("password_confirm")}
-                value={newPwdConfirm}
-                onChange={(e) => setNewPwdConfirm(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            {error && (
-              <div style={{ color: "#ff9bbb", marginTop: 10 }}>{error}</div>
-            )}
-            {msg && (
-              <div style={{ color: "#a5f3fc", marginTop: 8 }}>{msg}</div>
-            )}
-
-            <button
-              onClick={handleConfirm}
-              style={buttonStyle}
-              disabled={loading}
-            >
-              {loading ? t("auth_checking") : t("auth_change_password")}
-            </button>
-
-            <button onClick={handleClose} style={closeBtnStyle}>
-              {t("mb_close")}
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 
   return (
     <>
       {toast && <div style={toastStyle}>{toast}</div>}
+
       <style>{segmentStyles}</style>
 
       <div className="card" style={{ paddingTop: 18 }}>
@@ -772,7 +532,6 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
                   onChange={(e) => setPasswordConfirm(e.target.value)}
                   placeholder={t("password_confirm")}
                 />
-
                 <span
                   onClick={() =>
                     setShowConfirmPassword(!showConfirmPassword)
@@ -807,7 +566,7 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
         open={recoverOpen}
         onClose={() => setRecoverOpen(false)}
         onPasswordChanged={(user) => {
-          setCurrent(user);
+          setCurrentUser(user);
           onAuth?.(user);
           showToast(t("auth_reset_success"));
         }}
@@ -817,6 +576,7 @@ function ForgotPasswordModal({ open, onClose, onPasswordChanged }) {
 }
 
 /* ===================== STYLES ===================== */
+
 const segmentStyles = `
 .segmented {
   display: grid;
@@ -852,6 +612,9 @@ const segmentStyles = `
   outline: none;
   transition: .25s;
 }
+.glass-input.error {
+  border-color: #ff6688;
+}
 .cta {
   height: 42px;
   border-radius: 12px;
@@ -859,77 +622,9 @@ const segmentStyles = `
   background: linear-gradient(180deg, rgba(86,0,145,0.9), rgba(44,0,77,0.85));
   color: #fff;
   font-weight: 500;
-  transition: 0.25s;
-}
-.cta:hover {
-  box-shadow: 0 0 20px rgba(168,85,247,0.6);
-  transform: translateY(-1px);
+  transition: .25s;
 }
 `;
-
-const profileCard = {
-  position: "relative",
-  padding: "24px",
-  borderRadius: "20px",
-  background:
-    "linear-gradient(180deg, rgba(32,18,45,1) 0%, rgba(22,10,33,1) 100%)",
-  border: "1px solid rgba(150,90,255,0.25)",
-  backdropFilter: "blur(16px)",
-  overflow: "hidden",
-  color: "#fff",
-};
-
-const auroraBg = {
-  position: "absolute",
-  inset: 0,
-  background:
-    "radial-gradient(800px 500px at -10% 120%, rgba(120,80,220,0.08), transparent 70%), " +
-    "radial-gradient(700px 400px at 110% -20%, rgba(100,70,210,0.06), transparent 65%), " +
-    "radial-gradient(800px 450px at 50% 120%, rgba(80,70,200,0.05), transparent 75%)",
-};
-
-const borderGlow = {
-  position: "absolute",
-  inset: 0,
-  borderRadius: "20px",
-  border: "4px solid rgba(175,95,255,1)",
-  boxShadow: `
-    0 0 8px rgba(175,95,255,0.9),
-    0 0 18px rgba(175,95,255,0.7),
-    0 0 28px rgba(175,95,255,0.45)
-  `,
-};
-
-const avatarStyle = {
-  width: 48,
-  height: 48,
-  borderRadius: 14,
-  border: "1px solid rgba(150,90,255,0.35)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  color: "#fff",
-  fontWeight: 700,
-};
-
-const nameStyle = {
-  fontWeight: 700,
-  fontSize: "1.15rem",
-};
-
-const contactStyle = {
-  opacity: 0.85,
-  fontSize: "0.9rem",
-};
-
-const logoutButton = {
-  borderRadius: "12px",
-  border: "1px solid rgba(168,85,247,0.45)",
-  background: "rgba(31,0,63,0.45)",
-  color: "#fff",
-  padding: "10px 24px",
-  cursor: "pointer",
-};
 
 const overlayStyle = {
   position: "fixed",
@@ -991,4 +686,13 @@ const toastStyle = {
   padding: "10px 18px",
   borderRadius: 12,
   color: "#fff",
+};
+
+const eyeIcon = {
+  position: "absolute",
+  top: "50%",
+  right: 12,
+  transform: "translateY(-50%)",
+  cursor: "pointer",
+  opacity: 0.8,
 };
