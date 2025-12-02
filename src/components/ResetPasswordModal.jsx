@@ -4,7 +4,7 @@ import sha256 from "../lib/sha256";
 import { getUsers, saveUsers, setCurrentUser } from "../lib/storage";
 
 export default function ResetPasswordModal({ open, onClose }) {
-  const { t } = useI18n();
+const { t, lang } = useI18n();
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
