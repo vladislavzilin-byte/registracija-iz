@@ -27,14 +27,11 @@ export default async function handler(req, res) {
 
     await transporter.verify();
 
-    // Генерируем код
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     console.log(`RESET CODE ${code} for ${email}`);
 
-    // Сохраняем в Upstash KV на 10 минут
     await redis.set(`reset:${normalizedEmail}`, code, { ex: 600 });
 
-    // Отправляем письмо
     await transporter.sendMail({
       from: `"${process.env.FROM_NAME}" <${process.env.FROM_EMAIL}>`,
       to: email,
@@ -51,7 +48,6 @@ export default async function handler(req, res) {
     });
 
     return res.status(200).json({ ok: true });
-
   } catch (err) {
     console.error("SEND ERROR:", err);
     return res.status(500).json({ ok: false });
