@@ -12,23 +12,23 @@ export default async function handler(req, res) {
   if (!email || !code) return res.status(400).json({ ok: false });
 
   const key = `reset:${email.toLowerCase().trim()}`;
-  const cleanCode = code.toString().replace(/\D/g, "").slice(0, 6);
+  const inputCode = code.toString().replace(/\D/g, "").slice(0, 6);  // ← строка
 
   try {
     const stored = await redis.get(key);
 
-    if (stored !== cleanCode) {
-      console.log(`НЕВЕРНЫЙ КОД: ожидалось ${stored}, пришло ${cleanCode}`);
+    // ← Вот эта строчка — вся магия
+    if (!stored || String(stored) !== inputCode) {
+      console.log(`НЕВЕРНЫЙ КОД: ожидалось ${stored}, пришло ${inputCode} (typeof stored: ${typeof stored})`);
       return res.status(400).json({ ok: false });
     }
 
-    // Удаляем код сразу после успешной проверки
     await redis.del(key);
-    console.log(`КОД ПРИНЯТ И УДАЛЁН: ${cleanCode} для ${email}`);
-    
+    console.log(`КОД ПРИНЯТ: ${inputCode}`);
     return res.status(200).json({ ok: true });
+
   } catch (err) {
-    console.error("UPSTASH ERROR:", err);
-    return res.status(500).json({ ok: false });
+    console.error(err);
+    return res.status(500).end();
   }
 }
