@@ -16,9 +16,9 @@ const texts = {
 };
 
 const infoText = {
-  lt: "Kvitą galite atsisiųsti savo paskyroje arba admin panelėje.",
+  lt: "Kvitą galite atsisiųsti paskyroje arba admin panelėje.",
   ru: "Квитанцию можно скачать в личном кабинете или админке.",
-  en: "You can download the receipt in your profile or admin panel.",
+  en: "Receipt can be downloaded in your profile or admin panel.",
 };
 
 export default async function handler(req, res) {
