@@ -45,30 +45,30 @@ export default async function handler(req, res) {
   const lang = booking.userLang || "lt";
   const t = translations[lang] || translations["lt"];
 
-  const date = new Date(booking.start).toLocaleDateString(lang === "lt" ? "lt-LT" : lang === "ru" ? "ru-RU" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
-  const time = `${new Date(booking.start).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })} – ${new Date(booking.end).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })}`;
+  const date = new Date(booking.start).toLocaleDateString("lt-LT", { year: "numeric", month: "2-digit", day: "2-digit" });
+  const time = `${new Date(booking.start).toLocaleTimeString("lt-LT", { hour: "2-digit", minute: "2-digit" })} – ${new Date(booking.end).toLocaleTimeString("lt-LT", { hour: "2-digit", minute: "2-digit" })}`;
 
   const html = `
-<div style="font-family:Arial,sans-serif;background:#f8f8f8;padding:40px 20px;">
-  <div style="max-width:480px;margin:0 auto;background:white;padding:40px 30px;border-radius:24px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.08);">
-    <img src="${logoUrl}" style="width:220px;margin-bottom:30px;" alt="Irina Žilina IZ Hair Trend"/>
-    <h1 style="font-size:28px;font-weight:700;color:#000;margin:0 0 20px 0;">
-      ${t.title} ✅
+<div style="font-family:Arial,sans-serif;background:#ffffff;padding:40px 20px;">
+  <div style="max-width:480px;margin:0 auto;background:#ffffff;padding:40px 20px;border-radius:20px;text-align:center;">
+    <img src="${logoUrl}" style="width:240px;margin-bottom:32px;" alt="Irina Žilina IZ Hair Trend"/>
+    <h1 style="font-size:28px;font-weight:700;color:#000;margin:0 0 24px 0;">
+      ${t.title}
     </h1>
-    <p style="font-size:17px;color:#333;margin:0 0 30px 0;line-height:1.6;">
+    <p style="font-size:17px;color:#333333;margin:0 0 32px 0;line-height:1.6;">
       ${t.greeting}, <b>${booking.userName || "kliente"}</b>!<br><br>
       ${t.text}
     </p>
-    <div style="background:#ecfdf5;padding:24px;border-radius:16px;margin:30px 0;">
-      <div style="font-size:16px;color:#333;line-height:1.8;text-align:left;max-width:300px;margin:0 auto;">
+    <div style="background:#ecfdf5;padding:28px 20px;border-radius:16px;margin:0 auto 32px auto;max-width:340px;">
+      <div style="font-size:16px;color:#333333;line-height:1.8;">
         <div><b>${t.data}:</b> ${date}</div>
-        <div><b>${t.laikas}:</b> ${time}</div>
-        <div style="margin-top:12px;font-size:18px;font-weight:700;color:#166534;">
+        <div style="margin-top:8px;"><b>${t.laikas}:</b> ${time}</div>
+        <div style="margin-top:16px;font-size:18px;font-weight:700;color:#166534;">
           ✅ ${t.suma}: ${booking.price || 0} €
         </div>
       </div>
     </div>
-    <p style="font-size:14px;color:#666;margin-top:30px;">
+    <p style="font-size:14px;color:#888888;margin:0;">
       ${t.kvitas}
     </p>
   </div>
@@ -88,11 +88,10 @@ export default async function handler(req, res) {
     await transporter.sendMail({
       from: `"IZ Hair Trend" <${process.env.FROM_EMAIL}>`,
       to: booking.userEmail,
-      subject: t.title + " ✅",
+      subject: t.title,
       html,
     });
 
-    console.log(`Оплата — письмо отправлено на ${booking.userEmail} (${lang})`);
     res.status(200).json({ ok: true });
   } catch (err) {
     console.error("PAID EMAIL ERROR:", err);
