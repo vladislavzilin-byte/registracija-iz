@@ -8,7 +8,6 @@ const translations = {
     title: "Rezervacija patvirtinta!",
     greeting: "Sveiki",
     text: "Jūsų rezervacija buvo sėkmingai patvirtinta{paid}.",
-    paidText: " ir apmokėta",
     data: "Data",
     laikas: "Laikas",
     paslaugos: "Paslaugos",
@@ -67,12 +66,12 @@ export default async function handler(req, res) {
       ${t.greeting}, <b>${booking.userName || "kliente"}</b>!<br><br>
       ${t.text.replace("{paid}", paidStr)}
     </p>
-    <div style="background:#f3e8ff;padding:28px 20px;border-radius:16px;margin:0 auto 32px auto;max-width:340px;">
-      <div style="font-size:16px;color:#333333;line-height:1.8;">
+    <div style="background:#fdf4ff;padding:20px 24px;border-radius:16px;margin:0 auto 32px auto;max-width:340px;">
+      <div style="font-size:16px;color:#333333;line-height:1.4;">
         <div><b>${t.data}:</b> ${date}</div>
-        <div style="margin-top:8px;"><b>${t.laikas}:</b> ${time}</div>
-        <div style="margin-top:8px;"><b>${t.paslaugos}:</b> ${booking.services?.join(", ") || "—"}</div>
-        <div style="margin-top:8px;"><b>${t.apmoketa}:</b> ${booking.paid ? (booking.price + " €") : "Dar ne"}</div>
+        <div style="margin-top:4px;"><b>${t.laikas}:</b> ${time}</div>
+        <div style="margin-top:4px;"><b>${t.paslaugos}:</b> ${booking.services?.join(", ") || "—"}</div>
+        <div style="margin-top:4px;"><b>${t.apmoketa}:</b> ${booking.paid ? (booking.price + " €") : "Dar ne"}</div>
       </div>
     </div>
     <p style="font-size:14px;color:#888888;margin:0;">
