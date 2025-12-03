@@ -10,7 +10,7 @@ const translations = {
     greeting: "Sveiki",
     text: "Jūsų rezervacija buvo <b>patvirtinta{paid}</b>.",
     paidText: " ir apmokėta",
-    info: "Kvitą galite atsisiųsti savo paskyroje arba admin panelėje.",
+    info: "Kvitą galite atsisiųsti paskyroje arba admin panelėje.",
   },
   ru: {
     subject: "Ваша запись подтверждена! ✓",
@@ -26,7 +26,7 @@ const translations = {
     greeting: "Hello",
     text: "Your booking has been <b>confirmed{paid}</b>.",
     paidText: " and paid",
-    info: "You can download the receipt in your profile or admin panel.",
+    info: "Receipt can be downloaded in your profile or admin panel.",
   },
 };
 
