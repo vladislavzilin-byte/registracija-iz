@@ -1,143 +1,112 @@
 // /api/mail/booking-confirmed.js
-import { Redis } from "@upstash/redis";
-import nodemailer from "nodemailer";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { getBookings, getUsers } from "../../lib/storage"; // если путь другой — поправлю
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
+import nodemailer from "nodemailer";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
   const { booking } = req.body || {};
-  if (!booking || !booking.userEmail)
-    return res.status(400).json({ ok: false, error: "bad_request" });
+  if (!booking) return res.status(400).json({ ok: false, error: "No booking" });
+
+  const {
+    userEmail,
+    userName,
+    start,
+    end,
+    services,
+    price,
+    id
+  } = booking;
+
+  if (!userEmail) {
+    return res.status(400).json({ ok: false, error: "User email missing" });
+  }
+
+  const date = new Date(start).toLocaleDateString("lt-LT");
+  const time =
+    new Date(start).toLocaleTimeString("lt-LT", {
+      hour: "2-digit",
+      minute: "2-digit"
+    }) +
+    " – " +
+    new Date(end).toLocaleTimeString("lt-LT", {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;background:#f4f4f4;padding:40px;">
+      <div style="
+        max-width:520px;
+        margin:0 auto;
+        background:white;
+        padding:32px;
+        border-radius:16px;
+        box-shadow:0 4px 14px rgba(0,0,0,0.1);
+      ">
+
+        <div style="text-align:center;margin-bottom:20px;">
+          <img src="https://registracija-iz.vercel.app/logo-email.png" style="width:170px;" />
+        </div>
+
+        <h2 style="text-align:center;color:#000;font-size:22px;margin-bottom:25px;">
+          Jūsų rezervacija patvirtinta! 🎉
+        </h2>
+
+        <p style="font-size:15px;color:#444;">
+          Sveiki, <b>${userName || "kliente"}</b>!<br><br>
+          Jūsų rezervacija buvo <b>patvirtinta ir apmokėta</b>.
+        </p>
+
+        <div style="
+          background:#f3f3f3;
+          padding:16px 20px;
+          border-radius:10px;
+          margin:20px 0;
+          font-size:15px;
+          line-height:1.6;
+        ">
+          <b>Data:</b> ${date}<br>
+          <b>Laikas:</b> ${time}<br>
+          <b>Paslauga:</b> ${services?.join(", ") || "—"}<br>
+          <b>Apmokėta:</b> ${price ? price + "€" : "—"}
+        </div>
+
+        <p style="font-size:14px;color:#666;">
+          Pridedame sąskaitą–faktūrą (PDF) prie laiško.
+        </p>
+
+      </div>
+    </div>
+  `;
 
   try {
-    // LOGO
-    const logoUrl =
-      "https://registracija-iz.vercel.app/logo-email.png";
-
-    // 1) Генерируем PDF-квитанцию (вариант A – как у пользователя)
-    const pdfBytes = await generateReceiptPdf(booking);
-
-    // 2) Генерируем HTML-письмо (как Reset Password)
-    const html = `
-      <div style="font-family:Arial,sans-serif;background:#f4f4f4;padding:40px;">
-        <div style="max-width:480px;margin:0 auto;background:white;padding:32px;border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,0.1);">
-
-          <div style="text-align:center;margin-bottom:20px;">
-            <img src="${logoUrl}" alt="Logo" style="width:180px;" />
-          </div>
-
-          <h2 style="text-align:center;color:#000;font-size:22px;margin-bottom:25px;">
-            Ваше бронирование подтверждено!
-          </h2>
-
-          <p style="text-align:center;color:#444;font-size:14px;margin-top:10px;">
-            <b>Дата:</b> ${formatDate(booking.start)}<br>
-            <b>Время:</b> ${formatTime(booking.start)} – ${formatTime(booking.end)}<br>
-            <b>Услуги:</b> ${(booking.services || []).join(", ")}<br>
-            <b>Стоимость:</b> ${booking.price ? booking.price + "€" : "—"}
-          </p>
-
-          <p style="text-align:center;color:#444;font-size:15px;margin-top:25px;">
-            PDF-квитанция прикреплена к письму.
-          </p>
-
-        </div>
-      </div>
-    `;
-
-    // Transporter
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT),
       secure: process.env.SMTP_SECURE === "true",
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
     });
 
     await transporter.sendMail({
       from: `"IZ Booking" <${process.env.FROM_EMAIL}>`,
-      to: booking.userEmail,
-      subject: "Ваше бронирование подтверждено",
+      to: userEmail,
+      subject: "Jūsų rezervacija patvirtinta ✓",
       html,
       attachments: [
         {
-          filename: `IZ-Booking-${booking.id.slice(0, 6)}.pdf`,
-          content: pdfBytes,
-        },
-      ],
+          filename: `receipt-${id.slice(0, 6)}.pdf`,
+          path: `https://izhairtrend.lt/api/receipt-pdf?id=${id}`
+        }
+      ]
     });
 
     return res.status(200).json({ ok: true });
-  } catch (err) {
-    console.error("EMAIL CONFIRM ERROR:", err);
-    return res.status(500).json({ ok: false, error: "server_error" });
+  } catch (e) {
+    console.error("EMAIL CONFIRM ERROR:", e);
+    return res.status(500).json({ ok: false });
   }
-}
-
-// === HELPERS ===
-
-function formatDate(date) {
-  return new Date(date).toLocaleDateString("lt-LT");
-}
-function formatTime(date) {
-  return new Date(date).toLocaleTimeString("lt-LT", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-// === СЕРВЕРНАЯ PDF КАК У ПОЛЬЗОВАТЕЛЯ ===
-async function generateReceiptPdf(b) {
-  const pdf = await PDFDocument.create();
-  const page = pdf.addPage([595, 842]); // A4
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-
-  let y = 800;
-  const size = 14;
-
-  page.drawText("IZ HAIR TREND – Квитанция", {
-    x: 50,
-    y,
-    size: 20,
-    font,
-    color: rgb(0.3, 0.2, 0.5),
-  });
-  y -= 40;
-
-  const add = (label, value) => {
-    page.drawText(label, { x: 50, y, size, font });
-    page.drawText(String(value || "-"), {
-      x: 200,
-      y,
-      size,
-      font,
-    });
-    y -= 25;
-  };
-
-  add("Номер:", b.id.slice(0, 6));
-  add("Имя:", b.userName);
-  add("Телефон:", b.userPhone);
-  add("Email:", b.userEmail);
-  add("Дата:", formatDate(b.start));
-  add("Время:", `${formatTime(b.start)} – ${formatTime(b.end)}`);
-  add("Услуги:", (b.services || []).join(", "));
-  add("Стоимость:", b.price ? b.price + "€" : "—");
-  add("Статус:", "Оплачено");
-
-  page.drawText("Спасибо за бронирование!", {
-    x: 50,
-    y: y - 20,
-    size: 14,
-    font,
-    color: rgb(0.3, 0.5, 0.3),
-  });
-
-  return await pdf.save();
 }
