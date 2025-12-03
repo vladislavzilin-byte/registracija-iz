@@ -5,28 +5,37 @@ const logoUrl = "https://registracija-iz.vercel.app/logo-email.png";
 
 const translations = {
   lt: {
-    subject: "Jūsų rezervacija patvirtinta! ✓",
     title: "Rezervacija patvirtinta! 🎉",
     greeting: "Sveiki",
-    text: "Jūsų rezervacija buvo <b>patvirtinta{paid}</b>.",
+    text: "Jūsų rezervacija buvo patvirtinta{paid}.",
     paidText: " ir apmokėta",
-    info: "Kvitą galite atsisiųsti paskyroje arba admin panelėje.",
+    data: "Data",
+    laikas: "Laikas",
+    paslaugos: "Paslaugos",
+    apmoketa: "Apmokėta",
+    kvitas: "Kvitą galite parsisiųsti savo paskyroje arba admin panelėje.",
   },
   ru: {
-    subject: "Ваша запись подтверждена! ✓",
     title: "Запись подтверждена! 🎉",
     greeting: "Здравствуйте",
-    text: "Ваша запись была <b>подтверждена{paid}</b>.",
+    text: "Ваша запись была подтверждена{paid}.",
     paidText: " и оплачена",
-    info: "Квитанцию можно скачать в личном кабинете или админке.",
+    data: "Дата",
+    laikas: "Время",
+    paslaugos: "Услуги",
+    apmoketa: "Оплачено",
+    kvitas: "Квитанцию можно скачать в личном кабинете или админ-панели.",
   },
   en: {
-    subject: "Your booking is confirmed! ✓",
     title: "Booking confirmed! 🎉",
     greeting: "Hello",
-    text: "Your booking has been <b>confirmed{paid}</b>.",
+    text: "Your booking has been confirmed{paid}.",
     paidText: " and paid",
-    info: "Receipt can be downloaded in your profile or admin panel.",
+    data: "Date",
+    laikas: "Time",
+    paslaugos: "Services",
+    apmoketa: "Paid",
+    kvitas: "You can download the receipt in your account or admin panel.",
   },
 };
 
@@ -48,21 +57,21 @@ export default async function handler(req, res) {
   const paidStr = booking.paid ? t.paidText : "";
 
   const html = `
-<div style="font-family:Arial,sans-serif;background:#f8f8f8;padding:40px 20px;">
-  <div style="max-width:520px;margin:0 auto;background:white;padding:32px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.1);text-align:center;">
-    <img src="${logoUrl}" style="width:170px;margin-bottom:20px;" alt="IZ Hair Trend"/>
-    <h2 style="color:#000;font-size:24px;margin-bottom:20px;">${t.title}</h2>
-    <p style="font-size:16px;color:#333;line-height:1.6;">
+<div style="font-family:Arial,sans-serif;background:#f9f5ff;padding:40px 20px;">
+  <div style="max-width:520px;margin:0 auto;background:white;padding:32px;border-radius:20px;box-shadow:0 8px 30px rgba(160,100,255,0.15);text-align:center;">
+    <img src="${logoUrl}" style="width:180px;margin-bottom:24px;" alt="IZ Hair Trend"/>
+    <h1 style="color:#000;font-size:26px;margin:0 0 20px 0;font-weight:700;">${t.title}</h1>
+    <p style="font-size:17px;color:#333;margin:0 0 30px 0;">
       ${t.greeting}, <b>${booking.userName || "kliente"}</b>!<br><br>
       ${t.text.replace("{paid}", paidStr)}
     </p>
-    <div style="background:#f3f3ff;padding:20px;border-radius:12px;margin:30px 0;font-size:15px;line-height:1.7;">
-      <b>Data:</b> ${date}<br>
-      <b>Laikas:</b> ${time}<br>
-      <b>Paslaugos:</b> ${booking.services?.join(", ") || "—"}<br>
-      <b>Apmokėta:</b> ${booking.paid ? (booking.price + " €") : "Dar ne"}
+    <div style="background:linear-gradient(135deg, #c084fc, #818cf8);padding:24px;border-radius:16px;color:#fff;font-size:16px;line-height:1.8;">
+      <div><b>${t.data}:</b> ${date}</div>
+      <div><b>${t.laikas}:</b> ${time}</div>
+      <div><b>${t.paslaugos}:</b> ${booking.services?.join(", ") || "—"}</div>
+      <div><b>${t.apmoketa}:</b> ${booking.paid ? (booking.price + " €") : "Dar ne"}</div>
     </div>
-    <p style="color:#666;font-size:14px;">${t.info}</p>
+    <p style="color:#666;font-size:14px;margin-top:24px;">${t.kvitas}</p>
   </div>
 </div>`;
 
@@ -80,11 +89,11 @@ export default async function handler(req, res) {
     await transporter.sendMail({
       from: `"IZ Hair Trend" <${process.env.FROM_EMAIL}>`,
       to: booking.userEmail,
-      subject: t.subject,
+      subject: t.title,
       html,
     });
 
-    console.log(`Подтверждение отправлено на ${booking.userEmail}`);
+    console.log(`Подтверждение отправлено на ${booking.userEmail} (${lang})`);
     res.status(200).json({ ok: true });
   } catch (err) {
     console.error("CONFIRM EMAIL ERROR:", err);
