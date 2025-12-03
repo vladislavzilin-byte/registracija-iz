@@ -16,9 +16,17 @@ const texts = {
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
-  const { booking } = req.body;
-  if (!booking?.userEmail || !booking?.paid) {
-    return res.status(400).json({ ok: false });
+  const { booking } = req.body || {};
+
+  if (!booking) {
+    console.log("booking-paid: нет данных booking");
+    return res.status(200).json({ ok: true });
+  }
+
+  // Если нет email — просто выходим (не 400!)
+  if (!booking.userEmail) {
+    console.log(`booking-paid: нет email у записи #${booking.id?.slice(0,6) || '???'}`);
+    return res.status(200).json({ ok: true });
   }
 
   const lang = booking.userLang || "lt";
@@ -36,7 +44,7 @@ export default async function handler(req, res) {
       <b>${date} ${time}</b>
     </p>
     <div style="background:#f0fdf4;padding:20px;border-radius:12px;margin:30px 0;font-size:15px;color:#166534;">
-      ✅ Pilnai apmokėta suma: ${booking.price} €
+      ✅ Pilnai apmokėta suma: ${booking.price || 0} €
     </div>
   </div>
 </div>`;
@@ -59,7 +67,9 @@ export default async function handler(req, res) {
       html,
     });
 
+    console.log(`Письмо об оплате отправлено на ${booking.userEmail} (#${booking.id.slice(0,6)})`);
     res.status(200).json({ ok: true });
+
   } catch (err) {
     console.error("PAID EMAIL ERROR:", err);
     res.status(500).json({ ok: false, error: err.message });
