@@ -21,7 +21,7 @@ const tagColors = {
   'Atvykimas': '#facc15',
   'Konsultacija': '#34d399'
 }
-
+userLang: localStorage.getItem("lang") || "lt"
 // грузим правильный ключ, тот что использует Admin.jsx
 const settings = getSettings()
 
