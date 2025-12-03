@@ -1,8 +1,6 @@
 // /pages/api/mail/booking-paid.js
 import nodemailer from "nodemailer";
 
-const baseUrl = process.env.NEXT_PUBLIC_URL || "https://registracija-pk5lf8jlo-vladislavzilin.vercel.app";
-
 const titles = {
   lt: "Apmokėjimas gautas! ✅",
   ru: "Оплата получена! ✅",
@@ -15,12 +13,18 @@ const texts = {
   en: "Thank you for your payment! Your booking is now fully paid.",
 };
 
+const infoText = {
+  lt: "Kvitą galite atsisiųsti savo paskyroje arba admin panelėje.",
+  ru: "Квитанцию можно скачать в личном кабинете или админке.",
+  en: "You can download the receipt in your profile or admin panel.",
+};
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
   const { booking } = req.body || {};
 
-  if (!booking || !booking.userEmail || !booking.paid) {
+  if (!booking || !booking.userEmail) {
     return res.status(200).json({ ok: true });
   }
 
@@ -41,7 +45,7 @@ export default async function handler(req, res) {
     <div style="background:#f0fdf4;padding:20px;border-radius:12px;margin:30px 0;font-size:15px;color:#166534;">
       ✅ Pilnai apmokėta suma: ${booking.price || 0} €
     </div>
-    <p style="color:#666;font-size:14px;">Kvitą rasite prisegte prie laiško.</p>
+    <p style="color:#666;font-size:14px;">${infoText[lang]}</p>
   </div>
 </div>`;
 
@@ -56,25 +60,14 @@ export default async function handler(req, res) {
       },
     });
 
-    const mailOptions = {
+    await transporter.sendMail({
       from: `"IZ Hair Trend" <${process.env.FROM_EMAIL}>`,
       to: booking.userEmail,
       subject: titles[lang],
       html,
-    };
+    });
 
-    // PDF только здесь — когда реально оплачено
-    if (booking.price) {
-      mailOptions.attachments = [{
-        filename: `kvitas-${booking.id.slice(0,6)}.pdf`,
-        path: `${baseUrl}/api/receipt-pdf?id=${booking.id}`,
-        contentType: "application/pdf"
-      }];
-    }
-
-    await transporter.sendMail(mailOptions);
-
-    console.log(`Оплата + PDF отправлено на ${booking.userEmail}`);
+    console.log(`Письмо об оплате отправлено на ${booking.userEmail}`);
     res.status(200).json({ ok: true });
   } catch (err) {
     console.error("PAID EMAIL ERROR:", err);
