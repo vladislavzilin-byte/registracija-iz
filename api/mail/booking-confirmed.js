@@ -1,6 +1,8 @@
 // /pages/api/mail/booking-confirmed.js
 import nodemailer from "nodemailer";
 
+const logoUrl = "https://registracija-iz.vercel.app/logo-email.png";
+
 const translations = {
   lt: {
     subject: "Jūsų rezervacija patvirtinta! ✓",
@@ -48,7 +50,7 @@ export default async function handler(req, res) {
   const html = `
 <div style="font-family:Arial,sans-serif;background:#f8f8f8;padding:40px 20px;">
   <div style="max-width:520px;margin:0 auto;background:white;padding:32px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.1);text-align:center;">
-    <img src="https://izhairtrend.lt/logo-email.png" style="width:170px;margin-bottom:20px;" alt="IZ Hair Trend"/>
+    <img src="${logoUrl}" style="width:170px;margin-bottom:20px;" alt="IZ Hair Trend"/>
     <h2 style="color:#000;font-size:24px;margin-bottom:20px;">${t.title}</h2>
     <p style="font-size:16px;color:#333;line-height:1.6;">
       ${t.greeting}, <b>${booking.userName || "kliente"}</b>!<br><br>
