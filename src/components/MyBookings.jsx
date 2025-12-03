@@ -95,23 +95,34 @@ export default function MyBookings() {
   }, [filter, version, bookingsAll.length])
 
   // пуш-уведомление когда бронь подтверждена админом
-  useEffect(() => {
-    const prev = JSON.parse(localStorage.getItem('prevBookings') || '[]')
-    const approvedNow = all.find(
-      b =>
-        (b.status === 'approved' || b.status === 'approved_paid') &&
-        !prev.find(
-          p =>
-            p.id === b.id &&
-            (p.status === 'approved' || p.status === 'approved_paid')
-        )
-    )
-    if (approvedNow) {
-      setApprovedModal(true)
-      setTimeout(() => setApprovedModal(false), 2500)
-    }
-    localStorage.setItem('prevBookings', JSON.stringify(all))
-  }, [all])
+useEffect(() => {
+  const prev = JSON.parse(localStorage.getItem('prevBookings') || '[]')
+
+  const approvedNow = all.find(
+    b =>
+      (b.status === 'approved' || b.status === 'approved_paid') &&
+      !prev.find(
+        p =>
+          p.id === b.id &&
+          (p.status === 'approved' || p.status === 'approved_paid')
+      )
+  )
+
+  if (approvedNow) {
+    // показываем модалку пользователю
+    setApprovedModal(true)
+    setTimeout(() => setApprovedModal(false), 2500)
+
+    // === 🔥 отправляем письмо о подтверждении ===
+    fetch("/api/mail/booking-confirmed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ booking: approvedNow }),
+    }).catch(console.error)
+  }
+
+  localStorage.setItem('prevBookings', JSON.stringify(all))
+}, [all])
 
   // авто-синхронизация с админкой
   useEffect(() => {
