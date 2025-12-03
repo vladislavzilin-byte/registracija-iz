@@ -58,7 +58,7 @@ export default async function handler(req, res) {
 
   const html = `
 <div style="font-family:Arial,sans-serif;background:#ffffff;padding:40px 20px;">
-  <div style="max-width:480px;margin:0 auto;background:#ffffff;padding:40px 20px;border-radius:20px;text-align:center;">
+  <div style="max-width:520px;margin:0 auto;background:#ffffff;padding:40px 20px;border-radius:20px;text-align:center;">
     <img src="${logoUrl}" style="width:240px;margin-bottom:32px;" alt="Irina Žilina IZ Hair Trend"/>
     <h1 style="font-size:28px;font-weight:700;color:#000;margin:0 0 24px 0;">
       ${t.title}
@@ -67,12 +67,12 @@ export default async function handler(req, res) {
       ${t.greeting}, <b>${booking.userName || "kliente"}</b>!<br><br>
       ${t.text.replace("{paid}", paidStr)}
     </p>
-    <div style="background:#fdf4ff;padding:18px 24px;border-radius:16px;margin:0 auto 32px auto;max-width:380px;">
+    <div style="background:#fdf4ff;padding:20px 28px;border-radius:16px;margin:0 auto 32px auto;max-width:400px;">
       <div style="font-size:16px;color:#333333;line-height:1.3;text-align:left;">
         <div><b>${t.data}:</b> ${date}</div>
-        <div style="margin-top:3px;"><b>${t.laikas}:</b> ${time}</div>
-        <div style="margin-top:3px;"><b>${t.paslaugos}:</b> ${booking.services?.join(", ") || "—"}</div>
-        <div style="margin-top:3px;"><b>${t.apmoketa}:</b> ${booking.paid ? (booking.price + " €") : "Dar ne"}</div>
+        <div style="margin-top:4px;"><b>${t.laikas}:</b> ${time}</div>
+        <div style="margin-top:4px;"><b>${t.paslaugos}:</b> ${booking.services?.join(", ") || "—"}</div>
+        <div style="margin-top:4px;"><b>${t.apmoketa}:</b> ${booking.paid ? (booking.price + " €") : "Dar ne"}</div>
       </div>
     </div>
     <p style="font-size:14px;color:#888888;margin:0;">
