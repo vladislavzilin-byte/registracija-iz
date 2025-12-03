@@ -49,30 +49,34 @@ export default async function handler(req, res) {
   const time = `${new Date(booking.start).toLocaleTimeString("lt-LT", { hour: "2-digit", minute: "2-digit" })} – ${new Date(booking.end).toLocaleTimeString("lt-LT", { hour: "2-digit", minute: "2-digit" })}`;
 
   const html = `
-<div style="font-family:Arial,sans-serif;background:#ffffff;padding:40px 20px;">
-  <div style="max-width:520px;margin:0 auto;background:#ffffff;padding:40px 20px;border-radius:20px;text-align:center;">
-    <img src="${logoUrl}" style="width:240px;margin-bottom:32px;" alt="Irina Žilina IZ Hair Trend"/>
-    <h1 style="font-size:28px;font-weight:700;color:#000;margin:0 0 24px 0;">
-      ${t.title}
-    </h1>
-    <p style="font-size:17px;color:#333333;margin:0 0 32px 0;line-height:1.6;">
-      ${t.greeting}, <b>${booking.userName || "kliente"}</b>!<br><br>
-      ${t.text}
-    </p>
-    <div style="background:#f0fdfa;padding:20px 28px;border-radius:16px;margin:0 auto 32px auto;max-width:400px;">
-      <div style="font-size:16px;color:#333333;line-height:1.3;text-align:left;">
-        <div><b>${t.data}:</b> ${date}</div>
-        <div style="margin-top:4px;"><b>${t.laikas}:</b> ${time}</div>
-        <div style="margin-top:16px;font-size:19px;font-weight:700;text-align:center;">
-          ${t.suma}: ${booking.price || 0} €
+<table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(to right, #ecfdf5, #d1fae5);min-height:100vh;">
+  <tr>
+    <td align="center" style="padding:40px 20px;">
+      <div style="max-width:520px;margin:0 auto;background:#ffffff;padding:48px 32px;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,0.08);text-align:center;">
+        <img src="${logoUrl}" style="width:240px;margin-bottom:36px;" alt="Irina Žilina IZ Hair Trend"/>
+        <h1 style="font-size:30px;font-weight:700;color:#000;margin:0 0 28px 0;line-height:1.2;">
+          ${t.title}
+        </h1>
+        <p style="font-size:17px;color:#333333;margin:0 0 36px 0;line-height:1.6;">
+          ${t.greeting}, <b>${booking.userName || "kliente"}</b>!<br><br>
+          ${t.text}
+        </p>
+        <div style="background:#f0fdfa;padding:24px 32px;border-radius:16px;margin:0 auto 36px auto;">
+          <div style="font-size:16px;color:#333333;line-height:1.4;">
+            <div><b>${t.data}:</b> ${date}</div>
+            <div style="margin-top:4px;"><b>${t.laikas}:</b> ${time}</div>
+            <div style="margin-top:16px;font-size:19px;font-weight:700;color:#166534;">
+              ${t.suma}: ${booking.price || 0} €
+            </div>
+          </div>
         </div>
+        <p style="font-size:14px;color:#888888;margin:0;line-height:1.5;">
+          ${t.kvitas}
+        </p>
       </div>
-    </div>
-    <p style="font-size:14px;color:#888888;margin:0;">
-      ${t.kvitas}
-    </p>
-  </div>
-</div>`;
+    </td>
+  </tr>
+</table>`;
 
   try {
     const transporter = nodemailer.createTransport({
