@@ -1,6 +1,8 @@
 // /pages/api/mail/booking-paid.js
 import nodemailer from "nodemailer";
 
+const baseUrl = process.env.NEXT_PUBLIC_URL || "https://registracija-4yf8rc9jb-vladislavzilin.vercel.app";
+
 const titles = {
   lt: "Apmokėjimas gautas! ✅",
   ru: "Оплата получена! ✅",
@@ -18,14 +20,8 @@ export default async function handler(req, res) {
 
   const { booking } = req.body || {};
 
-  if (!booking) {
-    console.log("booking-paid: нет данных booking");
-    return res.status(200).json({ ok: true });
-  }
-
-  // Если нет email — просто выходим (не 400!)
-  if (!booking.userEmail) {
-    console.log(`booking-paid: нет email у записи #${booking.id?.slice(0,6) || '???'}`);
+  if (!booking || !booking.userEmail) {
+    console.log("booking-paid: нет email или данных");
     return res.status(200).json({ ok: true });
   }
 
@@ -67,9 +63,8 @@ export default async function handler(req, res) {
       html,
     });
 
-    console.log(`Письмо об оплате отправлено на ${booking.userEmail} (#${booking.id.slice(0,6)})`);
+    console.log(`Оплата подтверждена — письмо отправлено на ${booking.userEmail}`);
     res.status(200).json({ ok: true });
-
   } catch (err) {
     console.error("PAID EMAIL ERROR:", err);
     res.status(500).json({ ok: false, error: err.message });
