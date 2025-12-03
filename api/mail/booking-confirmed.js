@@ -9,6 +9,7 @@ const translations = {
     text: "Jūsų rezervacija buvo <b>patvirtinta{paid}</b>.",
     paidText: " ir apmokėta",
     info: "Pridedame kvito PDF.",
+    noPdf: "Apmokėjimas dar negautas – kvitas bus atsiųstas vėliau.",
   },
   ru: {
     subject: "Ваша запись подтверждена! ✓",
@@ -17,6 +18,7 @@ const translations = {
     text: "Ваша запись была <b>подтверждена{paid}</b>.",
     paidText: " и оплачена",
     info: "Прикрепляем PDF-квитанцию.",
+    noPdf: "Оплата ещё не получена – квитанция будет отправлена позже.",
   },
   en: {
     subject: "Your booking is confirmed! ✓",
@@ -25,24 +27,34 @@ const translations = {
     text: "Your booking has been <b>confirmed{paid}</b>.",
     paidText: " and paid",
     info: "PDF receipt attached.",
+    noPdf: "Payment not yet received – receipt will be sent later.",
   },
 };
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
-  const { booking } = req.body;
-  if (!booking?.userEmail || !booking?.id) {
-    return res.status(400).json({ ok: false, error: "No booking data" });
+  const { booking } = req.body || {};
+
+  if (!booking) {
+    console.log("booking-confirmed: нет данных booking");
+    return res.status(200).json({ ok: true }); // не падаем, просто молчим
   }
 
-  const lang = booking.userLang || "lt"; // важно: сохраняй язык пользователя в booking.userLang при создании брони!
+  const lang = booking.userLang || "lt";
   const t = translations[lang] || translations["lt"];
+
+  // Если нет email — просто выходим (не 400!)
+  if (!booking.userEmail) {
+    console.log(`booking-confirmed: нет email у записи #${booking.id?.slice(0,6) || '???'}`);
+    return res.status(200).json({ ok: true });
+  }
 
   const date = new Date(booking.start).toLocaleDateString(lang === "lt" ? "lt-LT" : lang === "ru" ? "ru-RU" : "en-GB");
   const time = `${new Date(booking.start).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })} – ${new Date(booking.end).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })}`;
 
   const paidStr = booking.paid ? t.paidText : "";
+  const infoText = booking.paid && booking.price ? t.info : t.noPdf;
 
   const html = `
 <div style="font-family:Arial,sans-serif;background:#f8f8f8;padding:40px 20px;">
@@ -59,7 +71,7 @@ export default async function handler(req, res) {
       <b>Paslaugos:</b> ${booking.services?.join(", ") || "—"}<br>
       <b>Apmokėta:</b> ${booking.paid ? (booking.price + " €") : "Dar ne"}
     </div>
-    <p style="color:#666;font-size:14px;">${t.info}</p>
+    <p style="color:#666;font-size:14px;">${infoText}</p>
   </div>
 </div>`;
 
@@ -74,37 +86,27 @@ export default async function handler(req, res) {
       },
     });
 
-    await transporter.sendMail({
+    const mailOptions = {
       from: `"IZ Hair Trend" <${process.env.FROM_EMAIL}>`,
       to: booking.userEmail,
       subject: t.subject,
       html,
-      attachments: booking.paid || booking.price ? [{
+    };
+
+    // Прикрепляем PDF только если оплачено и есть цена
+    if (booking.paid && booking.price) {
+      mailOptions.attachments = [{
         filename: `kvitas-${booking.id.slice(0,6)}.pdf`,
-        path: `https://izhairtrend.lt/api/receipt-pdf?id=${booking.id}`, // или твой домен
+        path: `https://registracija-iz.vercel.app/api/receipt-pdf?id=${booking.id}`, // ← твой актуальный домен Vercel
         contentType: "application/pdf"
-      }] : [],
-    });
-
-    // === SMS (если хочешь — раскомментируй когда настроишь sms.ru) ===
-    /*
-    if (booking.userPhone) {
-      await fetch("https://izhairtrend.lt/api/sms/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: booking.userPhone,
-          type: "confirmed",
-          date,
-          time,
-          services: booking.services,
-          lang,
-        }),
-      });
+      }];
     }
-    */
 
+    await transporter.sendMail(mailOptions);
+
+    console.log(`Письмо-подтверждение отправлено на ${booking.userEmail} (#${booking.id.slice(0,6)})`);
     res.status(200).json({ ok: true });
+
   } catch (err) {
     console.error("CONFIRM EMAIL ERROR:", err);
     res.status(500).json({ ok: false, error: err.message });
