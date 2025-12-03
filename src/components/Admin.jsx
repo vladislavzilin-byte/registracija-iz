@@ -1,282 +1,4 @@
-JavaScript// /pages/api/sms/send.js
-import { Redis } from "@upstash/redis";
-
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
-
-const translations = {
-  confirmed: {
-    lt: "Jūsų rezervacija patvirtinta! 📅 {date} 🕐 {time} 💇‍♀️ {services}",
-    ru: "Ваша запись подтверждена! 📅 {date} 🕐 {time} 💇‍♀️ {services}",
-    en: "Your booking is confirmed! 📅 {date} 🕐 {time} 💇‍♀️ {services}",
-  },
-  paid: {
-    lt: "Apmokėjimas gautas! ✅ Rezervacija {date} {time} dabar pilnai apmokėta.",
-    ru: "Оплата получена! ✅ Запись {date} {time} теперь полностью оплачена.",
-    en: "Payment received! ✅ Booking {date} {time} is now fully paid.",
-  },
-};
-
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
-
-  const { phone, type = "confirmed", date, time, services, lang = "lt" } = req.body;
-
-  if (!phone || !date || !time) return res.status(400).json({ ok: false });
-
-  // Антиспам – не чаще чем раз в 60 сек на один номер
-  const key = `sms_cooldown:${phone}`;
-  if (await redis.get(key)) {
-    return res.status(429).json({ ok: false, message: "Too frequent" });
-  }
-  await redis.set(key, "1", { ex: 60 });
-
-  const t = translations[type][lang] || translations[type]["lt"];
-
-  const message = t
-    .replace("{date}", date)
-    .replace("{time}", time)
-    .replace("{services}", services?.join(", ") || "");
-
-  // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
-  // Здесь подключи свой SMS-провайдер
-  // Пример для Twilio:
-  /*
-  const twilio = require("twilio")(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
-  await twilio.messages.create({
-    body: message,
-    from: process.env.TWILIO_PHONE,
-    to: phone,
-  });
-  */
-
-  // Пример для sms.ru (очень дешево в Литве/России):
-  const response = await fetch(`https://sms.ru/sms/send?api_id=${process.env.SMSRU_API_ID}&to=${phone}&msg=${encodeURIComponent(message)}&json=1`);
-  const result = await response.json();
-  if (result.status !== "OK") throw new Error("SMS failed");
-
-  // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
-
-  return res.status(200).json({ ok: true });
-}
-2. Обновлённый /api/mail/booking-confirmed.js (теперь многоязычный)
-JavaScript// /pages/api/mail/booking-confirmed.js
-import nodemailer from "nodemailer";
-
-const translations = {
-  title: {
-    lt: "Jūsų rezervacija patvirtinta! 🎉",
-    ru: "Ваша запись подтверждена! 🎉",
-    en: "Your booking is confirmed! 🎉",
-  },
-  greeting: {
-    lt: "Sveiki",
-    ru: "Здравствуйте",
-    en: "Hello",
-  },
-  text1: {
-    lt: "Jūsų rezervacija buvo <b>patvirtinta{paid}</b>.",
-    ru: "Ваша запись была <b>подтверждена{paid}</b>.",
-    en: "Your booking has been <b>confirmed{paid}</b>.",
-  },
-  paidText: {
-    lt: " ir apmokėta",
-    ru: " и оплачена",
-    en: " and paid",
-  },
-};
-
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
-
-  const { booking } = req.body || {};
-  if (!booking?.userEmail) return res.status(400).json({ ok: false });
-
-  const lang = booking.userLang || "lt"; // ← ты должен сохранять язык пользователя в booking.userLang
-
-  const t = translations;
-  const paidStr = booking.paid ? translations.paidText[lang] : "";
-
-  const date = new Date(booking.start).toLocaleDateString(lang === "lt" ? "lt-LT" : lang === "ru" ? "ru-RU" : "en-GB");
-  const time = `${new Date(booking.start).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })} – ${new Date(booking.end).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })}`;
-
-  const html = `
-    <div style="font-family:Arial,sans-serif;background:#f4f4f4;padding:40px;">
-      <div style="max-width:520px;margin:0 auto;background:white;padding:32px;border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,0.1);text-align:center;">
-        <img src="https://izhairtrend.lt/logo-email.png" style="width:170px;margin-bottom:20px;" alt="IZ Hair Trend"/>
-        <h2 style="color:#000;font-size:22px;margin-bottom:25px;">${t.title[lang]}</h2>
-        <p style="font-size:15px;color:#444;">
-          ${t.greeting[lang]}, <b>${booking.userName || "kliente"}</b>!<br><br>
-          ${t.text1[lang].replace("{paid}", paidStr)}
-        </p>
-        <div style="background:#f8f0ff;padding:20px;border-radius:12px;margin:25px 0;font-size:15px;">
-          <b>Data:</b> ${date}<br>
-          <b>Laikas:</b> ${time}<br>
-          <b>Paslaugos:</b> ${booking.services?.join(", ") || "—"}<br>
-          <b>Apmokėta:</b> ${booking.paid ? (booking.price + " €") : "Dar ne"}
-        </div>
-        <p style="font-size:14px;color:#666;">Pridedame PDF kvito.</p>
-      </div>
-    </div>`;
-
-  try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT),
-      secure: process.env.SMTP_SECURE === "true",
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    });
-
-    await transporter.sendMail({
-      from: `"IZ Hair Trend" <${process.env.FROM_EMAIL}>`,
-      to: booking.userEmail,
-      subject: t.title[lang],
-      html,
-      attachments: [{
-        filename: `kvitas-${booking.id.slice(0,6)}.pdf`,
-        path: `https://izhairtrend.lt/api/receipt-pdf?id=${booking.id}`,
-        contentType: "application/pdf"
-      }]
-    });
-
-    // === ОТПРАВЛЯЕМ SMS ===
-    if (booking.userPhone) {
-      await fetch(`${process.env.NEXT_PUBLIC_URL || "https://tavo-domenas.lt"}/api/sms/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: booking.userPhone,
-          type: "confirmed",
-          date,
-          time,
-          services: booking.services,
-          lang,
-        }),
-      });
-    }
-
-    res.status(200).json({ ok: true });
-  } catch (e) {
-    console.error("EMAIL/SMS ERROR:", e);
-    res.status(500).json({ ok: false });
-  }
-}
-3. Новый файл: /pages/api/mail/booking-paid.js
-JavaScript// /pages/api/mail/booking-paid.js
-import nodemailer from "nodemailer";
-
-const titles = {
-  lt: "Apmokėjimas gautas! ✅",
-  ru: "Оплата получена! ✅",
-  en: "Payment received! ✅",
-};
-
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
-
-  const { booking } = req.body;
-  if (!booking?.userEmail) return res.status(400).json({ ok: false });
-
-  const lang = booking.userLang || "lt";
-
-  const date = new Date(booking.start).toLocaleDateString(lang === "lt" ? "lt-LT" : lang === "ru" ? "ru-RU" : "en-GB");
-  const time = `${new Date(booking.start).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })} – ${new Date(booking.end).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })}`;
-
-  const html = `
-    <div style="font-family:Arial,sans-serif;background:#f4f4f4;padding:40px;text-align:center;">
-      <div style="max-width:520px;margin:0 auto;background:white;padding:32px;border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,0.1);">
-        <img src="https://izhairtrend.lt/logo-email.png" style="width:170px;margin-bottom:20px;" />
-        <h2 style="color:#000;font-size:22px;margin-bottom:25px;">${titles[lang]}</h2>
-        <p style="font-size:16px;color:#444;">
-          Ačiū už apmokėjimą!<br>
-          Jūsų rezervacija <b>${date} ${time}</b> dabar pilnai apmokėta.
-        </p>
-      </div>
-    </div>`;
-
-  try {
-    const transporter = nodemailer.createTransport({ /* те же настройки */ });
-
-    await transporter.sendMail({
-      from: `"IZ Hair Trend" <${process.env.FROM_EMAIL}>`,
-      to: booking.userEmail,
-      subject: titles[lang],
-      html,
-    });
-
-    // SMS об оплате
-    if (booking.userPhone) {
-      await fetch(`${process.env.NEXT_PUBLIC_URL || "https://tavo-domenas.lt"}/api/sms/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: booking.userPhone,
-          type: "paid",
-          date,
-          time,
-          lang,
-        }),
-      });
-    }
-
-    res.status(200).json({ ok: true });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ ok: false });
-  }
-}
-4. Изменения в Admin.jsx (два места)
-JavaScriptconst approveByAdmin = async (id) => {
-  updateBooking(id, (b) => ({
-    ...b,
-    status: "approved",
-    approvedAt: new Date().toISOString(),
-  }));
-
-  const fresh = getBookings().find(b => b.id === id);
-
-  showToast(t("admin_toast_approved"));
-
-  // Отправляем письмо + SMS о подтверждении (всегда, даже если ещё не оплачено)
-  await fetch("/api/mail/booking-confirmed", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ booking: fresh }),
-  });
-};
-
-const togglePaid = async (id) => {
-  updateBooking(id, (b) => ({ ...b, paid: !b.paid }));
-
-  const fresh = getBookings().find(b => b.id === id);
-
-  showToast(t("admin_toast_payment_updated"));
-
-  // Если стало оплачено — отдельное письмо + SMS
-  if (fresh.paid) {
-    await fetch("/api/mail/booking-paid", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ booking: fresh }),
-    });
-  }
-};
-5. Важно: сохраняй язык пользователя
-В MyBookings.jsx или при создании брони добавь:
-JavaScriptuserLang: localStorage.getItem("lang") || "lt"
-или из i18n контекста.
-Готово. Теперь у клиента будет и письмо, и SMS при подтверждении и при оплате, на нужном языке, и никаких дубликатов.
-Если нужно – могу сразу скинуть Twilio или sms.ru интеграцию под ключ.14.8smozhew mne vilsat polnij admin pomeniav tolko etogo i necho bolshe const approveByAdmin = async (id) => { updateBooking(id, (b) => ({ ...b, status: "approved", approvedAt: new Date().toISOString(), }));
-  const fresh = getBookings().find(b => b.id === id);
-  showToast(t("admin_toast_approved"));
-  // Отправляем письмо + SMS о подтверждении (всегда, даже если ещё не оплачено) await fetch("/api/mail/booking-confirmed", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ booking: fresh }), }); };
-const togglePaid = async (id) => { updateBooking(id, (b) => ({ ...b, paid: !b.paid }));
-  const fresh = getBookings().find(b => b.id === id);
-  showToast(t("admin_toast_payment_updated"));
-  // Если стало оплачено — отдельное письмо + SMS if (fresh.paid) { await fetch("/api/mail/booking-paid", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ booking: fresh }), }); } }; ?Вот полный файл Admin.jsx — я поменял ТОЛЬКО две функции approveByAdmin и togglePaid ровно так, как ты просил, и ничего больше не трогал.
-jsximport { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   getSettings,
   saveSettings,
@@ -322,7 +44,6 @@ const serviceStyles = {
   },
 };
 
-// оплачено — либо новое поле paid, либо старый статус approved_paid
 const isPaid = (b) => !!(b?.paid || b?.status === "approved_paid");
 
 const pad2 = (n) => String(n).padStart(2, "0");
@@ -359,7 +80,6 @@ export default function Admin() {
     );
   }
 
-  // === НАСТРОЙКИ И СОСТОЯНИЯ ===
   const [settings, setSettings] = useState(() => {
     const s = getSettings();
     if (!Array.isArray(s.serviceList) || !s.serviceList.length) {
@@ -373,12 +93,9 @@ export default function Admin() {
   const [showSettings, setShowSettings] = useState(false);
   const [showFinance, setShowFinance] = useState(false);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all"); // all | active | finished | canceled
+  const [statusFilter, setStatusFilter] = useState("all");
   const [toast, setToast] = useState(null);
-
-  // для гармошки в списке записей
   const [openId, setOpenId] = useState(null);
-  // пагинация
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
@@ -388,20 +105,17 @@ export default function Admin() {
     saveSettings(next);
   };
 
-  // синк записей при обновлении профиля
   useEffect(() => {
     const handler = () => setBookings(getBookings());
     window.addEventListener("profileUpdated", handler);
     return () => window.removeEventListener("profileUpdated", handler);
   }, []);
 
-  // если меняем поиск / фильтр — сбрасываем на первую страницу
   useEffect(() => {
     setPage(1);
     setOpenId(null);
   }, [search, statusFilter]);
 
-  // === СТАТИСТИКА ===
   const stats = useMemo(() => {
     const total = bookings.length;
     const active = bookings.filter(
@@ -413,7 +127,6 @@ export default function Admin() {
     return { total, active, canceled };
   }, [bookings]);
 
-  // === ФИЛЬТР СПИСКА ===
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     const now = new Date();
@@ -440,9 +153,6 @@ export default function Admin() {
           matchStatus = ["canceled_client", "canceled_admin"].includes(
             b.status
           );
-        } else {
-          // all — ничего не ограничиваем
-          matchStatus = true;
         }
 
         return matchQ && matchStatus;
@@ -452,7 +162,6 @@ export default function Admin() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
 
-  // если вдруг уменьшили список и текущая страница вылезла за предел
   useEffect(() => {
     if (page > totalPages) {
       setPage(totalPages);
@@ -465,7 +174,6 @@ export default function Admin() {
     return filtered.slice(startIndex, startIndex + pageSize);
   }, [filtered, page]);
 
-  // группировка по датам (для одной страницы)
   const groupedByDate = useMemo(() => {
     const byKey = new Map();
     paginated.forEach((b) => {
@@ -481,7 +189,6 @@ export default function Admin() {
     }));
   }, [paginated]);
 
-  // === helper для обновления одной записи ===
   const updateBooking = (id, updater) => {
     const all = getBookings();
     const next = all.map((b) => (b.id === id ? updater(b) : b));
@@ -494,7 +201,6 @@ export default function Admin() {
     setTimeout(() => setToast(null), 2200);
   };
 
-  // === ДЕЙСТВИЯ С ЗАПИСЯМИ ===
   const cancelByAdmin = (id) => {
     if (!confirm(t("admin_confirm_cancel"))) return;
     updateBooking(id, (b) => ({
@@ -505,8 +211,7 @@ export default function Admin() {
     showToast(t("admin_toast_canceled"));
   };
 
-  // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←← НОВЫЕ ФУНКЦИИ (ТОЛЬКО ОНИ ИЗМЕНЕНЫ)
-
+  // НОВАЯ ЛОГИКА — ВСЁ ОТПРАВЛЯЕТСЯ ВСЕГДА ПРИ ПОДТВЕРЖДЕНИИ
   const approveByAdmin = async (id) => {
     updateBooking(id, (b) => ({
       ...b,
@@ -514,70 +219,70 @@ export default function Admin() {
       approvedAt: new Date().toISOString(),
     }));
 
-    const fresh = getBookings().find(b => b.id === id);
+    const fresh = getBookings().find((b) => b.id === id);
 
     showToast(t("admin_toast_approved"));
 
-    // Отправляем письмо + SMS о подтверждении (всегда, даже если ещё не оплачено)
+    // Всегда отправляем письмо + SMS о подтверждении (даже если ещё не оплачено)
     await fetch("/api/mail/booking-confirmed", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ booking: fresh }),
-    });
+    }).catch(console.error);
   };
 
+  // НОВАЯ ЛОГИКА — ОТДЕЛЬНОЕ ПИСЬМО ТОЛЬКО ПРИ СТАНОВЛЕНИИ ОПЛАЧЕННЫМ
   const togglePaid = async (id) => {
     updateBooking(id, (b) => ({ ...b, paid: !b.paid }));
 
-    const fresh = getBookings().find(b => b.id === id);
+    const fresh = getBookings().find((b) => b.id === id);
 
     showToast(t("admin_toast_payment_updated"));
 
-    // Если стало оплачено — отдельное письмо + SMS об оплате
+    // Отправляем отдельное письмо + SMS только когда стало оплачено
     if (fresh.paid) {
       await fetch("/api/mail/booking-paid", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ booking: fresh }),
-      });
+      }).catch(console.error);
     }
   };
 
-// === НАСТРОЙКИ УСЛУГ ===
-const services = settings.serviceList || [];
+  const services = settings.serviceList || [];
 
-const updateServiceField = (index, field, value) => {
-  const next = [...services];
-  next[index] = {
-    ...next[index],
-    [field]:
-      field === "duration" || field === "deposit"
-        ? Number(value) || 0
-        : value,
+  const updateServiceField = (index, field, value) => {
+    const next = [...services];
+    next[index] = {
+      ...next[index],
+      [field]:
+        field === "duration" || field === "deposit"
+          ? Number(value) || 0
+          : value,
+    };
+    updateSettings({ serviceList: next });
   };
-  updateSettings({ serviceList: next });
-};
 
-const addService = () => {
-  updateSettings({
-    serviceList: [
-      ...services,
-      { name: t("admin_services_new_service"), duration: 60, deposit: 0 },
-    ],
-  });
-};
+  const addService = () => {
+    updateSettings({
+      serviceList: [
+        ...services,
+        { name: t("admin_services_new_service"), duration: 60, deposit: 0 },
+      ],
+    });
+  };
 
-const removeService = (index) => {
-  if (services.length <= 1) return;
-  updateSettings({
-    serviceList: services.filter((_, i) => i !== index),
-  });
-};
+  const removeService = (index) => {
+    if (services.length <= 1) return;
+    updateSettings({
+      serviceList: services.filter((_, i) => i !== index),
+    });
+  };
 
-const handleDownloadReceipt = (booking) => {
-  downloadReceipt(booking, t);
-};
-  
+  const handleDownloadReceipt = (booking) => {
+    downloadReceipt(booking, t);
+  };
+
   return (
     <div className="col" style={{ gap: 16 }}>
       {/* === НАСТРОЙКИ (ГАРМОШКА) === */}
@@ -594,7 +299,6 @@ const handleDownloadReceipt = (booking) => {
               </span>
             </span>
           </button>
-
           <div
             style={{
               maxHeight: showSettings ? 1200 : 0,
@@ -605,7 +309,6 @@ const handleDownloadReceipt = (booking) => {
             <div style={{ paddingTop: 10 }}>
               {/* ОСНОВНЫЕ НАСТРОЙКИ */}
               <div className="row" style={{ gap: 12 }}>
-                {/* Имя мастера */}
                 <div className="col">
                   <label style={labelStyle}>{t("master_name")}</label>
                   <input
@@ -616,8 +319,6 @@ const handleDownloadReceipt = (booking) => {
                     }
                   />
                 </div>
-
-                {/* Телефон администратора */}
                 <div className="col">
                   <label style={labelStyle}>{t("admin_phone")}</label>
                   <input
@@ -628,8 +329,6 @@ const handleDownloadReceipt = (booking) => {
                     }
                   />
                 </div>
-
-                {/* IBAN администратора */}
                 <div className="col">
                   <label style={labelStyle}>IBAN (EUR)</label>
                   <input
@@ -642,7 +341,6 @@ const handleDownloadReceipt = (booking) => {
                   />
                 </div>
               </div>
-
               {/* РАБОЧЕЕ ВРЕМЯ */}
               <div
                 className="row"
@@ -662,7 +360,6 @@ const handleDownloadReceipt = (booking) => {
                     ))}
                   </select>
                 </div>
-
                 <div className="col">
                   <label style={labelStyle}>{t("day_end")}</label>
                   <select
@@ -677,7 +374,6 @@ const handleDownloadReceipt = (booking) => {
                     ))}
                   </select>
                 </div>
-
                 <div className="col">
                   <label style={labelStyle}>{t("slot_minutes")}</label>
                   <select
@@ -695,7 +391,6 @@ const handleDownloadReceipt = (booking) => {
                   </select>
                 </div>
               </div>
-
               {/* УСЛУГИ */}
               <div
                 style={{
@@ -720,13 +415,10 @@ const handleDownloadReceipt = (booking) => {
                       {t("admin_services_subtitle")}
                     </div>
                   </div>
-
                   <button style={btnPrimary} onClick={addService}>
                     + {t("admin_services_add_button")}
                   </button>
                 </div>
-
-                {/* РЕДАКТИРОВАНИЕ УСЛУГ */}
                 <div
                   style={{
                     display: "flex",
@@ -745,7 +437,6 @@ const handleDownloadReceipt = (booking) => {
                         alignItems: "center",
                       }}
                     >
-                      {/* Название */}
                       <input
                         style={inputGlass}
                         value={s.name}
@@ -753,8 +444,6 @@ const handleDownloadReceipt = (booking) => {
                           updateServiceField(idx, "name", e.target.value)
                         }
                       />
-
-                      {/* Длительность + "min" */}
                       <div style={{ position: "relative" }}>
                         <input
                           style={{ ...inputGlass, paddingRight: 34 }}
@@ -778,8 +467,6 @@ const handleDownloadReceipt = (booking) => {
                           min
                         </span>
                       </div>
-
-                      {/* Депозит + "€" */}
                       <div style={{ position: "relative" }}>
                         <input
                           style={{ ...inputGlass, paddingRight: 34 }}
@@ -803,7 +490,6 @@ const handleDownloadReceipt = (booking) => {
                           €
                         </span>
                       </div>
-
                       <button
                         onClick={() => removeService(idx)}
                         style={{
@@ -837,7 +523,6 @@ const handleDownloadReceipt = (booking) => {
               <span style={{ fontWeight: 700 }}>{t("finance_title")}</span>
             </span>
           </button>
-
           <div
             style={{
               maxHeight: showFinance ? 2000 : 0,
@@ -856,7 +541,7 @@ const handleDownloadReceipt = (booking) => {
         </div>
       </div>
 
-      {/* === ВСЕ ЗАПИСИ — ГРУППИРОВКА + ГАРМОШКА + ПАГИНАЦИЯ === */}
+      {/* === ВСЕ ЗАПИСИ === */}
       <div style={{ width: "100%" }}>
         <div style={cardAurora}>
           <div style={topBar}>
@@ -880,8 +565,6 @@ const handleDownloadReceipt = (booking) => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-
-            {/* ПАНЕЛЬ ФИЛЬТРОВ */}
             <div style={segmented}>
               {[
                 { v: "all", label: t("all") },
@@ -927,7 +610,6 @@ const handleDownloadReceipt = (booking) => {
                 {t("total_canceled")}: {stats.canceled}
               </span>
             </div>
-
             <div
               style={{
                 display: "flex",
@@ -970,7 +652,7 @@ const handleDownloadReceipt = (booking) => {
             </div>
           </div>
 
-          {/* Список сгруппирован по датам */}
+          {/* СПИСОК ЗАПИСЕЙ */}
           <div
             style={{
               display: "flex",
@@ -984,7 +666,6 @@ const handleDownloadReceipt = (booking) => {
                 key={key}
                 style={{ display: "flex", flexDirection: "column", gap: 6 }}
               >
-                {/* заголовок дня */}
                 <div
                   style={{
                     display: "flex",
@@ -1004,11 +685,8 @@ const handleDownloadReceipt = (booking) => {
                   </span>
                 </div>
 
-                {/* записи конкретного дня */}
                 {items.map((b) => {
                   const inFuture = new Date(b.start) > new Date();
-                  const startDate = new Date(b.start);
-                  const endDate = new Date(b.end || b.start);
                   const servicesArr = Array.isArray(b.services)
                     ? b.services
                     : [];
@@ -1038,7 +716,7 @@ const handleDownloadReceipt = (booking) => {
                         boxShadow: "0 0 16px rgba(88,28,135,0.55)",
                       }}
                     >
-                      {/* строка в одну линию (гармошка) */}
+                      {/* Заголовок записи (гармошка) */}
                       <button
                         type="button"
                         onClick={() => setOpenId(isOpen ? null : b.id)}
@@ -1054,31 +732,20 @@ const handleDownloadReceipt = (booking) => {
                           }}
                         >
                           <div>{statusDot(b)}</div>
-
-                          {/* дата */}
                           <span style={pillDate}>{fmtDate(b.start)}</span>
-
-                          {/* время */}
                           <span style={pillTime}>
                             {fmtTime(b.start)} – {fmtTime(b.end)}
                           </span>
-
-                          {/* услуги */}
                           {servicesArr.length > 0 && (
                             <span style={pillService}>
                               {servicesArr.join(", ")}
                             </span>
                           )}
-
-                          {/* цена */}
                           <span style={pillPrice}>
                             €{formatPrice(b.price)}
                           </span>
-
-                          {/* ID */}
                           <span style={pillId}>#{b.id.slice(0, 6)}</span>
 
-                          {/* справа: подтверждение + оплата + стрелка */}
                           <span
                             style={{
                               marginLeft: "auto",
@@ -1087,7 +754,6 @@ const handleDownloadReceipt = (booking) => {
                               gap: 8,
                             }}
                           >
-                            {/* статус подтверждения */}
                             <span
                               style={{
                                 fontSize: 11,
@@ -1111,7 +777,6 @@ const handleDownloadReceipt = (booking) => {
                                 : t("admin_status_unconfirmed")}
                             </span>
 
-                            {/* статус оплаты */}
                             <span
                               style={{
                                 fontSize: 11,
@@ -1130,7 +795,6 @@ const handleDownloadReceipt = (booking) => {
                                 : t("receipt_status_unpaid")}
                             </span>
 
-                            {/* стрелка */}
                             <div
                               style={{
                                 transform: isOpen
@@ -1145,7 +809,7 @@ const handleDownloadReceipt = (booking) => {
                         </div>
                       </button>
 
-                      {/* раскрытая карточка */}
+                      {/* Раскрытая часть */}
                       {isOpen && (
                         <div
                           style={{
@@ -1159,7 +823,7 @@ const handleDownloadReceipt = (booking) => {
                             gap: 10,
                           }}
                         >
-                          {/* верхняя строка — дата/время + квитанция */}
+                          {/* Дата/время + квитанция */}
                           <div
                             style={{
                               display: "flex",
@@ -1170,14 +834,13 @@ const handleDownloadReceipt = (booking) => {
                           >
                             <div>{statusDot(b)}</div>
 
-                            {/* Дата */}
                             <div style={{ minWidth: 140 }}>
                               <div style={{ fontSize: 12, opacity: 0.8 }}>
                                 {t("date")}
                               </div>
                               <input
                                 type="date"
-                                value={toInputDate(startDate)}
+                                value={toInputDate(b.start)}
                                 style={{
                                   ...inputGlass,
                                   height: 32,
@@ -1186,54 +849,40 @@ const handleDownloadReceipt = (booking) => {
                                 onChange={(e) => {
                                   const val = e.target.value;
                                   if (!val) return;
-                                  const [y, m, d] = val
-                                    .split("-")
-                                    .map(Number);
+                                  const [y, m, d] = val.split("-").map(Number);
                                   updateBooking(b.id, (orig) => {
                                     const st = new Date(orig.start);
-                                    const en = new Date(
-                                      orig.end || orig.start
-                                    );
+                                    const en = new Date(orig.end || orig.start);
                                     const duration = en - st;
                                     const ns = new Date(orig.start);
                                     ns.setFullYear(y, m - 1, d);
-                                    const ne = new Date(
-                                      ns.getTime() +
-                                        Math.max(duration, 15 * 60000)
-                                    );
+                                    const ne = new Date(ns.getTime() + Math.max(duration, 15 * 60000));
                                     return { ...orig, start: ns, end: ne };
                                   });
                                 }}
                               />
                             </div>
 
-                            {/* Время от */}
                             <div style={{ minWidth: 110 }}>
                               <div style={{ fontSize: 12, opacity: 0.8 }}>
                                 {t("admin_time_from")}
                               </div>
                               <input
                                 type="time"
-                                value={toInputTime(startDate)}
+                                value={toInputTime(b.start)}
                                 style={{
                                   ...inputGlass,
                                   height: 32,
                                   padding: "6px 10px",
                                 }}
                                 onChange={(e) => {
-                                  const [hh, mm] = e.target.value
-                                    .split(":")
-                                    .map(Number);
+                                  const [hh, mm] = e.target.value.split(":").map(Number);
                                   updateBooking(b.id, (orig) => {
                                     const ns = new Date(orig.start);
                                     ns.setHours(hh, mm);
-                                    const ne = new Date(
-                                      orig.end || orig.start
-                                    );
+                                    const ne = new Date(orig.end || orig.start);
                                     if (ne <= ns) {
-                                      ne.setTime(
-                                        ns.getTime() + 15 * 60000
-                                      );
+                                      ne.setTime(ns.getTime() + 15 * 60000);
                                     }
                                     return { ...orig, start: ns, end: ne };
                                   });
@@ -1241,38 +890,31 @@ const handleDownloadReceipt = (booking) => {
                               />
                             </div>
 
-                            {/* Время до */}
                             <div style={{ minWidth: 110 }}>
                               <div style={{ fontSize: 12, opacity: 0.8 }}>
                                 {t("admin_time_to")}
                               </div>
                               <input
                                 type="time"
-                                value={toInputTime(endDate)}
+                                value={toInputTime(b.end)}
                                 style={{
                                   ...inputGlass,
                                   height: 32,
                                   padding: "6px 10px",
                                 }}
                                 onChange={(e) => {
-                                  const [hh, mm] = e.target.value
-                                    .split(":")
-                                    .map(Number);
+                                  const [hh, mm] = e.target.value.split(":").map(Number);
                                   updateBooking(b.id, (orig) => {
                                     const st = new Date(orig.start);
                                     let ne = new Date(st);
                                     ne.setHours(hh, mm);
-                                    if (ne <= st)
-                                      ne.setTime(
-                                        st.getTime() + 15 * 60000
-                                      );
+                                    if (ne <= st) ne.setTime(st.getTime() + 15 * 60000);
                                     return { ...orig, end: ne };
                                   });
                                 }}
                               />
                             </div>
 
-                            {/* Правый блок: время + квитанция */}
                             <div
                               style={{
                                 marginLeft: "auto",
@@ -1284,7 +926,6 @@ const handleDownloadReceipt = (booking) => {
                               <div style={{ opacity: 0.8, fontSize: 13 }}>
                                 {fmtTime(b.start)} – {fmtTime(b.end)}
                               </div>
-
                               {paid && (
                                 <button
                                   type="button"
@@ -1294,8 +935,6 @@ const handleDownloadReceipt = (booking) => {
                                   📄 {t("admin_download_receipt")}
                                 </button>
                               )}
-
-                              {/* Номер квитанции */}
                               <div
                                 style={{
                                   opacity: 0.7,
@@ -1342,8 +981,7 @@ const handleDownloadReceipt = (booking) => {
                               marginTop: 6,
                               padding: "10px 12px",
                               borderRadius: 10,
-                              border:
-                                "1px solid rgba(148,163,184,0.25)",
+                              border: "1px solid rgba(148,163,184,0.25)",
                               background: "rgba(30,20,40,0.55)",
                               display: "flex",
                               flexDirection: "column",
@@ -1362,9 +1000,7 @@ const handleDownloadReceipt = (booking) => {
                                   width: 10,
                                   height: 10,
                                   borderRadius: "50%",
-                                  background: b.paid
-                                    ? "#22c55e"
-                                    : "#ef4444",
+                                  background: b.paid ? "#22c55e" : "#ef4444",
                                   boxShadow: b.paid
                                     ? "0 0 8px rgba(34,197,94,0.9)"
                                     : "0 0 8px rgba(248,113,113,0.9)",
@@ -1372,9 +1008,7 @@ const handleDownloadReceipt = (booking) => {
                               />
                               <span
                                 style={{
-                                  color: b.paid
-                                    ? "#bbf7d0"
-                                    : "#fecaca",
+                                  color: b.paid ? "#bbf7d0" : "#fecaca",
                                   fontWeight: 600,
                                 }}
                               >
@@ -1384,7 +1018,6 @@ const handleDownloadReceipt = (booking) => {
                               </span>
                             </div>
 
-                            {/* Цена / аванс */}
                             <div
                               style={{
                                 display: "flex",
@@ -1407,8 +1040,7 @@ const handleDownloadReceipt = (booking) => {
                                   const v = e.target.value;
                                   updateBooking(b.id, (orig) => ({
                                     ...orig,
-                                    price:
-                                      v === "" ? null : Number(v),
+                                    price: v === "" ? null : Number(v),
                                   }));
                                 }}
                               />
@@ -1421,8 +1053,7 @@ const handleDownloadReceipt = (booking) => {
                                 width: "100%",
                                 padding: 8,
                                 borderRadius: 8,
-                                border:
-                                  "1px solid rgba(148,163,184,0.5)",
+                                border: "1px solid rgba(148,163,184,0.5)",
                                 background: "rgba(0,0,0,0.25)",
                                 color: "#fff",
                               }}
@@ -1461,7 +1092,6 @@ const handleDownloadReceipt = (booking) => {
                                 ? t("canceled")
                                 : t("approved")}
                             </span>
-
                             <span
                               style={{
                                 padding: "4px 10px",
@@ -1499,15 +1129,13 @@ const handleDownloadReceipt = (booking) => {
                                 {t("approve")}
                               </button>
                             )}
-
                             {!b.status.includes("canceled") && inFuture && (
                               <button
                                 onClick={() => cancelByAdmin(b.id)}
                                 style={{
                                   ...btnBase,
                                   background: "rgba(110,20,30,.35)",
-                                  border:
-                                    "1px solid rgba(239,68,68,.6)",
+                                  border: "1px solid rgba(239,68,68,.6)",
                                   color: "#fff",
                                 }}
                               >
@@ -1541,7 +1169,7 @@ const handleDownloadReceipt = (booking) => {
   );
 }
 
-/* === ИКОНКА CHEVRON === */
+/* === ВСПОМОГАТЕЛЬНЫЕ КОМПОНЕНТЫ И СТИЛИ === */
 function Chevron({ open }) {
   return (
     <svg
@@ -1557,7 +1185,6 @@ function Chevron({ open }) {
   );
 }
 
-/* === TIME OPTIONS === */
 function generateTimes(start, end) {
   const res = [];
   for (let h = start; h < end; h++) {
@@ -1568,7 +1195,6 @@ function generateTimes(start, end) {
   return res;
 }
 
-/* === СТИЛИ === */
 const cardAurora = {
   background:
     "linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))",
@@ -1677,30 +1303,11 @@ const pillBase = {
   whiteSpace: "nowrap",
 };
 
-const pillDate = {
-  ...pillBase,
-  border: "1px solid rgba(129,140,248,0.85)",
-};
-
-const pillTime = {
-  ...pillBase,
-  border: "1px solid rgba(94,234,212,0.8)",
-};
-
-const pillService = {
-  ...pillBase,
-  border: "1px solid rgba(244,114,182,0.85)",
-};
-
-const pillPrice = {
-  ...pillBase,
-  border: "1px solid rgba(34,197,94,0.9)",
-};
-
-const pillId = {
-  ...pillBase,
-  border: "1px solid rgba(251,146,60,0.9)",
-};
+const pillDate = { ...pillBase, border: "1px solid rgba(129,140,248,0.85)" };
+const pillTime = { ...pillBase, border: "1px solid rgba(94,234,212,0.8)" };
+const pillService = { ...pillBase, border: "1px solid rgba(244,114,182,0.85)" };
+const pillPrice = { ...pillBase, border: "1px solid rgba(34,197,94,0.9)" };
+const pillId = { ...pillBase, border: "1px solid rgba(251,146,60,0.9)" };
 
 const lamp = (color) => ({
   width: 12,
@@ -1718,7 +1325,6 @@ const statusDot = (b) => {
   return <span style={lamp("#ef4444")} />;
 };
 
-/* === ГЕНЕРАЦИЯ КВИТАНЦИИ === */
 const downloadReceipt = (b, t) => {
   try {
     const win = window.open("", "_blank", "width=700,height=900");
@@ -1759,181 +1365,60 @@ const downloadReceipt = (b, t) => {
   <meta charSet="utf-8" />
   <title>${t("receipt_title")} #${shortId}</title>
   <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0b0217;
-      color: #f9fafb;
-      margin: 0;
-      padding: 24px;
-    }
-    .wrap {
-      max-width: 640px;
-      margin: 0 auto;
-      border-radius: 16px;
-      border: 1px solid rgba(168,85,247,0.5);
-      background: radial-gradient(circle at top left, rgba(168,85,247,0.2), transparent 55%),
-                  radial-gradient(circle at bottom right, rgba(56,189,248,0.15), transparent 60%),
-                  rgba(15,23,42,0.95);
-      padding: 24px 28px 28px;
-    }
-    .sub {
-      font-size: 13px;
-      opacity: 0.75;
-    }
-    .title {
-      margin-top: 16px;
-      font-size: 20px;
-      font-weight: 700;
-    }
-    .top-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 16px;
-    }
-    .top-left {
-      text-align: left;
-    }
-    .top-right {
-      text-align: right;
-      font-size: 12px;
-      opacity: 0.9;
-    }
-    .section {
-      margin-top: 16px;
-      padding-top: 10px;
-      border-top: 1px dashed rgba(148,163,184,0.5);
-      font-size: 14px;
-    }
-    .row {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      margin: 4px 0;
-    }
-    .label {
-      opacity: 0.8;
-    }
-    .value {
-      font-weight: 500;
-      text-align: right;
-    }
-    .services {
-      margin-top: 8px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .tag {
-      padding: 4px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(168,85,247,0.7);
-      background: rgba(30,64,175,0.35);
-      font-size: 12px;
-    }
-    .footer {
-      margin-top: 18px;
-      font-size: 11px;
-      opacity: 0.75;
-      line-height: 1.5;
-    }
-    .qr-label {
-      font-size: 11px;
-      margin-top: 4px;
-      opacity: 0.8;
-    }
+    body {font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;background: #0b0217;color: #f9fafb;margin: 0;padding: 24px;}
+    .wrap {max-width: 640px;margin: 0 auto;border-radius: 16px;border: 1px solid rgba(168,85,247,0.5);background: radial-gradient(circle at top left, rgba(168,85,247,0.2), transparent 55%), radial-gradient(circle at bottom right, rgba(56,189,248,0.15), transparent 60%), rgba(15,23,42,0.95);padding: 24px 28px 28px;}
+    .sub {font-size: 13px;opacity: 0.75;}
+    .title {margin-top: 16px;font-size: 20px;font-weight: 700;}
+    .top-row {display: flex;justify-content: space-between;align-items: flex-start;gap: 16px;}
+    .top-left {text-align: left;}
+    .top-right {text-align: right;font-size: 12px;opacity: 0.9;}
+    .section {margin-top: 16px;padding-top: 10px;border-top: 1px dashed rgba(148,163,184,0.5);font-size: 14px;}
+    .row {display: flex;justify-content: space-between;gap: 12px;margin: 4px 0;}
+    .label {opacity: 0.8;}
+    .value {font-weight: 500;text-align: right;}
+    .services {margin-top: 8px;display: flex;flex-wrap: wrap;gap: 6px;}
+    .tag {padding: 4px 10px;border-radius: 999px;border: 1px solid rgba(168,85,247,0.7);background: rgba(30,64,175,0.35);font-size: 12px;}
+    .footer {margin-top: 18px;font-size: 11px;opacity: 0.75;line-height: 1.5;}
+    .qr-label {font-size: 11px;margin-top: 4px;opacity: 0.8;}
   </style>
 </head>
 <body>
   <div class="wrap">
-
     <div class="top-row">
       <div class="top-left">
         <img src="/logo2.svg" style="height:100px; margin-bottom:6px;" />
         <div class="sub">${t("receipt_subtitle")}</div>
       </div>
-
       <div class="top-right">
         ${t("receipt_number_label")} <b>#${shortId}</b><br/>
         ${t("receipt_created_label")} ${createdStr}<br/>
-
-        <img src="${qrUrl}" alt="IZ HAIR TREND vCard"
-             style="
-               margin-top:10px;
-               border-radius:10px;
-               border:1px solid rgba(148,163,184,0.6);
-               padding:6px;
-               background:rgba(15,23,42,0.9);
-               width:90px;
-               height:90px;
-             "/>
-
-        <div class="qr-label">
-          ${t("receipt_qr_hint")}
-        </div>
+        <img src="${qrUrl}" alt="IZ HAIR TREND vCard" style="margin-top:10px;border-radius:10px;border:1px solid rgba(148,163,184,0.6);padding:6px;background:rgba(15,23,42,0.9);width:90px;height:90px;"/>
+        <div class="qr-label">${t("receipt_qr_hint")}</div>
       </div>
     </div>
-
     <div class="title">${t("receipt_title")}</div>
-
     <div class="section">
-      <div class="row">
-        <div class="label">${t("receipt_client_label")}</div>
-        <div class="value">${b.userName || "-"}</div>
-      </div>
-      <div class="row">
-        <div class="label">${t("receipt_phone_label")}</div>
-        <div class="value">${b.userPhone || "-"}</div>
-      </div>
-      <div class="row">
-        <div class="label">${t("receipt_email_label")}</div>
-        <div class="value">${b.userEmail || "-"}</div>
-      </div>
+      <div class="row"><div class="label">${t("receipt_client_label")}</div><div class="value">${b.userName || "-"}</div></div>
+      <div class="row"><div class="label">${t("receipt_phone_label")}</div><div class="value">${b.userPhone || "-"}</div></div>
+      <div class="row"><div class="label">${t("receipt_email_label")}</div><div class="value">${b.userEmail || "-"}</div></div>
     </div>
-
     <div class="section">
-      <div class="row">
-        <div class="label">${t("receipt_date_label")}</div>
-        <div class="value">${dateStr}</div>
-      </div>
-      <div class="row">
-        <div class="label">${t("receipt_time_label")}</div>
-        <div class="value">${timeStr}</div>
-      </div>
-      <div class="row">
-        <div class="label">${t("receipt_services_label")}</div>
-        <div class="value">${servicesStr}</div>
-      </div>
+      <div class="row"><div class="label">${t("receipt_date_label")}</div><div class="value">${dateStr}</div></div>
+      <div class="row"><div class="label">${t("receipt_time_label")}</div><div class="value">${timeStr}</div></div>
+      <div class="row"><div class="label">${t("receipt_services_label")}</div><div class="value">${servicesStr}</div></div>
       <div class="services">
-        ${(b.services || [])
-          .map((s) => `<span class="tag">${s}</span>`)
-          .join("")}
+        ${(b.services || []).map((s) => `<span class="tag">${s}</span>`).join("")}
       </div>
     </div>
-
     <div class="section">
-      <div class="row">
-        <div class="label">${t("receipt_advance_label")}</div>
-        <div class="value">${
-          b.price ? `${b.price} €` : "—"
-        }</div>
-      </div>
-      <div class="row">
-        <div class="label">${t("receipt_payment_status_label")}</div>
-        <div class="value">${paidLabel}</div>
-      </div>
+      <div class="row"><div class="label">${t("receipt_advance_label")}</div><div class="value">${b.price ? `${b.price} €` : "—"}</div></div>
+      <div class="row"><div class="label">${t("receipt_payment_status_label")}</div><div class="value">${paidLabel}</div></div>
     </div>
-
-    <div class="footer">
-      ${t("receipt_footer_text")}
-    </div>
+    <div class="footer">${t("receipt_footer_text")}</div>
   </div>
-
   <script>
     window.focus();
-    setTimeout(function(){
-      window.print();
-    }, 400);
+    setTimeout(function(){ window.print(); }, 400);
   </script>
 </body>
 </html>`;
