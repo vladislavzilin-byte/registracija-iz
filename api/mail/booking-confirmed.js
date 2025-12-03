@@ -1,6 +1,9 @@
 // /pages/api/mail/booking-confirmed.js
 import nodemailer from "nodemailer";
 
+// Динамический URL — работает на любом домене Vercel и локально
+const baseUrl = process.env.NEXT_PUBLIC_URL || "https://registracija-4yf8rc9jb-vladislavzilin.vercel.app";
+
 const translations = {
   lt: {
     subject: "Jūsų rezervacija patvirtinta! ✓",
@@ -38,17 +41,16 @@ export default async function handler(req, res) {
 
   if (!booking) {
     console.log("booking-confirmed: нет данных booking");
-    return res.status(200).json({ ok: true }); // не падаем, просто молчим
+    return res.status(200).json({ ok: true });
   }
 
-  const lang = booking.userLang || "lt";
-  const t = translations[lang] || translations["lt"];
-
-  // Если нет email — просто выходим (не 400!)
   if (!booking.userEmail) {
     console.log(`booking-confirmed: нет email у записи #${booking.id?.slice(0,6) || '???'}`);
     return res.status(200).json({ ok: true });
   }
+
+  const lang = booking.userLang || "lt";
+  const t = translations[lang] || translations["lt"];
 
   const date = new Date(booking.start).toLocaleDateString(lang === "lt" ? "lt-LT" : lang === "ru" ? "ru-RU" : "en-GB");
   const time = `${new Date(booking.start).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })} – ${new Date(booking.end).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })}`;
@@ -93,20 +95,18 @@ export default async function handler(req, res) {
       html,
     };
 
-    // Прикрепляем PDF только если оплачено и есть цена
     if (booking.paid && booking.price) {
       mailOptions.attachments = [{
         filename: `kvitas-${booking.id.slice(0,6)}.pdf`,
-        path: `https://registracija-iz.vercel.app/api/receipt-pdf?id=${booking.id}`, // ← твой актуальный домен Vercel
+        path: `${baseUrl}/api/receipt-pdf?id=${booking.id}`,
         contentType: "application/pdf"
       }];
     }
 
     await transporter.sendMail(mailOptions);
 
-    console.log(`Письмо-подтверждение отправлено на ${booking.userEmail} (#${booking.id.slice(0,6)})`);
+    console.log(`Подтверждение отправлено на ${booking.userEmail} (#${booking.id.slice(0,6)})`);
     res.status(200).json({ ok: true });
-
   } catch (err) {
     console.error("CONFIRM EMAIL ERROR:", err);
     res.status(500).json({ ok: false, error: err.message });
