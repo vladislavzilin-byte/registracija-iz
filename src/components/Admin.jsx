@@ -229,54 +229,41 @@ const cancelByAdmin = (id) => {
 
 // 🔥 ОБНОВЛЁННЫЙ БЛОК: подтверждение записи
 const approveByAdmin = async (id) => {
-  const booking = getBookings().find((b) => b.id === id);
-
   updateBooking(id, (b) => ({
     ...b,
     status: "approved",
     approvedAt: new Date().toISOString(),
   }));
 
+  const fresh = getBookings().find(b => b.id === id); // <- ОБНОВЛЁННАЯ версия
+
   showToast(t("admin_toast_approved"));
 
-  // 📩 отправляем письмо ТОЛЬКО если уже оплачено
-  if (booking?.paid) {
-    try {
-      await fetch("/api/mail/booking-confirmed", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ booking }),
-      });
-    } catch (e) {
-      console.error("Email error:", e);
-    }
+  if (fresh.paid) {
+    await fetch("/api/mail/booking-confirmed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ booking: fresh }), // ← отправляем новую версию
+    });
   }
 };
 
+
 // 🔥 ОБНОВЛЁННЫЙ БЛОК: переключение оплаты
 const togglePaid = async (id) => {
-  const booking = getBookings().find((b) => b.id === id);
-  const nowPaid = !booking.paid;
+  updateBooking(id, (b) => ({ ...b, paid: !b.paid }));
 
-  updateBooking(id, (b) => ({ ...b, paid: nowPaid }));
+  const fresh = getBookings().find(b => b.id === id);
+
   showToast(t("admin_toast_payment_updated"));
 
-  // 📩 письмо если:
-  // 1) теперь оплачено
-  // 2) статус уже подтверждён
-  if (
-    nowPaid &&
-    (booking.status === "approved" || booking.status === "approved_paid")
-  ) {
-    try {
-      await fetch("/api/mail/booking-confirmed", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ booking: { ...booking, paid: true } }),
-      });
-    } catch (e) {
-      console.error("Email error:", e);
-    }
+  // отправляем письмо, если:
+  if (fresh.paid && fresh.status === "approved") {
+    await fetch("/api/mail/booking-confirmed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ booking: fresh }),
+    });
   }
 };
 
