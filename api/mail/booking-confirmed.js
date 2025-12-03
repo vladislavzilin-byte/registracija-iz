@@ -1,9 +1,6 @@
 // /pages/api/mail/booking-confirmed.js
 import nodemailer from "nodemailer";
 
-// Динамический URL — работает на любом домене Vercel и локально
-const baseUrl = process.env.NEXT_PUBLIC_URL || "https://registracija-4yf8rc9jb-vladislavzilin.vercel.app";
-
 const translations = {
   lt: {
     subject: "Jūsų rezervacija patvirtinta! ✓",
@@ -11,8 +8,7 @@ const translations = {
     greeting: "Sveiki",
     text: "Jūsų rezervacija buvo <b>patvirtinta{paid}</b>.",
     paidText: " ir apmokėta",
-    info: "Pridedame kvito PDF.",
-    noPdf: "Apmokėjimas dar negautas – kvitas bus atsiųstas vėliau.",
+    info: "Jei rezervacija apmokėta — kvitas bus atsiųstas atskiru laišku.",
   },
   ru: {
     subject: "Ваша запись подтверждена! ✓",
@@ -20,8 +16,7 @@ const translations = {
     greeting: "Здравствуйте",
     text: "Ваша запись была <b>подтверждена{paid}</b>.",
     paidText: " и оплачена",
-    info: "Прикрепляем PDF-квитанцию.",
-    noPdf: "Оплата ещё не получена – квитанция будет отправлена позже.",
+    info: "Если запись оплачена — квитанция придёт отдельным письмом.",
   },
   en: {
     subject: "Your booking is confirmed! ✓",
@@ -29,8 +24,7 @@ const translations = {
     greeting: "Hello",
     text: "Your booking has been <b>confirmed{paid}</b>.",
     paidText: " and paid",
-    info: "PDF receipt attached.",
-    noPdf: "Payment not yet received – receipt will be sent later.",
+    info: "If paid — receipt will be sent in a separate email.",
   },
 };
 
@@ -39,13 +33,7 @@ export default async function handler(req, res) {
 
   const { booking } = req.body || {};
 
-  if (!booking) {
-    console.log("booking-confirmed: нет данных booking");
-    return res.status(200).json({ ok: true });
-  }
-
-  if (!booking.userEmail) {
-    console.log(`booking-confirmed: нет email у записи #${booking.id?.slice(0,6) || '???'}`);
+  if (!booking || !booking.userEmail) {
     return res.status(200).json({ ok: true });
   }
 
@@ -56,7 +44,6 @@ export default async function handler(req, res) {
   const time = `${new Date(booking.start).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })} – ${new Date(booking.end).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })}`;
 
   const paidStr = booking.paid ? t.paidText : "";
-  const infoText = booking.paid && booking.price ? t.info : t.noPdf;
 
   const html = `
 <div style="font-family:Arial,sans-serif;background:#f8f8f8;padding:40px 20px;">
@@ -73,7 +60,7 @@ export default async function handler(req, res) {
       <b>Paslaugos:</b> ${booking.services?.join(", ") || "—"}<br>
       <b>Apmokėta:</b> ${booking.paid ? (booking.price + " €") : "Dar ne"}
     </div>
-    <p style="color:#666;font-size:14px;">${infoText}</p>
+    <p style="color:#666;font-size:14px;">${t.info}</p>
   </div>
 </div>`;
 
@@ -88,24 +75,15 @@ export default async function handler(req, res) {
       },
     });
 
-    const mailOptions = {
+    await transporter.sendMail({
       from: `"IZ Hair Trend" <${process.env.FROM_EMAIL}>`,
       to: booking.userEmail,
       subject: t.subject,
       html,
-    };
+      // PDF УБРАН НАВСЕГДА из подтверждения — только в письме об оплате
+    });
 
-    if (booking.paid && booking.price) {
-      mailOptions.attachments = [{
-        filename: `kvitas-${booking.id.slice(0,6)}.pdf`,
-        path: `${baseUrl}/api/receipt-pdf?id=${booking.id}`,
-        contentType: "application/pdf"
-      }];
-    }
-
-    await transporter.sendMail(mailOptions);
-
-    console.log(`Подтверждение отправлено на ${booking.userEmail} (#${booking.id.slice(0,6)})`);
+    console.log(`Подтверждение отправлено на ${booking.userEmail}`);
     res.status(200).json({ ok: true });
   } catch (err) {
     console.error("CONFIRM EMAIL ERROR:", err);
