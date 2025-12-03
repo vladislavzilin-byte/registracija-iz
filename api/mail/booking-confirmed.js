@@ -8,7 +8,7 @@ const translations = {
     greeting: "Sveiki",
     text: "Jūsų rezervacija buvo <b>patvirtinta{paid}</b>.",
     paidText: " ir apmokėta",
-    info: "Jei rezervacija apmokėta — kvitas bus atsiųstas atskiru laišku.",
+    info: "Kvitą galite atsisiųsti savo paskyroje arba admin panelėje.",
   },
   ru: {
     subject: "Ваша запись подтверждена! ✓",
@@ -16,7 +16,7 @@ const translations = {
     greeting: "Здравствуйте",
     text: "Ваша запись была <b>подтверждена{paid}</b>.",
     paidText: " и оплачена",
-    info: "Если запись оплачена — квитанция придёт отдельным письмом.",
+    info: "Квитанцию можно скачать в личном кабинете или админке.",
   },
   en: {
     subject: "Your booking is confirmed! ✓",
@@ -24,7 +24,7 @@ const translations = {
     greeting: "Hello",
     text: "Your booking has been <b>confirmed{paid}</b>.",
     paidText: " and paid",
-    info: "If paid — receipt will be sent in a separate email.",
+    info: "You can download the receipt in your profile or admin panel.",
   },
 };
 
@@ -80,7 +80,6 @@ export default async function handler(req, res) {
       to: booking.userEmail,
       subject: t.subject,
       html,
-      // PDF УБРАН НАВСЕГДА из подтверждения — только в письме об оплате
     });
 
     console.log(`Подтверждение отправлено на ${booking.userEmail}`);
