@@ -1,7 +1,7 @@
 // /pages/api/mail/booking-paid.js
 import nodemailer from "nodemailer";
 
-const baseUrl = process.env.NEXT_PUBLIC_URL || "https://registracija-4yf8rc9jb-vladislavzilin.vercel.app";
+const baseUrl = process.env.NEXT_PUBLIC_URL || "https://registracija-pk5lf8jlo-vladislavzilin.vercel.app";
 
 const titles = {
   lt: "Apmokėjimas gautas! ✅",
@@ -20,8 +20,7 @@ export default async function handler(req, res) {
 
   const { booking } = req.body || {};
 
-  if (!booking || !booking.userEmail) {
-    console.log("booking-paid: нет email или данных");
+  if (!booking || !booking.userEmail || !booking.paid) {
     return res.status(200).json({ ok: true });
   }
 
@@ -42,6 +41,7 @@ export default async function handler(req, res) {
     <div style="background:#f0fdf4;padding:20px;border-radius:12px;margin:30px 0;font-size:15px;color:#166534;">
       ✅ Pilnai apmokėta suma: ${booking.price || 0} €
     </div>
+    <p style="color:#666;font-size:14px;">Kvitą rasite prisegte prie laiško.</p>
   </div>
 </div>`;
 
@@ -56,14 +56,25 @@ export default async function handler(req, res) {
       },
     });
 
-    await transporter.sendMail({
+    const mailOptions = {
       from: `"IZ Hair Trend" <${process.env.FROM_EMAIL}>`,
       to: booking.userEmail,
       subject: titles[lang],
       html,
-    });
+    };
 
-    console.log(`Оплата подтверждена — письмо отправлено на ${booking.userEmail}`);
+    // PDF только здесь — когда реально оплачено
+    if (booking.price) {
+      mailOptions.attachments = [{
+        filename: `kvitas-${booking.id.slice(0,6)}.pdf`,
+        path: `${baseUrl}/api/receipt-pdf?id=${booking.id}`,
+        contentType: "application/pdf"
+      }];
+    }
+
+    await transporter.sendMail(mailOptions);
+
+    console.log(`Оплата + PDF отправлено на ${booking.userEmail}`);
     res.status(200).json({ ok: true });
   } catch (err) {
     console.error("PAID EMAIL ERROR:", err);
