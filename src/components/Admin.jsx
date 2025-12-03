@@ -203,79 +203,119 @@ export default function Admin() {
     }));
   }, [paginated]);
 
-  // === helper для обновления одной записи ===
-  const updateBooking = (id, updater) => {
-    const all = getBookings();
-    const next = all.map((b) => (b.id === id ? updater(b) : b));
-    saveBookings(next);
-    setBookings(next);
+// === helper для обновления одной записи ===
+const updateBooking = (id, updater) => {
+  const all = getBookings();
+  const next = all.map((b) => (b.id === id ? updater(b) : b));
+  saveBookings(next);
+  setBookings(next);
+};
+
+const showToast = (msg) => {
+  setToast(msg);
+  setTimeout(() => setToast(null), 2200);
+};
+
+// === ДЕЙСТВИЯ С ЗАПИСЯМИ ===
+const cancelByAdmin = (id) => {
+  if (!confirm(t("admin_confirm_cancel"))) return;
+  updateBooking(id, (b) => ({
+    ...b,
+    status: "canceled_admin",
+    canceledAt: new Date().toISOString(),
+  }));
+  showToast(t("admin_toast_canceled"));
+};
+
+// 🔥 ОБНОВЛЁННЫЙ БЛОК: подтверждение записи
+const approveByAdmin = async (id) => {
+  const booking = getBookings().find((b) => b.id === id);
+
+  updateBooking(id, (b) => ({
+    ...b,
+    status: "approved",
+    approvedAt: new Date().toISOString(),
+  }));
+
+  showToast(t("admin_toast_approved"));
+
+  // 📩 отправляем письмо ТОЛЬКО если уже оплачено
+  if (booking?.paid) {
+    try {
+      await fetch("/api/mail/booking-confirmed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking }),
+      });
+    } catch (e) {
+      console.error("Email error:", e);
+    }
+  }
+};
+
+// 🔥 ОБНОВЛЁННЫЙ БЛОК: переключение оплаты
+const togglePaid = async (id) => {
+  const booking = getBookings().find((b) => b.id === id);
+  const nowPaid = !booking.paid;
+
+  updateBooking(id, (b) => ({ ...b, paid: nowPaid }));
+  showToast(t("admin_toast_payment_updated"));
+
+  // 📩 письмо если:
+  // 1) теперь оплачено
+  // 2) статус уже подтверждён
+  if (
+    nowPaid &&
+    (booking.status === "approved" || booking.status === "approved_paid")
+  ) {
+    try {
+      await fetch("/api/mail/booking-confirmed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking: { ...booking, paid: true } }),
+      });
+    } catch (e) {
+      console.error("Email error:", e);
+    }
+  }
+};
+
+// === НАСТРОЙКИ УСЛУГ ===
+const services = settings.serviceList || [];
+
+const updateServiceField = (index, field, value) => {
+  const next = [...services];
+  next[index] = {
+    ...next[index],
+    [field]:
+      field === "duration" || field === "deposit"
+        ? Number(value) || 0
+        : value,
   };
+  updateSettings({ serviceList: next });
+};
 
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2200);
-  };
+const addService = () => {
+  updateSettings({
+    serviceList: [
+      ...services,
+      { name: t("admin_services_new_service"), duration: 60, deposit: 0 },
+    ],
+  });
+};
 
-  // === ДЕЙСТВИЯ С ЗАПИСЯМИ ===
-  const cancelByAdmin = (id) => {
-    if (!confirm(t("admin_confirm_cancel"))) return;
-    updateBooking(id, (b) => ({
-      ...b,
-      status: "canceled_admin",
-      canceledAt: new Date().toISOString(),
-    }));
-    showToast(t("admin_toast_canceled"));
-  };
+const removeService = (index) => {
+  if (services.length <= 1) return;
+  updateSettings({
+    serviceList: services.filter((_, i) => i !== index),
+  });
+};
 
-  const approveByAdmin = (id) => {
-    updateBooking(id, (b) => ({
-      ...b,
-      status: "approved",
-      approvedAt: new Date().toISOString(),
-    }));
-    showToast(t("admin_toast_approved"));
-  };
+const handleDownloadReceipt = (booking) => {
+  downloadReceipt(booking, t);
+};
 
-  const togglePaid = (id) => {
-    updateBooking(id, (b) => ({ ...b, paid: !b.paid }));
-    showToast(t("admin_toast_payment_updated"));
-  };
-
-  // === НАСТРОЙКИ УСЛУГ ===
-  const services = settings.serviceList || [];
-
-  const updateServiceField = (index, field, value) => {
-    const next = [...services];
-    next[index] = {
-      ...next[index],
-      [field]:
-        field === "duration" || field === "deposit"
-          ? Number(value) || 0
-          : value,
-    };
-    updateSettings({ serviceList: next });
-  };
-
-  const addService = () => {
-    updateSettings({
-      serviceList: [
-        ...services,
-        { name: t("admin_services_new_service"), duration: 60, deposit: 0 },
-      ],
-    });
-  };
-
-  const removeService = (index) => {
-    if (services.length <= 1) return;
-    updateSettings({
-      serviceList: services.filter((_, i) => i !== index),
-    });
-  };
-
-  const handleDownloadReceipt = (booking) => {
-    downloadReceipt(booking, t);
-  };
-
+  
   return (
     <div className="col" style={{ gap: 16 }}>
       {/* === НАСТРОЙКИ (ГАРМОШКА) === */}
