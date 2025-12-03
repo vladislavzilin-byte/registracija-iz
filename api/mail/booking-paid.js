@@ -5,34 +5,31 @@ const logoUrl = "https://registracija-iz.vercel.app/logo-email.png";
 
 const translations = {
   lt: {
-    title: "Apmokėjimas gautas! ✅",
-    greeting: "Ačiū",
+    title: "Apmokėjimas gautas!",
+    greeting: "Sveiki",
     text: "Jūsų rezervacija dabar pilnai apmokėta.",
     data: "Data",
     laikas: "Laikas",
-    paslaugos: "Paslaugos",
-    suma: "Pilnai apmokėta suma",
-    kvitas: "Kvitą galite parsisiųsti savo paskyroje arba admin panelėje.",
+    suma: "Suma",
+    kvitas: "Kvitą galite atsisiųsti savo paskyroje",
   },
   ru: {
-    title: "Оплата получена! ✅",
-    greeting: "Спасибо",
+    title: "Оплата получена!",
+    greeting: "Здравствуйте",
     text: "Ваша запись теперь полностью оплачена.",
     data: "Дата",
     laikas: "Время",
-    paslaugos: "Услуги",
-    suma: "Полностью оплаченная сумма",
-    kvitas: "Квитанцию можно скачать в личном кабинете или админке.",
+    suma: "Сумма",
+    kvitas: "Квитанцию можно скачать в личном кабинете",
   },
   en: {
-    title: "Payment received! ✅",
-    greeting: "Thank you",
+    title: "Payment received!",
+    greeting: "Hello",
     text: "Your booking is now fully paid.",
     data: "Date",
     laikas: "Time",
-    paslaugos: "Services",
-    suma: "Fully paid amount",
-    kvitas: "You can download the receipt in your account or admin panel.",
+    suma: "Amount",
+    kvitas: "You can download the receipt in your account",
   },
 };
 
@@ -48,27 +45,32 @@ export default async function handler(req, res) {
   const lang = booking.userLang || "lt";
   const t = translations[lang] || translations["lt"];
 
-  const date = new Date(booking.start).toLocaleDateString(lang === "lt" ? "lt-LT" : lang === "ru" ? "ru-RU" : "en-GB");
+  const date = new Date(booking.start).toLocaleDateString(lang === "lt" ? "lt-LT" : lang === "ru" ? "ru-RU" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
   const time = `${new Date(booking.start).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })} – ${new Date(booking.end).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })}`;
 
   const html = `
-<div style="font-family:Arial,sans-serif;background:#f9f5ff;padding:40px 20px;">
-  <div style="max-width:520px;margin:0 auto;background:white;padding:32px;border-radius:20px;box-shadow:0 8px 30px rgba(160,100,255,0.15);text-align:center;">
-    <img src="${logoUrl}" style="width:180px;margin-bottom:24px;" alt="IZ Hair Trend"/>
-    <h1 style="color:#000;font-size:26px;margin:0 0 20px 0;font-weight:700;">${t.title}</h1>
-    <p style="font-size:17px;color:#333;margin:0 0 30px 0;">
+<div style="font-family:Arial,sans-serif;background:#f8f8f8;padding:40px 20px;">
+  <div style="max-width:480px;margin:0 auto;background:white;padding:40px 30px;border-radius:24px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.08);">
+    <img src="${logoUrl}" style="width:220px;margin-bottom:30px;" alt="Irina Žilina IZ Hair Trend"/>
+    <h1 style="font-size:28px;font-weight:700;color:#000;margin:0 0 20px 0;">
+      ${t.title} ✅
+    </h1>
+    <p style="font-size:17px;color:#333;margin:0 0 30px 0;line-height:1.6;">
       ${t.greeting}, <b>${booking.userName || "kliente"}</b>!<br><br>
       ${t.text}
     </p>
-    <div style="background:linear-gradient(135deg, #34d399, #10b981);padding:24px;border-radius:16px;color:#fff;font-size:16px;line-height:1.8;">
-      <div><b>${t.data}:</b> ${date}</div>
-      <div><b>${t.laikas}:</b> ${time}</div>
-      <div><b>${t.paslaugos}:</b> ${booking.services?.join(", ") || "—"}</div>
-      <div style="margin-top:12px;font-size:18px;font-weight:700;">
-        ✅ ${t.suma}: ${booking.price || 0} €
+    <div style="background:#ecfdf5;padding:24px;border-radius:16px;margin:30px 0;">
+      <div style="font-size:16px;color:#333;line-height:1.8;text-align:left;max-width:300px;margin:0 auto;">
+        <div><b>${t.data}:</b> ${date}</div>
+        <div><b>${t.laikas}:</b> ${time}</div>
+        <div style="margin-top:12px;font-size:18px;font-weight:700;color:#166534;">
+          ✅ ${t.suma}: ${booking.price || 0} €
+        </div>
       </div>
     </div>
-    <p style="color:#666;font-size:14px;margin-top:24px;">${t.kvitas}</p>
+    <p style="font-size:14px;color:#666;margin-top:30px;">
+      ${t.kvitas}
+    </p>
   </div>
 </div>`;
 
@@ -86,7 +88,7 @@ export default async function handler(req, res) {
     await transporter.sendMail({
       from: `"IZ Hair Trend" <${process.env.FROM_EMAIL}>`,
       to: booking.userEmail,
-      subject: t.title,
+      subject: t.title + " ✅",
       html,
     });
 
