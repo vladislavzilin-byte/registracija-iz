@@ -10,8 +10,6 @@ import {
 } from "../lib/storage";
 import { useI18n } from "../lib/i18n";
 import FinancePanel from "./FinancePanel";
-userEmail: form.email || null,   // ←←←←← ЭТА СТРОКА
-  userLang: localStorage.getItem("lang") || "lt", // ← и эта для правильного языка письма
 const ADMINS = ["irina.abramova7@gmail.com", "vladislavzilin@gmail.com"];
 
 const DEFAULT_SERVICES = [
