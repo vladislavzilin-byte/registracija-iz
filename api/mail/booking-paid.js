@@ -7,11 +7,19 @@ const titles = {
   en: "Payment received! ✅",
 };
 
+const texts = {
+  lt: "Ačiū už apmokėjimą! Jūsų rezervacija dabar pilnai apmokėta.",
+  ru: "Спасибо за оплату! Ваша запись теперь полностью оплачена.",
+  en: "Thank you for your payment! Your booking is now fully paid.",
+};
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
   const { booking } = req.body;
-  if (!booking?.userEmail) return res.status(400).json({ ok: false });
+  if (!booking?.userEmail || !booking?.paid) {
+    return res.status(400).json({ ok: false });
+  }
 
   const lang = booking.userLang || "lt";
 
@@ -19,19 +27,30 @@ export default async function handler(req, res) {
   const time = `${new Date(booking.start).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })} – ${new Date(booking.end).toLocaleTimeString(lang === "lt" ? "lt-LT" : "en-US", { hour: "2-digit", minute: "2-digit" })}`;
 
   const html = `
-    <div style="font-family:Arial,sans-serif;background:#f4f4f4;padding:40px;text-align:center;">
-      <div style="max-width:520px;margin:0 auto;background:white;padding:32px;border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,0.1);">
-        <img src="https://izhairtrend.lt/logo-email.png" style="width:170px;margin-bottom:20px;" />
-        <h2 style="color:#000;font-size:22px;margin-bottom:25px;">${titles[lang]}</h2>
-        <p style="font-size:16px;color:#444;">
-          Ačiū už apmokėjimą!<br>
-          Jūsų rezervacija <b>${date} ${time}</b> dabar pilnai apmokėta.
-        </p>
-      </div>
-    </div>`;
+<div style="font-family:Arial,sans-serif;background:#f8f8f8;padding:40px 20px;">
+  <div style="max-width:520px;margin:0 auto;background:white;padding:32px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.1);text-align:center;">
+    <img src="https://izhairtrend.lt/logo-email.png" style="width:170px;margin-bottom:20px;" />
+    <h2 style="color:#000;font-size:24px;margin-bottom:20px;">${titles[lang]}</h2>
+    <p style="font-size:16px;color:#333;line-height:1.6;">
+      ${texts[lang]}<br><br>
+      <b>${date} ${time}</b>
+    </p>
+    <div style="background:#f0fdf4;padding:20px;border-radius:12px;margin:30px 0;font-size:15px;color:#166534;">
+      ✅ Pilnai apmokėta suma: ${booking.price} €
+    </div>
+  </div>
+</div>`;
 
   try {
-    const transporter = nodemailer.createTransport({ /* те же настройки */ });
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
+      secure: process.env.SMTP_SECURE === "true",
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
 
     await transporter.sendMail({
       from: `"IZ Hair Trend" <${process.env.FROM_EMAIL}>`,
@@ -40,24 +59,9 @@ export default async function handler(req, res) {
       html,
     });
 
-    // SMS об оплате
-    if (booking.userPhone) {
-      await fetch(`${process.env.NEXT_PUBLIC_URL || "https://tavo-domenas.lt"}/api/sms/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: booking.userPhone,
-          type: "paid",
-          date,
-          time,
-          lang,
-        }),
-      });
-    }
-
     res.status(200).json({ ok: true });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ ok: false });
+  } catch (err) {
+    console.error("PAID EMAIL ERROR:", err);
+    res.status(500).json({ ok: false, error: err.message });
   }
 }
