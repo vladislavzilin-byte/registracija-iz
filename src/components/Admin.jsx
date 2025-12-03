@@ -314,7 +314,6 @@ const removeService = (index) => {
 const handleDownloadReceipt = (booking) => {
   downloadReceipt(booking, t);
 };
-
   
   return (
     <div className="col" style={{ gap: 16 }}>
