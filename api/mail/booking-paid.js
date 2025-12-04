@@ -59,11 +59,11 @@ export default async function handler(req, res) {
       ${t.greeting}, <b>${booking.userName || "kliente"}</b>!<br><br>
       ${t.text}
     </p>
-    <div style="background:#f0fdfa;padding:24px 40px;border-radius:18px;margin:0 auto 32px auto;">
-      <div style="font-size:16px;color:#333;line-height:1.35;text-align:left;">
+    <div style="background:#f0fdfa;padding:24px 36px;border-radius:18px;margin:0 auto 32px auto;">
+      <div style="font-size:16px;color:#333;line-height:1.4;text-align:left;word-break:break-word;white-space:normal;">
         <div><b>${t.data}:</b> ${date}</div>
-        <div style="margin-top:4px;"><b>${t.laikas}:</b> ${time}</div>
-        <div style="margin-top:16px;font-size:18px;font-weight:700;color:#000;">
+        <div style="margin-top:5px;"><b>${t.laikas}:</b> ${time}</div>
+        <div style="margin-top:16px;font-size:19px;font-weight:700;color:#000;">
           ${t.suma}: ${booking.price || 0} €
         </div>
       </div>
