@@ -5,6 +5,7 @@ const logoUrl = "https://registracija-iz.vercel.app/logo-email.png";
 
 const translations = {
   lt: {
+    subject: "Jūsų rezervacija patvirtinta!",
     title: "Rezervacija patvirtinta!",
     greeting: "Sveiki",
     text: "Jūsų rezervacija buvo <b>patvirtinta{paid}</b>.",
@@ -16,6 +17,7 @@ const translations = {
     kvitas: "Kvitą galite atsisiųsti savo paskyroje",
   },
   ru: {
+    subject: "Ваша запись подтверждена!",
     title: "Запись подтверждена!",
     greeting: "Здравствуйте",
     text: "Ваша запись была <b>подтверждена{paid}</b>.",
@@ -27,6 +29,7 @@ const translations = {
     kvitas: "Квитанцию можно скачать в личном кабинете",
   },
   en: {
+    subject: "Your booking is confirmed!",
     title: "Booking confirmed!",
     greeting: "Hello",
     text: "Your booking has been <b>confirmed{paid}</b>.",
@@ -67,12 +70,12 @@ export default async function handler(req, res) {
       ${t.greeting}, <b>${booking.userName || "kliente"}</b>!<br><br>
       ${t.text.replace("{paid}", paidStr)}
     </p>
-    <div style="background:#fdf4ff;padding:22px 32px;border-radius:18px;margin:0 auto 32px auto;">
-      <div style="font-size:16px;color:#333;line-height:1.35;">
+    <div style="background:#fdf4ff;padding:20px 32px;border-radius:18px;margin:0 auto 32px auto;">
+      <div style="font-size:16px;color:#333;line-height:1.3;text-align:left;">
         <div><b>${t.data}:</b> ${date}</div>
-        <div style="margin-top:5px;"><b>${t.laikas}:</b> ${time}</div>
-        <div style="margin-top:5px;"><b>${t.paslaugos}:</b> ${booking.services?.join(", ") || "—"}</div>
-        <div style="margin-top:5px;"><b>${t.apmoketa}:</b> ${booking.paid ? (booking.price + " €") : "Dar ne"}</div>
+        <div style="margin-top:4px;"><b>${t.laikas}:</b> ${time}</div>
+        <div style="margin-top:4px;"><b>${t.paslaugos}:</b> ${booking.services?.join(", ") || "—"}</div>
+        <div style="margin-top:4px;"><b>${t.apmoketa}:</b> ${booking.paid ? (booking.price + " €") : "Dar ne"}</div>
       </div>
     </div>
     <p style="font-size:14px;color:#888;margin:0;line-height:1.5;">
@@ -95,7 +98,7 @@ export default async function handler(req, res) {
     await transporter.sendMail({
       from: `"IZ Hair Trend" <${process.env.FROM_EMAIL}>`,
       to: booking.userEmail,
-      subject: t.title,
+      subject: t.subject,
       html,
     });
 
