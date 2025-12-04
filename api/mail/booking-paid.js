@@ -29,8 +29,8 @@ export default async function handler(req, res) {
       ${t.greeting}, <b>${booking.userName || "kliente"}</b>!<br><br>
       ${t.text}
     </p>
-    <div style="background:#f0fdfa;padding:26px 36px;border-radius:18px;margin:0 auto 32px auto;">
-      <div style="font-size:16px;color:#333;line-height:1.4;text-align:center;">
+    <div style="background:#f0fdfa;padding:26px 20px;border-radius:18px;margin:0 auto 32px auto;">
+      <div style="font-size:16px;color:#333;line-height:1.45;text-align:center;word-wrap:break-word;overflow-wrap:break-word;hyphens:auto;">
         <div><b>${t.data}:</b> ${date}</div>
         <div style="margin-top:6px;"><b>${t.laikas}:</b> ${time}</div>
         <div style="margin-top:6px;"><b>${t.suma}:</b> ${booking.price || 0} €</div>
@@ -42,7 +42,8 @@ export default async function handler(req, res) {
 
   try {
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT),
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
       secure: process.env.SMTP_SECURE === "true",
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
     });
