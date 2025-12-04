@@ -4,9 +4,39 @@ import nodemailer from "nodemailer";
 const logoUrl = "https://registracija-iz.vercel.app/logo-email.png";
 
 const translations = {
-  lt: { title: "Rezervacija patvirtinta!", greeting: "Sveiki", text: "Jūsų rezervacija buvo sėkmingai patvirtinta{paid}.", data: "Data", laikas: "Laikas", paslaugos: "Paslaugos", apmoketa: "Apmokėta", kvitas: "Kvitą galite atsisiųsti savo paskyroje" },
-  ru: { title: "Запись подтверждена!", greeting: "Здравствуйте", text: "Ваша запись была успешно подтверждена{paid}.", paidText: " и оплачена", data: "Дата", laikas: "Время", paslaugos: "Услуги", apmoketa: "Оплачено", kvitas: "Квитанцию можно скачать в личном кабинете" },
-  en: { title: "Booking confirmed!", greeting: "Hello", text: "Your booking has been successfully confirmed{paid}.", paidText: " and paid", data: "Date", laikas: "Time", paslaugos: "Services", apmoketa: "Paid", kvitas: "You can download the receipt in your account" },
+  lt: {
+    title: "Rezervacija patvirtinta!",
+    greeting: "Sveiki",
+    text: "Jūsų rezervacija buvo sėkmingai patvirtinta{paid}.",
+    paidText: " ir apmokėta",
+    data: "Data",
+    laikas: "Laikas",
+    paslaugos: "Paslaugos",
+    apmoketa: "Apmokėta",
+    kvitas: "Kvitą galite atsisiųsti savo paskyroje",
+  },
+  ru: {
+    title: "Запись подтверждена!",
+    greeting: "Здравствуйте",
+    text: "Ваша запись была успешно подтверждена{paid}.",
+    paidText: " и оплачена",
+    data: "Дата",
+    laikas: "Время",
+    paslaugos: "Услуги",
+    apmoketa: "Оплачено",
+    kvitas: "Квитанцию можно скачать в личном кабинете",
+  },
+  en: {
+    title: "Booking confirmed!",
+    greeting: "Hello",
+    text: "Your booking has been successfully confirmed{paid}.",
+    paidText: " and paid",
+    data: "Date",
+    laikas: "Time",
+    paslaugos: "Services",
+    apmoketa: "Paid",
+    kvitas: "You can download the receipt in your account",
+  },
 };
 
 export default async function handler(req, res) {
@@ -30,11 +60,11 @@ export default async function handler(req, res) {
       ${t.greeting}, <b>${booking.userName || "kliente"}</b>!<br><br>
       ${t.text.replace("{paid}", paidStr)}
     </p>
-    <div style="background:#fdf4ff;padding:26px 36px;border-radius:18px;margin:0 auto 32px auto;">
-      <div style="font-size:16px;color:#333;line-height:1.4;text-align:center;">
+    <div style="background:#fdf4ff;padding:26px 20px;border-radius:18px;margin:0 auto 32px auto;">
+      <div style="font-size:16px;color:#333;line-height:1.45;text-align:center;word-wrap:break-word;overflow-wrap:break-word;hyphens:auto;">
         <div><b>${t.data}:</b> ${date}</div>
         <div style="margin-top:6px;"><b>${t.laikas}:</b> ${time}</div>
-        <div style="margin-top:6px;"><b>${t.paslaugos}:</b> ${booking.services?.join(", ") || "—"}</div>
+        <div style="margin-top:6px;"><b>${t.paslaugos}:</b><br>${booking.services?.join("<br>") || "—"}</div>
         <div style="margin-top:6px;"><b>${t.apmoketa}:</b> ${booking.paid ? (booking.price + " €") : "Dar ne"}</div>
       </div>
     </div>
@@ -44,7 +74,8 @@ export default async function handler(req, res) {
 
   try {
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT),
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
       secure: process.env.SMTP_SECURE === "true",
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
     });
