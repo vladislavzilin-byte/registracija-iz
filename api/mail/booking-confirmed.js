@@ -67,12 +67,12 @@ export default async function handler(req, res) {
       ${t.greeting}, <b>${booking.userName || "kliente"}</b>!<br><br>
       ${t.text.replace("{paid}", paidStr)}
     </p>
-    <div style="background:#fdf4ff;padding:24px 40px;border-radius:18px;margin:0 auto 32px auto;">
-      <div style="font-size:16px;color:#333;line-height:1.35;text-align:left;">
+    <div style="background:#fdf4ff;padding:24px 36px;border-radius:18px;margin:0 auto 32px auto;">
+      <div style="font-size:16px;color:#333;line-height:1.4;text-align:left;word-break:break-word;white-space:normal;">
         <div><b>${t.data}:</b> ${date}</div>
-        <div style="margin-top:4px;"><b>${t.laikas}:</b> ${time}</div>
-        <div style="margin-top:4px;"><b>${t.paslaugos}:</b> ${booking.services?.join(", ") || "—"}</div>
-        <div style="margin-top:4px;"><b>${t.apmoketa}:</b> ${booking.paid ? (booking.price + " €") : "Dar ne"}</div>
+        <div style="margin-top:5px;"><b>${t.laikas}:</b> ${time}</div>
+        <div style="margin-top:5px;"><b>${t.paslaugos}:</b> ${booking.services?.join(", ") || "—"}</div>
+        <div style="margin-top:5px;"><b>${t.apmoketa}:</b> ${booking.paid ? (booking.price + " €") : "Dar ne"}</div>
       </div>
     </div>
     <p style="font-size:14px;color:#888;margin:0;line-height:1.5;">
