@@ -7,28 +7,28 @@ const translations = {
   lt: {
     title: "Apmokėjimas gautas!",
     greeting: "Sveiki",
-    text: "Ačiū už apmokėjimą! Jūsų rezervacija dabar pilnai apmokėta.",
+    text: "Jūsų rezervacija dabar pilnai apmokėta.",
     data: "Data",
     laikas: "Laikas",
-    suma: "Pilnai apmokėta suma",
+    suma: "Suma",
     kvitas: "Kvitą galite atsisiųsti savo paskyroje",
   },
   ru: {
     title: "Оплата получена!",
     greeting: "Здравствуйте",
-    text: "Спасибо за оплату! Ваша запись теперь полностью оплачена.",
+    text: "Ваша запись теперь полностью оплачена.",
     data: "Дата",
     laikas: "Время",
-    suma: "Полностью оплаченная сумма",
+    suma: "Сумма",
     kvitas: "Квитанцию можно скачать в личном кабинете",
   },
   en: {
     title: "Payment received!",
     greeting: "Hello",
-    text: "Thank you for your payment! Your booking is now fully paid.",
+    text: "Your booking is now fully paid.",
     data: "Date",
     laikas: "Time",
-    suma: "Fully paid amount",
+    suma: "Amount",
     kvitas: "You can download the receipt in your account",
   },
 };
@@ -49,10 +49,10 @@ export default async function handler(req, res) {
   const time = `${new Date(booking.start).toLocaleTimeString("lt-LT", { hour: "2-digit", minute: "2-digit" })} – ${new Date(booking.end).toLocaleTimeString("lt-LT", { hour: "2-digit", minute: "2-digit" })}`;
 
   const html = `
-<table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(to right, #ecfdf5, #d1fae5);padding:40px 16px;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;padding:40px 16px;">
   <tr>
     <td align="center">
-      <div style="max-width:460px;width:100%;margin:0 auto;background:#ffffff;border-radius:28px;overflow:hidden;box-shadow:0 15px 40px rgba(209,250,229,0.35);">
+      <div style="max-width:460px;width:100%;margin:0 auto;background:#ffffff;border-radius:28px;overflow:hidden;box-shadow:0 15px 40px rgba(0,0,0,0.08);">
         <div style="padding:52px 32px 44px;text-align:center;">
           <img src="${logoUrl}" style="width:230px;margin-bottom:36px;" alt="Irina Žilina IZ Hair Trend"/>
           <h1 style="font-size:30px;font-weight:700;color:#000;margin:0 0 24px;line-height:1.2;">
@@ -62,8 +62,8 @@ export default async function handler(req, res) {
             ${t.greeting}, <b>${booking.userName || "kliente"}</b>!<br><br>
             ${t.text}
           </p>
-          <div style="background:#f0fdfa;padding:22px 32px;border-radius:18px;">
-            <div style="font-size:16px;color:#333;line-height:1.35;">
+          <div style="background:#f0fdfa;padding:24px 32px;border-radius:18px;">
+            <div style="font-size:16px;color:#333;line-height:1.4;">
               <div><b>${t.data}:</b> ${date}</div>
               <div style="margin-top:5px;"><b>${t.laikas}:</b> ${time}</div>
               <div style="margin-top:16px;font-size:20px;font-weight:700;color:#166534;">
