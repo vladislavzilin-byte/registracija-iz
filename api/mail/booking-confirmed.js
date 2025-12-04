@@ -8,7 +8,7 @@ const translations = {
     title: "Rezervacija patvirtinta!",
     greeting: "Sveiki",
     text: "Jūsų rezervacija buvo sėkmingai patvirtinta{paid}.",
-    paidText: " ir apmokėta",
+    paidText: "",
     data: "Data",
     laikas: "Laikas",
     paslaugos: "Paslaugos",
@@ -43,19 +43,18 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
   const { booking } = req.body || {};
-  if (!booking || !booking.userEmail) return res.status(200).json({ ok: true });
+
+  if (!booking || !booking.userEmail) {
+    return res.status(200).json({ ok: true });
+  }
 
   const lang = booking.userLang || "lt";
   const t = translations[lang] || translations["lt"];
 
   const date = new Date(booking.start).toLocaleDateString("lt-LT", { year: "numeric", month: "2-digit", day: "2-digit" });
   const time = `${new Date(booking.start).toLocaleTimeString("lt-LT", { hour: "2-digit", minute: "2-digit" })} – ${new Date(booking.end).toLocaleTimeString("lt-LT", { hour: "2-digit", minute: "2-digit" })}`;
-  const paidStr = booking.paid ? t.paidText : "";
 
-  // Ключевое изменение — услуги переносятся на новую строку
-  const servicesHtml = booking.services?.length > 0 
-    ? booking.services.map(s => s).join("<br>") 
-    : "—";
+  const paidStr = booking.paid ? t.paidText : "";
 
   const html = `
 <div style="font-family:Arial,sans-serif;background:#ffffff;padding:40px 20px;">
@@ -69,10 +68,10 @@ export default async function handler(req, res) {
       ${t.text.replace("{paid}", paidStr)}
     </p>
     <div style="background:#fdf4ff;padding:24px 36px;border-radius:18px;margin:0 auto 32px auto;">
-      <div style="font-size:16px;color:#333;line-height:1.4;text-align:left;word-break:break-word;">
+      <div style="font-size:16px;color:#333;line-height:1.4;text-align:left;word-break:break-word;white-space:normal;">
         <div><b>${t.data}:</b> ${date}</div>
         <div style="margin-top:5px;"><b>${t.laikas}:</b> ${time}</div>
-        <div style="margin-top:5px;"><b>${t.paslaugos}:</b><br>${servicesHtml}</div>
+        <div style="margin-top:5px;"><b>${t.paslaugos}:</b> ${booking.services?.join(", ") || "—"}</div>
         <div style="margin-top:5px;"><b>${t.apmoketa}:</b> ${booking.paid ? (booking.price + " €") : "Dar ne"}</div>
       </div>
     </div>
@@ -87,7 +86,10 @@ export default async function handler(req, res) {
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT),
       secure: process.env.SMTP_SECURE === "true",
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
     });
 
     await transporter.sendMail({
